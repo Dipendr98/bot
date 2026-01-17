@@ -69,7 +69,7 @@ def format_shopify_response(cc, mes, ano, cvv, raw_response, timet, profile):
 <b>[+] Country</b>: <code>{bin_info['country']} - [{bin_info['flag']}]</code>
 ━ ━ ━ ━ ━ ━ ━ ━ ━ ━ ━ ━ ━
 <b>[ﾒ] Checked By</b>: {profile} [<code>{plan} {badge}</code>]
-<b>[ϟ] Dev</b> ➺ <a href="https://t.me/syncblast">𝙎𝙮𝙣𝙘𝘽𝙡𝙖𝙨𝙩</a>
+<b>[ϟ] Dev</b> ➺ <a href="https://t.me/Chr1shtopher">Chr1shtopher�</a>
 ━━━━━━━━━━━━━━━
 <b>[ﾒ] T/t</b>: <code>[{timet} 𝐬]</code> <b>|P/x:</b> [<code>Live ⚡️</code>]
 """
