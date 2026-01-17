@@ -30,7 +30,7 @@ from pyrogram.enums import ChatType
 #     return True
 
 GROUPS_FILE = "DATA/groups.json"
-OWNER_ID = 7688488352  # apna user ID yahan daal
+OWNER_ID = 6891929831  # apna user ID yahan daal
 
 def load_allowed_groups():
     if not os.path.exists(GROUPS_FILE):
@@ -54,7 +54,7 @@ async def check_private_access(message: Message) -> bool:
     return True
 
 # GROUPS_FILE = "DATA/groups.json"
-# OWNER_ID = 7688488352  # apna user ID yahan daal
+# OWNER_ID = 6891929831  # apna user ID yahan daal
 
 # def load_allowed_groups():
 #     if not os.path.exists(GROUPS_FILE):
@@ -127,7 +127,7 @@ async def get_group_id(client: Client, message: Message):
     )
     await message.reply(response)
 
-@Client.on_message(filters.command(["add", "rmv"]) & filters.user([7688488352]))  # Add your admin ID here
+@Client.on_message(filters.command(["add", "rmv"]) & filters.user([6891929831]))  # Add your admin ID here
 async def modify_allowed_chats(bot, message: Message):
     if len(message.command) < 2:
         return await message.reply_text("❌ Usage: /add <chat_id> or /rmv <chat_id>")
