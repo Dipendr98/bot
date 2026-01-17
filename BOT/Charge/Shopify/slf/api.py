@@ -168,7 +168,7 @@ async def autoshopify(url, card, session):
     start = time.time()
     getua = get_random_user_agent()
     clienthint = platform(getua)
-    gmail = __import__('random').choice(['shaikhfurkan45107@gmail.com', 'shaikhfurkan70145@gmail.com', 'huhagenma@gmail.com', 'huhagenam@gmail.com', 'itzspoooky45107@gmail.com', 'fukkiharamkhor@gmail.com', 'teamsamrat5@gmail.com', 'macbhula@gmail.com', 'bhulamac@gmail.com'])
+    gmail = __import__('random').choice(['shaikhfurkan45107@gmail.com', 'shaikhfurkan70145@gmail.com', 'huhagenma@gmail.com', 'huhagenam@gmail.com', 'fukkiharamkhor@gmail.com', 'teamsamrat5@gmail.com', 'macbhula@gmail.com', 'bhulamac@gmail.com'])
     mobile = '?1' if any(x in getua for x in ["Android", "iPhone", "iPad", "Mobile"]) else '?0'
 
     # print(getua)
