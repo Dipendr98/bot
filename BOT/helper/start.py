@@ -238,10 +238,9 @@ async def register_command(client, message):
 @Client.on_message(filters.command("cmds"))
 async def show_cmds(client, message):
     home_text = """<pre>JOIN BEFORE USING. ✔️</pre>
-<b>~ Main :</b> <b><a href="https://t.me/SyncUI">Join Now</a></b>
-<b>~ Chat Group :</b> <b><a href="https://t.me/SyncUI">Join Now</a></b>
-<b>~ Scrapper :</b> <b><a href="https://t.me/SyncUI">Join Now</a></b>
-<b>~ Note :</b> <code>Report Bugs To @syncblastbot</code>
+<b>~ Main :</b> <b><a href="https://t.me/+IIHrr_9bwBM3NTA1">Join Now</a></b>
+<b>~ Chat Group :</b> <b><a href="https://t.me/+IIHrr_9bwBM3NTA1">Join Now</a></b>
+<b>~ Note :</b> <code>Report Bugs To @Chr1shtopher</code>
 <b>~ Proxy :</b> <code>Live 💎</code>
 <pre>Choose Your Gate Type :</pre>"""
 
@@ -273,10 +272,9 @@ async def handle_callbacks(client, callback_query):
     elif data == "home":
         # Home text jab home button click kare
         home_text = """<pre>JOIN BEFORE USING. ✔️</pre>
-<b>~ Main :</b> <b><a href="https://t.me/SyncUI">Join Now</a></b>
-<b>~ Chat Group :</b> <b><a href="https://t.me/SyncUI">Join Now</a></b>
-<b>~ Scrapper :</b> <b><a href="https://t.me/SyncUI">Join Now</a></b>
-<b>~ Note :</b> <code>Report Bugs To @syncblastbot</code>
+<b>~ Main :</b> <b><a href="https://t.me/+IIHrr_9bwBM3NTA1">Join Now</a></b>
+<b>~ Chat Group :</b> <b><a href="https://t.me/+IIHrr_9bwBM3NTA1">Join Now</a></b>
+<b>~ Note :</b> <code>Report Bugs To @Chr1shtopher</code>
 <b>~ Proxy :</b> <code>Live 💎</code>
 <pre>Choose Your Gate Type :</pre>"""
 
