@@ -46,65 +46,12 @@ def save_allowed_groups(groups):
         json.dump(groups, f)
 
 async def is_premium_user(message: Message) -> bool:
-    try:
-        db = load_users()
-        user_id = str(message.from_user.id)
-
-        user_data = db.get(user_id)
-        if not user_data:
-            await message.reply("❌ User not found in database.")
-            return False
-
-        user_plan = user_data.get("plan", {}).get("plan", "Free")
-        if user_plan in ["Free", "Redeem Code"]:
-            await message.reply_text(
-                "<pre>Notification ❗️</pre>\n"
-                "<b>~ Message :</b> <code>Only For Premium Users !</code>\n"
-                '<b>~ Buy Premium →</b> <b><a href="t.me.itzspoooky">Click Here</a></b>\n'
-                "━━━━━━━━━━━━━\n"
-                "<b>Type <code>/buy</code> to get Premium.</b>",
-                quote=True
-            )
-            return False
-
-        return True  # ✅ Premium user
-    except Exception as e:
-        print(f"[ERROR in is_premium_user] {e}")
-        return False
+    # Premium restriction removed - all users have access
+    return True
 
 async def check_private_access(message: Message) -> bool:
-    try:
-        # ✅ Step 1: Check if group is allowed
-        allowed_groups = load_allowed_groups()
-        if message.chat.type in [ChatType.GROUP, ChatType.SUPERGROUP]:
-            if message.chat.id in allowed_groups:
-                return True  # Allowed group → no private check
-
-        # ✅ Step 2: Private chat → check user plan
-        db = load_users()
-        user_id = str(message.from_user.id)
-        user_data = db.get(user_id)
-
-        if not user_data:
-            await message.reply("❌ User not found in database.")
-            return False
-
-        private_status = user_data.get("plan", {}).get("private", "off")
-        if private_status != "on":
-            await message.reply_text(
-                "<pre>Notification ❗️</pre>\n"
-                "<b>~ Message :</b> <code>Only For Premium Users !</code>\n"
-                "<b>~ Use Free In Chat →</b> Click Here\n"
-                "━━━━━━━━━━━━━\n"
-                "<b>Type <code>/buy</code> to get Premium.</b>",
-                quote=True
-            )
-            return False
-
-        return True
-    except Exception as e:
-        print(f"[ERROR in check_private_access] {e}")
-        return False
+    # Premium restriction removed - all users have private access
+    return True
 
 # GROUPS_FILE = "DATA/groups.json"
 # OWNER_ID = 7688488352  # apna user ID yahan daal
