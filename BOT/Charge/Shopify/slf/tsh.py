@@ -209,7 +209,7 @@ async def tsh_handler(client: Client, m: Message):
             f"⊙ <b>Time Elapsed :</b> <code>{elapsed:.2f}s</code> ⏱\n"
             f"━━━━━━━━━━━━━\n"
             f"[ﾒ] <b>Checked By:</b> {user.mention}\n"
-            f"⌥ <b>Dev:</b> <code>𝙁𝙪𝙧𝙠𝙖𝙣</code>"
+            f"⌥ <b>Dev:</b> <code>Chr1shtopher</code>"
         )
     
 
