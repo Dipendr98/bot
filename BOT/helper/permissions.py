@@ -111,6 +111,22 @@ if not os.path.exists(FILE_PATH):
     with open(FILE_PATH, "w") as f:
         json.dump([], f)
 
+@Client.on_message(filters.command(["groupid", "id", "chatid"]))
+async def get_group_id(client: Client, message: Message):
+    """Shows the current chat ID"""
+    chat_id = message.chat.id
+    chat_type = message.chat.type
+    chat_title = message.chat.title or "Private Chat"
+
+    response = (
+        "<b>📋 Chat Information</b>\n"
+        f"<b>Chat ID:</b> <code>{chat_id}</code>\n"
+        f"<b>Chat Type:</b> <code>{chat_type}</code>\n"
+        f"<b>Chat Title:</b> <code>{chat_title}</code>\n\n"
+        f"<i>Use this ID with /add {chat_id} to approve this group</i>"
+    )
+    await message.reply(response)
+
 @Client.on_message(filters.command(["add", "rmv"]) & filters.user([7688488352]))  # Add your admin ID here
 async def modify_allowed_chats(bot, message: Message):
     if len(message.command) < 2:
