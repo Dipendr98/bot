@@ -25,6 +25,12 @@ EXPIRY_SECONDS = 86400  # 1 day
 OWNER_ID = load_owner_id()
 REDEEM_FILE = "DATA/redeems.json"
 
+def is_facility_owner(user_id: str) -> bool:
+    """Check if user is a facility owner (restricted from giving plans)"""
+    users = load_users()
+    user = users.get(str(user_id), {})
+    return user.get("facility_owner", False)
+
 def load_redeems():
     try:
         with open(REDEEM_FILE, "r") as f:
@@ -47,6 +53,12 @@ async def generate_redeem(client, message):
     if str(message.from_user.id) != OWNER_ID:
         return await message.reply_text(
             "❌ You don't have permission to generate redeem codes.",
+            reply_to_message_id=message.id
+        )
+
+    if is_facility_owner(str(message.from_user.id)):
+        return await message.reply_text(
+            "⛔ Facility owners cannot generate redeem codes.",
             reply_to_message_id=message.id
         )
     

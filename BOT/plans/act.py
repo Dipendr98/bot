@@ -7,7 +7,7 @@ from BOT.plans.plan4 import activate_vip_plan
 from BOT.plans.plan5 import activate_ult_plan
 # from BOT.plans.free import activate_free_plan
 from BOT.helper.start import load_owner_id
-from BOT.helper.start import load_users 
+from BOT.helper.start import load_users, save_users 
 
 from datetime import datetime
 
@@ -23,6 +23,12 @@ def extract_user_id(message: Message) -> str:
 
 def is_owner(user_id: int) -> bool:
     return str(user_id) == str(OWNER_ID)
+
+def is_facility_owner(user_id: int) -> bool:
+    """Check if user is a facility owner (restricted from giving plans)"""
+    users = load_users()
+    user = users.get(str(user_id), {})
+    return user.get("facility_owner", False)
 
 async def notify_user_plan_activated(app, user_id: str, plan_name: str):
     users = load_users()
@@ -66,6 +72,9 @@ async def handle_plus(client, message: Message):
     if not is_owner(message.from_user.id):
         return await message.reply("⛔ Only the owner can activate plans.")
 
+    if is_facility_owner(message.from_user.id):
+        return await message.reply("⛔ Facility owners cannot provide plans to other users.")
+
     user_id = extract_user_id(message)
     if not user_id:
         return await message.reply("❗Usage: `/plus [user_id|@username|reply]`", quote=True)
@@ -83,6 +92,9 @@ async def handle_plus(client, message: Message):
 async def handle_pro(client, message: Message):
     if not is_owner(message.from_user.id):
         return await message.reply("⛔ Only the owner can activate plans.")
+
+    if is_facility_owner(message.from_user.id):
+        return await message.reply("⛔ Facility owners cannot provide plans to other users.")
 
     user_id = extract_user_id(message)
     if not user_id:
@@ -102,6 +114,9 @@ async def handle_elite(client, message: Message):
     if not is_owner(message.from_user.id):
         return await message.reply("⛔ Only the owner can activate plans.")
 
+    if is_facility_owner(message.from_user.id):
+        return await message.reply("⛔ Facility owners cannot provide plans to other users.")
+
     user_id = extract_user_id(message)
     if not user_id:
         return await message.reply("❗Usage: `/elite [user_id|@username|reply]`", quote=True)
@@ -119,6 +134,9 @@ async def handle_elite(client, message: Message):
 async def handle_vip(client, message: Message):
     if not is_owner(message.from_user.id):
         return await message.reply("⛔ Only the owner can activate plans.")
+
+    if is_facility_owner(message.from_user.id):
+        return await message.reply("⛔ Facility owners cannot provide plans to other users.")
 
     user_id = extract_user_id(message)
     if not user_id:
@@ -138,6 +156,9 @@ async def handle_ult(client, message: Message):
     if not is_owner(message.from_user.id):
         return await message.reply("⛔ Only the owner can activate plans.")
 
+    if is_facility_owner(message.from_user.id):
+        return await message.reply("⛔ Facility owners cannot provide plans to other users.")
+
     user_id = extract_user_id(message)
     if not user_id:
         return await message.reply("❗Usage: `/ult [user_id|@username|reply]`", quote=True)
@@ -150,3 +171,62 @@ async def handle_ult(client, message: Message):
         await notify_user_plan_activated(client, user_id, "VIP")
     else:
         await message.reply("❌ Failed to activate ULTIMATE plan. User not registered.")
+
+@Client.on_message(filters.command("setfacility") & filters.private)
+async def set_facility_owner(client, message: Message):
+    """Mark a user as facility owner (restricted from giving plans)"""
+    if not is_owner(message.from_user.id):
+        return await message.reply("⛔ Only the main owner can set facility owners.")
+
+    user_id = extract_user_id(message)
+    if not user_id:
+        return await message.reply("❗Usage: `/setfacility [user_id|@username|reply]`", quote=True)
+
+    users = load_users()
+    if str(user_id) not in users:
+        return await message.reply("❌ User not registered in the system.")
+
+    users[str(user_id)]["facility_owner"] = True
+    save_users(users)
+
+    await message.reply(f"✅ User `{user_id}` has been marked as a facility owner.\nThey can no longer provide plans to other users.")
+
+@Client.on_message(filters.command("unsetfacility") & filters.private)
+async def unset_facility_owner(client, message: Message):
+    """Remove facility owner restriction from a user"""
+    if not is_owner(message.from_user.id):
+        return await message.reply("⛔ Only the main owner can unset facility owners.")
+
+    user_id = extract_user_id(message)
+    if not user_id:
+        return await message.reply("❗Usage: `/unsetfacility [user_id|@username|reply]`", quote=True)
+
+    users = load_users()
+    if str(user_id) not in users:
+        return await message.reply("❌ User not registered in the system.")
+
+    users[str(user_id)]["facility_owner"] = False
+    save_users(users)
+
+    await message.reply(f"✅ Facility owner restriction removed from user `{user_id}`.\nThey can now provide plans if they have owner permissions.")
+
+@Client.on_message(filters.command("listfacility") & filters.private)
+async def list_facility_owners(client, message: Message):
+    """List all facility owners"""
+    if not is_owner(message.from_user.id):
+        return await message.reply("⛔ Only the main owner can view facility owners.")
+
+    users = load_users()
+    facility_owners = []
+
+    for user_id, user_data in users.items():
+        if user_data.get("facility_owner", False):
+            username = user_data.get("username", "N/A")
+            first_name = user_data.get("first_name", "Unknown")
+            facility_owners.append(f"• `{user_id}` - {first_name} (@{username})")
+
+    if not facility_owners:
+        return await message.reply("📋 No facility owners found.")
+
+    facility_list = "\n".join(facility_owners)
+    await message.reply(f"<b>📋 Facility Owners (Restricted from giving plans):</b>\n\n{facility_list}")
