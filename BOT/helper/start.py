@@ -77,6 +77,11 @@ def default_plan(user_id):
 
 @Client.on_message(filters.command("start"))
 async def start_command(client: Client, message: Message):
+    # Check if message is from a user (not a channel or anonymous admin)
+    if not message.from_user:
+        await message.reply("This command can only be used by users, not channels or anonymous admins.")
+        return
+
     animated_texts = ["〔", "〔S", "〔Sy", "〔Syn", "〔Sync〕"]
 
     sent = await message.reply("<pre>〔</pre>", quote=True)
@@ -173,6 +178,11 @@ async def register_callback(client, callback_query):
 # Handle the /register command
 @Client.on_message(filters.command("register"))
 async def register_command(client, message):
+    # Check if message is from a user (not a channel or anonymous admin)
+    if not message.from_user:
+        await message.reply("This command can only be used by users, not channels or anonymous admins.")
+        return
+
     async with user_lock:
         users = load_users()
         user_id = str(message.from_user.id)
