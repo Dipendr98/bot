@@ -134,7 +134,7 @@ async def add_site_api_based(client, message: Message):
 [⌯] <b>Time Taken:</b> <code>{time_taken} sec</code> 
 ━━━━━━━━━━━━━
 [⌯] <b>Req By:</b> {clickableFname}
-[⌯] <b>Dev:</b> <a href="tg://resolve?domain=SyncUI">𝙁𝙪𝙧𝙠𝙖𝙣</a>""",
+[⌯] <b>Dev:</b> <a href="tg://resolve?domain=SyncUI">Christopher</a>""",
                 parse_mode=ParseMode.HTML
             )
 
