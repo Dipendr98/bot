@@ -63,7 +63,7 @@ async def msh_handler(client, message):
             return await message.reply(
                 "<pre>Notification ❗️</pre>\n"
                 "<b>~ Message :</b> <code>This Group Is Not Approved ⚠️</code>\n"
-                "<b>~ Contact  →</b> <b>@itzspoooky</b>\n"
+                "<b>~ Contact  →</b> <b>@Chr1shtopher</b>\n"
                 "━━━━━━━━━━━━━\n"
                 "<b>Contact Owner For Approving</b>",
                 reply_to_message_id=message.id
