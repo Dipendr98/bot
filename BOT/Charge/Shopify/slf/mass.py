@@ -268,7 +268,7 @@ async def mslf_handler(client, message):
                 f"<pre>✦ [$mslf] | M-Self Shopify</pre>\n"
                 + "\n".join(final_results) + "\n"
                 f"<b>[⚬] Checked By :</b> {checked_by} [<code>{plan} {badge}</code>]\n"
-                f"<b>[⚬] Dev :</b> <a href='https://t.me/syncblast'>Furkan</a>",
+                f"<b>[⚬] Dev :</b> <a href='https://t.me/syncblast'>Chr1shtopher</a>",
                 disable_web_page_preview=True
             )
 
@@ -287,7 +287,7 @@ async def mslf_handler(client, message):
             f"{final_result_text}\n"
             f"<b>[⚬] T/t :</b> <code>{timetaken}s</code>\n"
             f"<b>[⚬] Checked By :</b> {checked_by} [<code>{plan} {badge}</code>]\n"
-            f"<b>[⚬] Dev :</b> <a href='https://t.me/syncblast'>Furkan</a>",
+            f"<b>[⚬] Dev :</b> <a href='https://t.me/syncblast'>Chr1shtopher</a>",
             disable_web_page_preview=True
         )
 
