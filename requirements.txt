@@ -1,0 +1,9 @@
+httpx==0.24.1
+requests==2.26.0
+pyrogram==2.0.106
+TgCrypto
+pysocks==1.7.1
+beautifulsoup4==4.13.3
+flask
+nest_asyncio
+pytz
