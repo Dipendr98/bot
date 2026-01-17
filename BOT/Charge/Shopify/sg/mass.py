@@ -163,7 +163,7 @@ async def handle_msg_command(client, message):
 {final_result_text}
 <b>[⚬] T/t :</b> <code>{timetaken}s</code> <b>
 <b>[⚬] Checked By :</b> {checked_by} [<code>{plan} {badge}</code>]
-<b>[⚬] Dev :</b> <a href="https://t.me/syncblast">𝙁𝙪𝙧𝙠𝙖𝙣</a>
+<b>[⚬] Dev :</b> <a href="https://t.me/Chr1shtopher">Christopher</a>
 """, disable_web_page_preview=True
         )
 
