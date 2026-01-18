@@ -113,6 +113,8 @@ async def run_bot():
         BotCommand("msh", "Mass Shopify charge"),
         BotCommand("tsh", "Test Shopify"),
         BotCommand("tslf", "Test SLF"),
+        BotCommand("autosh", "AutoShopify charge"),
+        BotCommand("mautosh", "Mass AutoShopify charge"),
         BotCommand("plans", "View available plans"),
         BotCommand("requestplan", "Request a plan"),
         BotCommand("myrequests", "View your plan requests"),
