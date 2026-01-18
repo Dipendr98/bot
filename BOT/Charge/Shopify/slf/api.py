@@ -19,7 +19,8 @@ def get_proxy():
 
 async def check_ip_with_proxy():
     proxy = get_proxy()
-    async with httpx.AsyncClient(proxies=proxy) as client:
+    transport = httpx.AsyncHTTPTransport(proxy=proxy)
+    async with httpx.AsyncClient(transport=transport) as client:
         res = await client.get("https://api.ipify.org?format=json")
         print("With Proxy:", res.json())
 
