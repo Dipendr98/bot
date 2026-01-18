@@ -198,6 +198,7 @@ async def tsh_handler(client: Client, m: Message):
     charged_count = 0
     approved_count = 0
     dead_count = 0
+    error_count = 0
 
     async def update_progress():
         elapsed = time.time() - start_time
@@ -219,7 +220,7 @@ async def tsh_handler(client: Client, m: Message):
     lock = asyncio.Lock()
 
     async def process_card(index, card):
-        nonlocal checked_count, charged_count, approved_count, dead_count
+        nonlocal checked_count, charged_count, approved_count, dead_count, error_count
 
         async with sem:
             site, gate = get_site_and_gate(user_id, index)
@@ -260,15 +261,25 @@ async def tsh_handler(client: Client, m: Message):
                         return
 
 
+            # Check for system errors first
+            if any(error_keyword in raw_response for error_keyword in [
+                "Connection Failed", "IP Rate Limit", "Product ID", "Site Not Found",
+                "Request Timeout", "Request Failed", "Site | Card Error"
+            ]):
+                status_flag = "Error ⚠️"
+                async with lock:
+                    error_count += 1
             # decide if card should be reported
-            if "ORDER_PLACED" in raw_response or "Thank You" in raw_response:
+            elif "ORDER_PLACED" in raw_response or "Thank You" in raw_response:
                 status_flag = "Charged 💎"
                 async with lock:
                     charged_count += 1
             elif any(keyword in raw_response for keyword in [
                 "3D CC", "MISMATCHED_BILLING", "MISMATCHED_PIN", "MISMATCHED_ZIP", "INSUFFICIENT_FUNDS",
                 "INVALID_CVC", "INCORRECT_CVC", "3DS_REQUIRED", "MISMATCHED_BILL", "3D_AUTHENTICATION",
-                "INCORRECT_ZIP", "INCORRECT_ADDRESS"
+                "INCORRECT_ZIP", "INCORRECT_ADDRESS", "CARD_DECLINED", "GENERIC_DECLINE", "DO_NOT_HONOR",
+                "INVALID_ACCOUNT", "EXPIRED_CARD", "PROCESSING_ERROR", "CARD_NOT_SUPPORTED",
+                "TRY_AGAIN_LATER", "AUTHENTICATION_REQUIRED", "PICKUP_CARD", "LOST_CARD", "STOLEN_CARD"
             ]):
                 status_flag = "Approved ❎"
                 async with lock:
@@ -307,7 +318,8 @@ async def tsh_handler(client: Client, m: Message):
         f"⊙ <b>Total:</b> <code>{total_cards}</code>\n"
         f"⊙ <b>Charged 💎:</b> <code>{charged_count}</code>\n"
         f"⊙ <b>Approved ❎:</b> <code>{approved_count}</code>\n"
-        f"⊙ <b>Declined ❌:</b> <code>{total_cards - (charged_count + approved_count)}</code>\n"
+        f"⊙ <b>Declined ❌:</b> <code>{dead_count}</code>\n"
+        f"⊙ <b>Errors ⚠️:</b> <code>{error_count}</code>\n"
         f"━━━━━━━━━━━━━\n"
         f"⌛ <b>Time Taken:</b> <code>{total_time:.2f}s</code>"
     )

@@ -17,11 +17,21 @@ def chunk_cards(cards, size):
         yield cards[i:i + size]
 
 def get_status_flag(raw_response):
-    if "ORDER_PLACED" in raw_response or "THANK YOU" in raw_response:
+    # Check for system errors first
+    if any(error_keyword in raw_response for error_keyword in [
+        "CONNECTION FAILED", "IP RATE LIMIT", "PRODUCT ID", "SITE NOT FOUND",
+        "REQUEST TIMEOUT", "REQUEST FAILED", "SITE | CARD ERROR"
+    ]):
+        return "Error ⚠️"
+    elif "ORDER_PLACED" in raw_response or "THANK YOU" in raw_response:
         return "Charged 💎"
     elif any(keyword in raw_response for keyword in [
         "3D CC", "MISMATCHED_BILLING", "MISMATCHED_PIN", "MISMATCHED_ZIP",
-        "INSUFFICIENT_FUNDS", "INVALID_CVC", "INCORRECT_CVC", "3DS_REQUIRED", "MISMATCHED_BILL"
+        "INSUFFICIENT_FUNDS", "INVALID_CVC", "INCORRECT_CVC", "3DS_REQUIRED", "MISMATCHED_BILL",
+        "3D_AUTHENTICATION", "INCORRECT_ZIP", "INCORRECT_ADDRESS", "CARD_DECLINED",
+        "GENERIC_DECLINE", "DO_NOT_HONOR", "INVALID_ACCOUNT", "EXPIRED_CARD",
+        "PROCESSING_ERROR", "CARD_NOT_SUPPORTED", "TRY_AGAIN_LATER",
+        "AUTHENTICATION_REQUIRED", "PICKUP_CARD", "LOST_CARD", "STOLEN_CARD"
     ]):
         return "Approved ✅"
     else:
@@ -271,6 +281,7 @@ async def mslf_handler(client, message):
         declined_count = 0
         charged_count = 0
         captcha_count = 0
+        error_count = 0
         processed_count = 0
 
         for batch in chunk_cards(all_cards, batch_size):
@@ -288,6 +299,8 @@ async def mslf_handler(client, message):
                     charged_count += 1
                 elif "Approved ✅" in status_flag:
                     approved_count += 1
+                elif "Error ⚠️" in status_flag:
+                    error_count += 1
                 else:
                     declined_count += 1
 
@@ -334,6 +347,7 @@ async def mslf_handler(client, message):
 ✅ <b>Approved</b>    : <code>{approved_count}</code>
 💎 <b>Charged</b>     : <code>{charged_count}</code>
 ❌ <b>Declined</b>    : <code>{declined_count}</code>
+⚠️ <b>Errors</b>      : <code>{error_count}</code>
 ⚠️ <b>CAPTCHA</b>     : <code>{captcha_count}</code>
 ━━━━━━━━━━━━━━━
 ⏱️ <b>Time Elapsed :</b> <code>{timetaken}s</code>
