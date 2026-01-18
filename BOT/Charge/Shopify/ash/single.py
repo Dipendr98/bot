@@ -17,12 +17,19 @@ def extract_card(text):
         return match.groups()
     return None
 
+def extract_site(text):
+    """Extract optional site URL from text in format site=https://..."""
+    match = re.search(r'site=([^\s]+)', text, re.IGNORECASE)
+    if match:
+        return match.group(1)
+    return None
+
 @Client.on_message(filters.command(["autosh", "ash"]))
 async def handle_autosh(client, message):
     """
     Handle /autosh command for AutoShopify card checking
 
-    Usage: /autosh cc|mm|yy|cvv
+    Usage: /autosh cc|mm|yy|cvv [site=https://store.myshopify.com/products/item]
     """
     try:
         # Load users and check registration
@@ -62,8 +69,9 @@ async def handle_autosh(client, message):
             return await message.reply(
                 f"""<pre>CC Not Found ❌</pre>
 <b>Error:</b> <code>No CC Found in your input</code>
-<b>Usage:</b> <code>/autosh cc|mm|yy|cvv</code>
-<b>Example:</b> <code>/autosh 4405639706340195|03|2029|734</code>""",
+<b>Usage:</b> <code>/autosh cc|mm|yy|cvv [site=URL]</code>
+<b>Example:</b> <code>/autosh 4405639706340195|03|2029|734</code>
+<b>With custom site:</b> <code>/autosh 4405639706340195|03|2029|734 site=https://store.myshopify.com/products/item</code>""",
                 reply_to_message_id=message.id
             )
 
@@ -72,8 +80,9 @@ async def handle_autosh(client, message):
             return await message.reply(
                 f"""<pre>Invalid Format ❌</pre>
 <b>Error:</b> <code>Send CC in Correct Format</code>
-<b>Usage:</b> <code>/autosh cc|mm|yy|cvv</code>
-<b>Example:</b> <code>/autosh 4405639706340195|03|2029|734</code>""",
+<b>Usage:</b> <code>/autosh cc|mm|yy|cvv [site=URL]</code>
+<b>Example:</b> <code>/autosh 4405639706340195|03|2029|734</code>
+<b>With custom site:</b> <code>/autosh 4405639706340195|03|2029|734 site=https://store.myshopify.com/products/item</code>""",
                 reply_to_message_id=message.id
             )
 
@@ -91,6 +100,9 @@ async def handle_autosh(client, message):
         card, mes, ano, cvv = extracted
         fullcc = f"{card}|{mes}|{ano}|{cvv}"
 
+        # Extract optional site parameter
+        site = extract_site(target_text)
+
         start_time = time.time()
 
         # Show processing message
@@ -107,7 +119,7 @@ async def handle_autosh(client, message):
         )
 
         # Check card using autoshopify
-        result = await check_autoshopify(fullcc)
+        result = await check_autoshopify(fullcc, site=site)
 
         await loading_msg.edit(
             f"<pre>Processed ✔️</pre>\n"
