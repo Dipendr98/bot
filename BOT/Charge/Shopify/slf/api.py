@@ -569,6 +569,7 @@ async def autoshopify(url, card, session):
                 'optionalDuties': {
                     'buyerRefusesDuties': False,
                 },
+                'captcha': None,
                 'cartMetafields': [],
             },
             'operationName': 'Proposal',
@@ -778,6 +779,7 @@ async def autoshopify(url, card, session):
                 'optionalDuties': {
                     'buyerRefusesDuties': False,
                 },
+                'captcha': None,
                 'cartMetafields': [],
             },
             'operationName': 'Proposal',
@@ -1064,6 +1066,7 @@ async def autoshopify(url, card, session):
                     'optionalDuties': {
                         'buyerRefusesDuties': False,
                     },
+                    'captcha': None,
                     'cartMetafields': [],
                 },
                 'attemptToken': f'{token}-4j33p1vmcd5',
@@ -1287,6 +1290,7 @@ async def autoshopify(url, card, session):
                     'optionalDuties': {
                         'buyerRefusesDuties': False,
                     },
+                    'captcha': None,
                     'cartMetafields': [],
                 },
                 'attemptToken': f'{token}-4j33p1vmcd5',
