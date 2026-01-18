@@ -23,10 +23,30 @@ def load_owner_id():
     try:
         with open(CONFIG_FILE, "r") as f:
             config_data = json.load(f)
-            return config_data.get("OWNER")
+            owner = config_data.get("OWNER")
+            if owner is None:
+                return None
+            if isinstance(owner, int):
+                return owner
+            owner_str = str(owner).strip()
+            if owner_str.isdigit():
+                return int(owner_str)
+            if not owner_str.startswith("@"):
+                owner_str = f"@{owner_str}"
+            return owner_str
     except FileNotFoundError:
         print("Config file not found.")
         return None
+
+def is_owner_user(user) -> bool:
+    owner = load_owner_id()
+    if owner is None:
+        return False
+    if isinstance(owner, int):
+        return user.id == owner
+    if not user.username:
+        return False
+    return user.username.lower() == str(owner).lstrip("@").lower()
 
 # Function to get IST time
 def get_ist_time():
@@ -47,10 +67,8 @@ def save_users(users):
         json.dump(users, f, indent=4)
 
 # Default plan data for new users
-def default_plan(user_id):
-    OWNER_ID = load_owner_id()
-
-    if user_id == OWNER_ID:
+def default_plan(user):
+    if is_owner_user(user):
         return {
             "plan": "Owner",
             "activated_at": get_ist_time(),
@@ -128,8 +146,6 @@ async def register_callback(client, callback_query):
         users = load_users()
         user_id = str(callback_query.from_user.id)
 
-        OWNER_ID = load_owner_id()
-
         if user_id in users:
             user_data = users[user_id]
             first_name = user_data['first_name']
@@ -146,7 +162,7 @@ async def register_callback(client, callback_query):
         first_name = callback_query.from_user.first_name
         username = callback_query.from_user.username if callback_query.from_user.username else None
 
-        plan_data = default_plan(user_id)
+        plan_data = default_plan(callback_query.from_user)
         role = plan_data["plan"]
 
         users[user_id] = {
@@ -187,8 +203,6 @@ async def register_command(client, message):
         users = load_users()
         user_id = str(message.from_user.id)
 
-        OWNER_ID = load_owner_id()
-
         if user_id in users:
             user_data = users[user_id]
             first_name = user_data['first_name']
@@ -211,7 +225,7 @@ async def register_command(client, message):
         first_name = message.from_user.first_name
         username = message.from_user.username if message.from_user.username else None
 
-        plan_data = default_plan(user_id)
+        plan_data = default_plan(message.from_user)
         role = plan_data["plan"]
 
         users[user_id] = {

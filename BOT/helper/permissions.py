@@ -1,5 +1,5 @@
 from pyrogram import Client, filters
-from BOT.helper.start import load_users
+from BOT.helper.start import is_owner_user
 from pyrogram.types import Message
 import json
 import os
@@ -30,7 +30,6 @@ from pyrogram.enums import ChatType
 #     return True
 
 GROUPS_FILE = "DATA/groups.json"
-OWNER_ID = 6891929831  # apna user ID yahan daal
 
 def load_allowed_groups():
     if not os.path.exists(GROUPS_FILE):
@@ -68,8 +67,10 @@ async def check_private_access(message: Message) -> bool:
 # def save_allowed_groups(groups):
 #     with open(GROUPS_FILE, "w") as f:
 #         json.dump(groups, f)
-@Client.on_message(filters.command(["add", ".add", "$add"]) & filters.user(OWNER_ID))
+@Client.on_message(filters.command(["add", ".add", "$add"]))
 async def add_group(client: Client, message: Message):
+    if not is_owner_user(message.from_user):
+        return await message.reply("⛔ Only the owner can manage groups.")
     try:
         args = message.text.split()
         if len(args) != 2:
@@ -86,8 +87,10 @@ async def add_group(client: Client, message: Message):
     except Exception as e:
         await message.reply(f"⚠️ Error: {e}")
 
-@Client.on_message(filters.command("rmv") & filters.user(OWNER_ID))
+@Client.on_message(filters.command("rmv"))
 async def remove_group(client: Client, message: Message):
+    if not is_owner_user(message.from_user):
+        return await message.reply("⛔ Only the owner can manage groups.")
     try:
         args = message.text.split()
         if len(args) != 2:
@@ -127,8 +130,10 @@ async def get_group_id(client: Client, message: Message):
     )
     await message.reply(response)
 
-@Client.on_message(filters.command(["add", "rmv"]) & filters.user([6891929831]))  # Add your admin ID here
+@Client.on_message(filters.command(["add", "rmv"]))
 async def modify_allowed_chats(bot, message: Message):
+    if not is_owner_user(message.from_user):
+        return await message.reply_text("⛔ Only the owner can manage groups.")
     if len(message.command) < 2:
         return await message.reply_text("❌ Usage: /add <chat_id> or /rmv <chat_id>")
 

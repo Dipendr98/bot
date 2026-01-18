@@ -1,12 +1,13 @@
 from pyrogram import Client, filters
 from pyrogram.types import InlineKeyboardMarkup, InlineKeyboardButton, Message
 import json
+from BOT.helper.start import load_owner_id
 
 # Load config
 with open("FILES/config.json") as f:
     CONFIG = json.load(f)
 
-OWNER = int(CONFIG["OWNER"])
+OWNER = load_owner_id()
 CHANNEL = CONFIG["FEEDBACK"]  # use @channel_username only
 
 

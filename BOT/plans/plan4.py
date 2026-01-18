@@ -108,7 +108,7 @@ async def check_and_expire_plans(app: Client):
                     """<pre>Notification ❗️</pre>
 <b>~ Your Plan Is Expired</b>
 <b>~ Renew your plan</b> (<code>/buy</code>)
-<b>~ Contact to Owner at @SyncBlastBot</b>
+<b>~ Contact to Owner at @Chr1shtopher</b>
                                """)
             except Exception as e:
                 print(f"Error sending expiration message: {e}")
@@ -123,4 +123,3 @@ async def check_and_expire_plans(app: Client):
                 print(f"Error sending owner notification: {e}")
 
         await asyncio.sleep(5)  # Check every 5 seconds
-
