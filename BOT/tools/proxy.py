@@ -140,22 +140,7 @@ def get_proxy(user_id: int) -> str | None:
     except Exception:
         return None
 
-@Client.on_message(filters.command("setpx") & filters.group)
-async def set_proxy_group_error(client, message: Message):
-    await message.reply(
-        "<b>⚠️ This command only works in private chat!</b>\n\n"
-        "<b>Reason:</b> Proxy credentials contain sensitive information (username & password)\n\n"
-        "<b>How to use:</b>\n"
-        "1️⃣ Click on my profile\n"
-        "2️⃣ Start a private chat\n"
-        "3️⃣ Send: <code>/setpx your_proxy</code>\n\n"
-        "<b>Format:</b>\n"
-        "~ <code>ip:port:user:pass</code>\n"
-        "~ <code>user:pass@ip:port</code>",
-        quote=True
-    )
-
-@Client.on_message(filters.command("setpx") & filters.private)
+@Client.on_message(filters.command("setpx"))
 async def set_proxy(client, message: Message):
     if len(message.command) < 2:
         return await message.reply("<b>Format ❌:</b> `/setpx {proxy}`", quote=True)
@@ -194,19 +179,7 @@ async def set_proxy(client, message: Message):
 
     await msg.edit(f"<pre>Proxy saved successfully! ✅</pre>")
 
-@Client.on_message(filters.command("delpx") & filters.group)
-async def delete_proxy_group_error(client, message: Message):
-    await message.reply(
-        "<b>⚠️ This command only works in private chat!</b>\n\n"
-        "<b>Reason:</b> Proxy management is a private feature\n\n"
-        "<b>How to use:</b>\n"
-        "1️⃣ Click on my profile\n"
-        "2️⃣ Start a private chat\n"
-        "3️⃣ Send: <code>/delpx</code>",
-        quote=True
-    )
-
-@Client.on_message(filters.command("delpx") & filters.private)
+@Client.on_message(filters.command("delpx"))
 async def delete_proxy(client, message: Message):
     user_id = str(message.from_user.id)
     data = load_proxies()
@@ -218,19 +191,7 @@ async def delete_proxy(client, message: Message):
     save_proxies(data)
     await message.reply("<b>Your proxy has been removed ✅</b>", quote=True)
 
-@Client.on_message(filters.command("getpx") & filters.group)
-async def getpx_group_error(client, message: Message):
-    await message.reply(
-        "<b>⚠️ This command only works in private chat!</b>\n\n"
-        "<b>Reason:</b> Proxy credentials are sensitive and should not be displayed in groups\n\n"
-        "<b>How to use:</b>\n"
-        "1️⃣ Click on my profile\n"
-        "2️⃣ Start a private chat\n"
-        "3️⃣ Send: <code>/getpx</code>",
-        quote=True
-    )
-
-@Client.on_message(filters.command("getpx") & filters.private)
+@Client.on_message(filters.command("getpx"))
 async def getpx_handler(client, message):
     user_id = message.from_user.id
     proxy = get_proxy(user_id)
