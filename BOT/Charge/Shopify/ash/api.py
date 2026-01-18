@@ -17,8 +17,8 @@ AUTOSHOPIFY_BASE_URL = "https://autosh-production-b437.up.railway.app/process"
 # Fallback product URLs - Multiple working Shopify and other e-commerce stores
 # Mix of domain-only and full product URLs for better compatibility
 FALLBACK_PRODUCT_URLS = [
+    "https://3duxdesign.myshopify.com",  # Primary fallback URL
     "https://www.bountifulbaby.com",  # Domain-only format
-    "https://3duxdesign.myshopify.com",
     "https://kettleandfire.myshopify.com/products/bone-broth",
     "https://kobo-us.myshopify.com/products/clara-2e",
     "https://habit-nest.myshopify.com/products/morning-sidekick-journal",
@@ -96,6 +96,14 @@ def _parse_response(response_data: dict) -> dict:
             return {
                 "status": "ERROR",
                 "message": "Checkout failed. The store may be blocking requests or the product is unavailable.",
+                "response": response_json or response_text,
+                "should_retry_with_fallback": True
+            }
+
+        if "receipt id is empty" in response_lower:
+            return {
+                "status": "ERROR",
+                "message": "Receipt ID error. The checkout process failed. Trying with fallback URLs.",
                 "response": response_json or response_text,
                 "should_retry_with_fallback": True
             }
