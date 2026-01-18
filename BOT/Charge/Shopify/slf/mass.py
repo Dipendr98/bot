@@ -103,16 +103,35 @@ async def mslf_handler(client, message):
             mlimit = int(mlimit)
 
         sites = load_sites()
-        if user_id not in sites:
+        user_site_info = None
+
+        if user_id in sites:
+            user_site_info = sites[user_id]
+        else:
+            # Check txtsite.json as fallback
+            try:
+                with open("DATA/txtsite.json") as f:
+                    txt_sites = json.load(f)
+                user_txt_sites = txt_sites.get(str(user_id), [])
+                if user_txt_sites and len(user_txt_sites) > 0:
+                    # Use the first site from txtsite.json
+                    first_site = user_txt_sites[0]
+                    user_site_info = {
+                        "site": first_site.get("site"),
+                        "gate": first_site.get("gate", "Unknown")
+                    }
+            except Exception:
+                pass
+
+        if not user_site_info:
             await message.reply(
                 "<pre>Site Not Found ⚠️</pre>\n"
                 "Error : <code>Please Set Site First</code>\n"
-                "~ <code>Using /addurl in Bot's Private</code>",
+                "~ <code>Using /slfurl or /txturl in Bot's Private</code>",
                 reply_to_message_id=message.id
             )
             return
 
-        user_site_info = sites[user_id]
         site = user_site_info["site"]
         gateway = user_site_info["gate"]
 
