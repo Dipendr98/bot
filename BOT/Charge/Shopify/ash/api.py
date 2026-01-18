@@ -19,7 +19,7 @@ async def check_autoshopify(card_data: str, site: str = None, proxy: str = None)
 
     Args:
         card_data: Card in format cc|mm|yy|cvv
-        site: Optional site URL (defaults to bountifulbaby.com)
+        site: Optional site URL with product (defaults to bountifulbaby.com/products/bb-body-blushing-medium)
         proxy: Optional proxy string
 
     Returns:
@@ -37,9 +37,9 @@ async def check_autoshopify(card_data: str, site: str = None, proxy: str = None)
 
         cc, mm, yy, cvv = parts
 
-        # Default site if not provided
+        # Default site if not provided - must include a product URL
         if not site:
-            site = "https://www.bountifulbaby.com"
+            site = "https://www.bountifulbaby.com/products/bb-body-blushing-medium"
 
         # Build request URL
         params = {
@@ -78,6 +78,14 @@ async def check_autoshopify(card_data: str, site: str = None, proxy: str = None)
             if response.status_code == 200:
                 # Check for common success indicators
                 response_lower = response_text.lower()
+
+                # Check for specific error cases first
+                if "handle is empty" in response_lower or "proposal step failed" in response_lower:
+                    return {
+                        "status": "ERROR",
+                        "message": "Site configuration error. The product URL may be invalid or the site requires a specific product handle. Try using a different site or contact support.",
+                        "response": response_json or response_text
+                    }
 
                 if any(word in response_lower for word in ["approved", "success", "charged", "cvv match"]):
                     return {
