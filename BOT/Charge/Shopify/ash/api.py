@@ -19,7 +19,7 @@ async def check_autoshopify(card_data: str, site: str = None, proxy: str = None)
 
     Args:
         card_data: Card in format cc|mm|yy|cvv
-        site: Optional site URL with product (defaults to bountifulbaby.com/products/bb-body-blushing-medium)
+        site: Optional site URL with product (defaults to kettleandfire.myshopify.com/products/bone-broth)
         proxy: Optional proxy string
 
     Returns:
@@ -39,7 +39,7 @@ async def check_autoshopify(card_data: str, site: str = None, proxy: str = None)
 
         # Default site if not provided - must include a product URL
         if not site:
-            site = "https://www.bountifulbaby.com/products/bb-body-blushing-medium"
+            site = "https://kettleandfire.myshopify.com/products/bone-broth"
 
         # Build request URL
         params = {
@@ -83,7 +83,7 @@ async def check_autoshopify(card_data: str, site: str = None, proxy: str = None)
                 if "handle is empty" in response_lower or "proposal step failed" in response_lower:
                     return {
                         "status": "ERROR",
-                        "message": "Site configuration error. The product URL may be invalid or the site requires a specific product handle. Try using a different site or contact support.",
+                        "message": "Site configuration error. The product URL may be invalid or inaccessible. Please try again or contact support if the issue persists.",
                         "response": response_json or response_text
                     }
 
