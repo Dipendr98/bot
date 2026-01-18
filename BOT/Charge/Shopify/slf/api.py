@@ -1582,13 +1582,25 @@ async def autoshopify(url, card, session):
                 "cc": card
             })
         else:
-            output.update({
-                "Response": result,
-                "Status": True,
-                "Gateway": gateway,
-                "Price": total,
-                "cc": card
-            })
+            # When result is None, check if order was actually successful
+            receipt_data = res_json.get('data', {}).get('receipt', {})
+            if receipt_data.get('id') and not receipt_data.get('processingError'):
+                # Order likely successful - check for confirmation indicators
+                output.update({
+                    "Response": "MISMATCHED_BILL",
+                    "Status": True,
+                    "Gateway": gateway,
+                    "Price": total,
+                    "cc": card
+                })
+            else:
+                output.update({
+                    "Response": "UNKNOWN_ERROR",
+                    "Status": True,
+                    "Gateway": gateway,
+                    "Price": total,
+                    "cc": card
+                })
 
 
     except Exception as e:
