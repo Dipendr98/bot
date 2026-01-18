@@ -5,6 +5,12 @@ import json
 import time
 import asyncio
 import re
+from datetime import datetime
+from reportlab.lib.pagesizes import letter
+from reportlab.lib import colors
+from reportlab.lib.styles import getSampleStyleSheet, ParagraphStyle
+from reportlab.platypus import SimpleDocTemplate, Paragraph, Spacer, Table, TableStyle
+from reportlab.lib.units import inch
 from BOT.Charge.Shopify.self.slf import check_card  # your check logic
 
 # Helper to load txtsite config
@@ -31,6 +37,134 @@ def get_site_and_gate(user_id, index):
         return None, None
     item = sites[index % len(sites)]
     return item.get("site"), item.get("gate")
+
+
+# PDF Generation Function
+async def generate_approved_pdf(client, msg, user, approved_ccs, total_time):
+    """Generate a PDF file containing all approved CCs"""
+    try:
+        # Create filename with timestamp
+        timestamp = datetime.now().strftime("%Y%m%d_%H%M%S")
+        filename = f"approved_cc_{timestamp}.pdf"
+        filepath = os.path.join("DATA", filename)
+
+        # Ensure DATA directory exists
+        os.makedirs("DATA", exist_ok=True)
+
+        # Create PDF document
+        doc = SimpleDocTemplate(filepath, pagesize=letter)
+        story = []
+        styles = getSampleStyleSheet()
+
+        # Create custom styles
+        title_style = ParagraphStyle(
+            'CustomTitle',
+            parent=styles['Heading1'],
+            fontSize=24,
+            textColor=colors.HexColor('#1a73e8'),
+            spaceAfter=30,
+            alignment=1  # Center alignment
+        )
+
+        header_style = ParagraphStyle(
+            'CustomHeader',
+            parent=styles['Normal'],
+            fontSize=12,
+            textColor=colors.HexColor('#5f6368'),
+            spaceAfter=20
+        )
+
+        # Add title
+        title = Paragraph("✅ Approved Credit Cards Report", title_style)
+        story.append(title)
+        story.append(Spacer(1, 0.2*inch))
+
+        # Add summary information
+        summary_text = f"""
+        <b>Report Generated:</b> {datetime.now().strftime("%Y-%m-%d %H:%M:%S")}<br/>
+        <b>Total Approved:</b> {len(approved_ccs)}<br/>
+        <b>Total Time:</b> {total_time:.2f} seconds<br/>
+        <b>Checked By:</b> {user.first_name} {user.last_name or ''}<br/>
+        """
+        summary = Paragraph(summary_text, header_style)
+        story.append(summary)
+        story.append(Spacer(1, 0.3*inch))
+
+        # Create table data
+        table_data = [['#', 'Card Number', 'Status', 'Response', 'Gateway']]
+
+        for idx, cc_data in enumerate(approved_ccs, 1):
+            # Split long responses into multiple lines if needed
+            response = cc_data['response']
+            if len(response) > 50:
+                response = response[:47] + "..."
+
+            table_data.append([
+                str(idx),
+                cc_data['cc'],
+                cc_data['status'],
+                response,
+                cc_data['gateway']
+            ])
+
+        # Create table
+        table = Table(table_data, colWidths=[0.5*inch, 2.5*inch, 1.2*inch, 2*inch, 1.5*inch])
+
+        # Style the table
+        table.setStyle(TableStyle([
+            # Header row
+            ('BACKGROUND', (0, 0), (-1, 0), colors.HexColor('#1a73e8')),
+            ('TEXTCOLOR', (0, 0), (-1, 0), colors.whitesmoke),
+            ('ALIGN', (0, 0), (-1, -1), 'CENTER'),
+            ('FONTNAME', (0, 0), (-1, 0), 'Helvetica-Bold'),
+            ('FONTSIZE', (0, 0), (-1, 0), 12),
+            ('BOTTOMPADDING', (0, 0), (-1, 0), 12),
+
+            # Data rows
+            ('BACKGROUND', (0, 1), (-1, -1), colors.beige),
+            ('TEXTCOLOR', (0, 1), (-1, -1), colors.black),
+            ('FONTNAME', (0, 1), (-1, -1), 'Helvetica'),
+            ('FONTSIZE', (0, 1), (-1, -1), 9),
+            ('ALIGN', (0, 0), (0, -1), 'CENTER'),
+
+            # Grid
+            ('GRID', (0, 0), (-1, -1), 1, colors.black),
+            ('VALIGN', (0, 0), (-1, -1), 'MIDDLE'),
+
+            # Alternating row colors
+            *[('BACKGROUND', (0, i), (-1, i), colors.lightgrey)
+              for i in range(2, len(table_data), 2)]
+        ]))
+
+        story.append(table)
+
+        # Add footer
+        story.append(Spacer(1, 0.5*inch))
+        footer_text = "<i>This report contains sensitive information. Handle with care.</i>"
+        footer = Paragraph(footer_text, styles['Italic'])
+        story.append(footer)
+
+        # Build PDF
+        doc.build(story)
+
+        # Send PDF to user
+        await client.send_document(
+            chat_id=msg.chat.id,
+            document=filepath,
+            caption=f"📄 <b>Approved CCs Report</b>\n\n"
+                    f"✅ Total Approved: <code>{len(approved_ccs)}</code>\n"
+                    f"⏱ Time Taken: <code>{total_time:.2f}s</code>\n"
+                    f"👤 Checked By: {user.mention}"
+        )
+
+        # Clean up the file after sending
+        try:
+            os.remove(filepath)
+        except:
+            pass
+
+    except Exception as e:
+        await msg.reply(f"⚠️ Error generating PDF: {str(e)}")
 
 
 # Card normalizer
@@ -81,6 +215,8 @@ async def tsh_handler(c: Client, m: Message):
         "live": 0,
         "dead": 0,
         "error": 0,
+        "captcha": 0,
+        "approved_ccs": [],  # Store approved CCs for PDF
         "start_time": time.time(),
         "checked": 0,
         "total": len(cards),
@@ -184,6 +320,9 @@ async def start_check(c, msg, user, state):
 
             # Check for captcha in response
             if any(x in raw.lower() for x in ["captcha", "hcaptcha", "recaptcha", "verify you are", "access denied"]):
+                # Increment captcha counter
+                state["captcha"] += 1
+
                 # Shift site
                 user_sites = get_user_site_info(str(user.id))
                 state["site_index"] = (state["site_index"] + 1) % len(user_sites)
@@ -211,6 +350,13 @@ async def start_check(c, msg, user, state):
         if "ORDER_PLACED" in response:
             status_flag = "Charged 💎"
             state["charged"] += 1
+            # Store approved CC
+            state["approved_ccs"].append({
+                "cc": cc,
+                "status": "Charged 💎",
+                "response": raw,
+                "gateway": state["gate"]
+            })
         elif any(x in response for x in [
             "3D CC", "MISMATCHED_BILLING", "MISMATCHED_PIN", "MISMATCHED_ZIP", "INSUFFICIENT_FUNDS",
             "INVALID_CVC", "INCORRECT_CVC", "3DS_REQUIRED", "MISMATCHED_BILL", "3D_AUTHENTICATION",
@@ -218,6 +364,13 @@ async def start_check(c, msg, user, state):
         ]):
             status_flag = "Approved ❎"
             state["live"] += 1
+            # Store approved CC
+            state["approved_ccs"].append({
+                "cc": cc,
+                "status": "Approved ❎",
+                "response": raw,
+                "gateway": state["gate"]
+            })
         elif "Declined" in response:
             state["error"] += 1
         else:
@@ -273,19 +426,25 @@ async def start_check(c, msg, user, state):
         total_time = time.time() - start
         await msg.edit("<b>✅ All Cards Checked</b>", reply_markup=None)
 
-        await c.send_message(
-            msg.chat.id,
-            f"<b>✅ Checking Finished</b>\n"
-            f"━━━━━━━━━━━━━\n"
-            f"⛶ <b>Charged:</b> <code>{state['charged']}</code>\n"
-            f"⎔ <b>Live:</b> <code>{state['live']}</code>\n"
-            f"⌀ <b>Dead:</b> <code>{state['dead']}</code>\n"
-            f"<b>[⌁] Error:</b> <code>{state['error']}</code>\n"
-            f"<b>[⌁] Total Checked:</b> <code>{state['total']}</code>\n"
-            f"━━━━━━━━━━━━━\n"
-            f"[ϟ] Time Taken: <code>{total_time:.2f}s</code>\n"
-            f"[ϟ] Checked By: {user.mention}"
+        # Create the summary message in the Discord format
+        summary_message = (
+            f"<b>Forwarded from Deleted Account</b>\n"
+            f"🧪 <b>Total CC  :</b> <code>{state['total']}</code>\n"
+            f"⏳ <b>Progress  :</b> <code>{state['total']}/{state['total']}</code>\n"
+            f"✅ <b>Approved  :</b> <code>{state['live']}</code>\n"
+            f"❌ <b>Declined  :</b> <code>{state['dead'] + state['error']}</code>\n"
+            f"💎 <b>Charged   :</b> <code>{state['charged']}</code>\n"
+            f"⚠️ <b>CAPTCHA   :</b> <code>{state['captcha']}</code>\n"
+            f"<b>Time Elapsed :</b> <code>{total_time:.2f}s</code> ⏱\n"
+            f"━━━━━━━━━━━━━━━\n"
+            f"↘️ <b>Dev:</b> {user.mention}"
         )
+
+        await c.send_message(msg.chat.id, summary_message)
+
+        # Generate PDF with approved CCs if any
+        if state["approved_ccs"]:
+            await generate_approved_pdf(c, msg, user, state["approved_ccs"], total_time)
 
         user_state.pop(str(user.id), None)
 
