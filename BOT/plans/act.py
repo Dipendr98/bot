@@ -67,7 +67,7 @@ Use <code>/info</code> anytime to check your current status.
 """
     )
 
-@Client.on_message(filters.command("plus") & filters.private)
+@Client.on_message(filters.command("plus") & (filters.private | filters.group))
 async def handle_plus(client, message: Message):
     if not is_owner(message.from_user.id):
         return await message.reply("⛔ Only the owner can activate plans.")
@@ -88,7 +88,7 @@ async def handle_plus(client, message: Message):
     else:
         await message.reply("❌ Failed to activate Plus plan. User not registered.")
 
-@Client.on_message(filters.command("pro") & filters.private)
+@Client.on_message(filters.command("pro") & (filters.private | filters.group))
 async def handle_pro(client, message: Message):
     if not is_owner(message.from_user.id):
         return await message.reply("⛔ Only the owner can activate plans.")
@@ -109,7 +109,7 @@ async def handle_pro(client, message: Message):
     else:
         await message.reply("❌ Failed to activate Pro plan. User not registered.")
 
-@Client.on_message(filters.command("elite") & filters.private)
+@Client.on_message(filters.command("elite") & (filters.private | filters.group))
 async def handle_elite(client, message: Message):
     if not is_owner(message.from_user.id):
         return await message.reply("⛔ Only the owner can activate plans.")
@@ -130,7 +130,7 @@ async def handle_elite(client, message: Message):
     else:
         await message.reply("❌ Failed to activate Elite plan. User not registered.")
 
-@Client.on_message(filters.command("vip") & filters.private)
+@Client.on_message(filters.command("vip") & (filters.private | filters.group))
 async def handle_vip(client, message: Message):
     if not is_owner(message.from_user.id):
         return await message.reply("⛔ Only the owner can activate plans.")
@@ -151,7 +151,7 @@ async def handle_vip(client, message: Message):
     else:
         await message.reply("❌ Failed to activate VIP plan. User not registered.")
 
-@Client.on_message(filters.command("ult") & filters.private)
+@Client.on_message(filters.command("ult") & (filters.private | filters.group))
 async def handle_ult(client, message: Message):
     if not is_owner(message.from_user.id):
         return await message.reply("⛔ Only the owner can activate plans.")
