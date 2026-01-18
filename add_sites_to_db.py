@@ -6,8 +6,6 @@ import os
 OWNER_ID = "6891929831"
 DATA_FILE = "DATA/txtsite.json"
 FILES_TO_PROCESS = [
-    "working_under_15_20251219_233951.txt",
-    "working_under_15_20251220_020621.txt",
     "Ex_Chk_Filter_Sites.txt"
 ]
 
