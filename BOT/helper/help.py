@@ -1,5 +1,6 @@
 from pyrogram import Client, filters
 from pyrogram.types import Message, InlineKeyboardMarkup, InlineKeyboardButton, CallbackQuery
+from pyrogram.errors import MessageNotModified
 
 @Client.on_message(filters.command(["help", ".help", "$help"]))
 async def help_command(client: Client, message: Message):
@@ -45,7 +46,10 @@ async def help_callback(client: Client, callback_query: CallbackQuery):
     data = callback_query.data
 
     if data == "help_close":
-        await callback_query.message.edit_text("<pre>Thanks for using Sync Bot! ✨</pre>")
+        try:
+            await callback_query.message.edit_text("<pre>Thanks for using Sync Bot! ✨</pre>")
+        except MessageNotModified:
+            pass
         return
 
     elif data == "help_main":
@@ -75,11 +79,14 @@ async def help_callback(client: Client, callback_query: CallbackQuery):
             ]
         ])
 
-        await callback_query.message.edit_text(
-            help_text,
-            reply_markup=help_buttons,
-            disable_web_page_preview=True
-        )
+        try:
+            await callback_query.message.edit_text(
+                help_text,
+                reply_markup=help_buttons,
+                disable_web_page_preview=True
+            )
+        except MessageNotModified:
+            pass
 
     elif data == "help_basic":
         basic_text = """<pre>━━━ 🏠 BASIC COMMANDS ━━━</pre>
@@ -110,10 +117,13 @@ async def help_callback(client: Client, callback_query: CallbackQuery):
             ]
         ])
 
-        await callback_query.message.edit_text(
-            basic_text,
-            reply_markup=basic_buttons
-        )
+        try:
+            await callback_query.message.edit_text(
+                basic_text,
+                reply_markup=basic_buttons
+            )
+        except MessageNotModified:
+            pass
 
     elif data == "help_tools":
         tools_text = """<pre>━━━ 🔧 TOOLS COMMANDS ━━━</pre>
@@ -142,10 +152,13 @@ async def help_callback(client: Client, callback_query: CallbackQuery):
             ]
         ])
 
-        await callback_query.message.edit_text(
-            tools_text,
-            reply_markup=tools_buttons
-        )
+        try:
+            await callback_query.message.edit_text(
+                tools_text,
+                reply_markup=tools_buttons
+            )
+        except MessageNotModified:
+            pass
 
     elif data == "help_gates":
         gates_text = """<pre>━━━ ⚡ GATE COMMANDS ━━━</pre>
@@ -189,10 +202,13 @@ async def help_callback(client: Client, callback_query: CallbackQuery):
             ]
         ])
 
-        await callback_query.message.edit_text(
-            gates_text,
-            reply_markup=gates_buttons
-        )
+        try:
+            await callback_query.message.edit_text(
+                gates_text,
+                reply_markup=gates_buttons
+            )
+        except MessageNotModified:
+            pass
 
     elif data == "help_plans":
         plans_text = """<pre>━━━ 💎 PLAN COMMANDS ━━━</pre>
@@ -228,10 +244,13 @@ async def help_callback(client: Client, callback_query: CallbackQuery):
             ]
         ])
 
-        await callback_query.message.edit_text(
-            plans_text,
-            reply_markup=plans_buttons
-        )
+        try:
+            await callback_query.message.edit_text(
+                plans_text,
+                reply_markup=plans_buttons
+            )
+        except MessageNotModified:
+            pass
 
     elif data == "help_admin":
         admin_text = """<pre>━━━ 👑 ADMIN COMMANDS ━━━</pre>
@@ -275,10 +294,13 @@ async def help_callback(client: Client, callback_query: CallbackQuery):
             ]
         ])
 
-        await callback_query.message.edit_text(
-            admin_text,
-            reply_markup=admin_buttons
-        )
+        try:
+            await callback_query.message.edit_text(
+                admin_text,
+                reply_markup=admin_buttons
+            )
+        except MessageNotModified:
+            pass
 
     elif data == "help_proxy":
         proxy_text = """<pre>━━━ 🌐 PROXY COMMANDS ━━━</pre>
@@ -306,7 +328,10 @@ async def help_callback(client: Client, callback_query: CallbackQuery):
             ]
         ])
 
-        await callback_query.message.edit_text(
-            proxy_text,
-            reply_markup=proxy_buttons
-        )
+        try:
+            await callback_query.message.edit_text(
+                proxy_text,
+                reply_markup=proxy_buttons
+            )
+        except MessageNotModified:
+            pass
