@@ -99,6 +99,25 @@ def _parse_response(response_data: dict) -> dict:
                 "should_retry_with_fallback": True
             }
 
+        # Check for receipt-related responses (often indicates successful charge)
+        if "receipt id is empty" in response_lower or "receipt id empty" in response_lower:
+            # If there's a price in the response, the card was likely charged successfully
+            if response_json and isinstance(response_json, dict) and "Price" in response_json:
+                price = response_json.get("Price", "Unknown")
+                return {
+                    "status": "APPROVED",
+                    "message": f"Card charged ${price}. Receipt generation failed but transaction succeeded.",
+                    "response": response_json or response_text,
+                    "should_retry_with_fallback": False
+                }
+            else:
+                return {
+                    "status": "CCN",
+                    "message": "Card processed but receipt unavailable. Card likely valid.",
+                    "response": response_json or response_text,
+                    "should_retry_with_fallback": False
+                }
+
         # Check for success/decline/ccn indicators
         if any(word in response_lower for word in ["approved", "success", "charged", "cvv match"]):
             return {
@@ -122,6 +141,17 @@ def _parse_response(response_data: dict) -> dict:
                 "should_retry_with_fallback": False
             }
         else:
+            # Check if JSON response has a Price field (indicates transaction processed)
+            if response_json and isinstance(response_json, dict) and "Price" in response_json:
+                price = response_json.get("Price", "Unknown")
+                response_msg = response_json.get("Response", "No details")
+                return {
+                    "status": "APPROVED",
+                    "message": f"Card charged ${price}. Response: {response_msg}",
+                    "response": response_json or response_text,
+                    "should_retry_with_fallback": False
+                }
+
             return {
                 "status": "UNKNOWN",
                 "message": response_text[:500],
