@@ -17,7 +17,7 @@ def extract_card(text):
         return match.groups()
     return None
 
-@Client.on_message(filters.command(["autosh", "ash"]) & filters.private)
+@Client.on_message(filters.command(["autosh", "ash"]))
 async def handle_autosh(client, message):
     """
     Handle /autosh command for AutoShopify card checking
