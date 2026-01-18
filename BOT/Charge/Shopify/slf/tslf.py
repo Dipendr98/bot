@@ -597,9 +597,27 @@ async def start_check(c, msg, user, state):
                 )
 
             state["index"] += 1
-            
+
         await asyncio.sleep(1)
 
+    # Done checking - moved outside the while loop
+    if state["index"] >= state["total"]:
+        total_time = time.time() - start
+        await msg.edit("<b>✅ All Cards Checked</b>", reply_markup=None)
+
+        await c.send_message(
+            msg.chat.id,
+            f"<b>✅ Checking Finished</b>\n"
+            f"━━━━━━━━━━━━━\n"
+            f"⛶ <b>Charged:</b> <code>{state['charged']}</code>\n"
+            f"⎔ <b>Live:</b> <code>{state['live']}</code>\n"
+            f"⌀ <b>Dead:</b> <code>{state['dead']}</code>\n"
+            f"<b>[⌁] Error:</b> <code>{state['error']}</code>\n"
+            f"<b>[⌁] Total Checked:</b> <code>{state['total']}</code>\n"
+            f"━━━━━━━━━━━━━\n"
+            f"[ϟ] Time Taken: <code>{total_time:.2f}s</code>\n"
+            f"[ϟ] Checked By: {user.mention}"
+        )
         user_state.pop(str(user.id), None)
 
 @Client.on_callback_query(filters.regex(r"tslf_3ds_toggle:(\d+)"))
