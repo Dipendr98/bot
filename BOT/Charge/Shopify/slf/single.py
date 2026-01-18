@@ -22,7 +22,25 @@ def get_user_site(user_id):
     try:
         with open("DATA/sites.json") as f:
             sites = json.load(f)
-        return sites.get(str(user_id))
+        site_info = sites.get(str(user_id))
+
+        # If not found in sites.json, check txtsite.json
+        if not site_info:
+            try:
+                with open("DATA/txtsite.json") as f:
+                    txt_sites = json.load(f)
+                user_txt_sites = txt_sites.get(str(user_id), [])
+                if user_txt_sites and len(user_txt_sites) > 0:
+                    # Use the first site from txtsite.json
+                    first_site = user_txt_sites[0]
+                    return {
+                        "site": first_site.get("site"),
+                        "gate": first_site.get("gate", "Unknown")
+                    }
+            except Exception:
+                pass
+
+        return site_info
     except Exception:
         return None
 
@@ -63,7 +81,7 @@ async def handle_slf(client, message):
         user_site_info = get_user_site(user_id)
         if not user_site_info:
             return await message.reply(
-                "<pre>Site Not Found ⚠️</pre>\nError : <code>Please Set Site First</code>\n~ <code>Using /slfurl in Bot's Private</code>",
+                "<pre>Site Not Found ⚠️</pre>\nError : <code>Please Set Site First</code>\n~ <code>Using /slfurl or /txturl in Bot's Private</code>",
                 reply_to_message_id=message.id
             )
 
