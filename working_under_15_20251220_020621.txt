@@ -1,0 +1,4512 @@
+============================================================
+WORKING SITES - Under $15
+Generated: 2025-12-20 02:06:21
+Total Sites: 751
+============================================================
+
+URL: https://camille-beckman.myshopify.com/collections/fragrant-drawer-sachet
+Gateway: Normal
+Price: $11.45
+Response: CARD_DECLINED
+------------------------------------------------------------
+
+URL: https://the-apothecary-fairy.myshopify.com/blogs/news
+Gateway: Normal
+Price: $11.18
+Response: CARD_DECLINED
+------------------------------------------------------------
+
+URL: https://ag-gear.myshopify.com
+Gateway: Normal
+Price: $10.0
+Response: CARD_DECLINED
+------------------------------------------------------------
+
+URL: https://sablelabs.myshopify.com/collections/all-products/products/black-seed-toner?variant=41862506021041%e2%80%a8
+Gateway: Normal
+Price: $11.0
+Response: CARD_DECLINED
+------------------------------------------------------------
+
+URL: https://jasie-vinyl-supply.myshopify.com
+Gateway: Normal
+Price: $10.59
+Response: CARD_DECLINED
+------------------------------------------------------------
+
+URL: https://a6f7a9.myshopify.com
+Gateway: Normal
+Price: $10.95
+Response: CARD_DECLINED
+------------------------------------------------------------
+
+URL: https://universal-parks.myshopify.com/collections/harry-potter\
+Gateway: Normal
+Price: $12.85
+Response: CARD_DECLINED
+------------------------------------------------------------
+
+URL: https://yoto-usa.myshopify.com/collections/library/author-andrew-gold?srsltid=afmboopkxto38srzjmqwu0fdjsnwu2fpo7zvz7igchezjtkfps2ywzkr\
+Gateway: Normal
+Price: $13.95
+Response: CARD_DECLINED
+------------------------------------------------------------
+
+URL: https://3dmto.myshopify.com
+Gateway: Normal
+Price: $12.79
+Response: CARD_DECLINED
+------------------------------------------------------------
+
+URL: https://sha-test.myshopify.com/pages/aircraft-nicknames
+Gateway: Normal
+Price: $12.74
+Response: CARD_DECLINED
+------------------------------------------------------------
+
+URL: https://moeshouse.myshopify.com/collections/power-strip
+Gateway: Normal
+Price: $14.98
+Response: 3D_AUTHENTICATION
+------------------------------------------------------------
+
+URL: https://jewell-clip.myshopify.com/products/copy-of-jewell-clip-24-extensions-220-grams
+Gateway: Normal
+Price: $10.86
+Response: CARD_DECLINED
+------------------------------------------------------------
+
+URL: https://magnetic-mobility.myshopify.com/products/spring-beauty
+Gateway: Normal
+Price: $13.5
+Response: CARD_DECLINED
+------------------------------------------------------------
+
+URL: https://urbanbodyjewelry.myshopify.com
+Gateway: Normal
+Price: $11.45
+Response: CARD_DECLINED
+------------------------------------------------------------
+
+URL: https://greenpan-us.myshopify.com/products/greenlife-healthy-duo-6-quart-slow-cooker-white
+Gateway: Normal
+Price: $12.98
+Response: CARD_DECLINED
+------------------------------------------------------------
+
+URL: https://dirt-cheap-dungeons.myshopify.com/products/spiral-staircases-expansion
+Gateway: Normal
+Price: $10.13
+Response: CARD_DECLINED
+------------------------------------------------------------
+
+URL: https://second-chance-thrift-store-bridge.myshopify.com/products/the-godfather-laserdisc
+Gateway: Normal
+Price: $12.71
+Response: CARD_DECLINED
+------------------------------------------------------------
+
+URL: https://edens-garden-2.myshopify.com
+Gateway: Normal
+Price: $10.28
+Response: CARD_DECLINED
+------------------------------------------------------------
+
+URL: https://urbanic-paper-boutique.myshopify.com/collections/greeting-cards/thank-you\
+Gateway: Normal
+Price: $12.2
+Response: CARD_DECLINED
+------------------------------------------------------------
+
+URL: https://bliss-world-store.myshopify.com/products/fab-foaming-facial-cleanser-exfoliator?utm_source=klaviyo&amp;utm_medium=email&amp;utm_campaign=4.26.25
+Gateway: Normal
+Price: $10.74
+Response: CARD_DECLINED
+------------------------------------------------------------
+
+URL: https://the-cookie-monstah.myshopify.com
+Gateway: Normal
+Price: $13.59
+Response: CARD_DECLINED
+------------------------------------------------------------
+
+URL: https://crown-affair-care.myshopify.com/products/the-finishing-gel
+Gateway: Normal
+Price: $10.0
+Response: CARD_DECLINED
+------------------------------------------------------------
+
+URL: https://softech-usa.myshopify.com
+Gateway: Normal
+Price: $11.78
+Response: CARD_DECLINED
+------------------------------------------------------------
+
+URL: https://seekbamboo11.myshopify.com/products/bamboo-toilet-paper?_rdiscovery-handle=bamboo-toilet-paper&_rdiscovery-smart-search-feature=quick%20view&_rdiscovery-search-term=\
+Gateway: Normal
+Price: $12.13
+Response: CARD_DECLINED
+------------------------------------------------------------
+
+URL: https://milanicosmetics.myshopify.com/products/highly-rated-mascara\
+Gateway: Normal
+Price: $11.28
+Response: CARD_DECLINED
+------------------------------------------------------------
+
+URL: https://badgerbalm.myshopify.com
+Gateway: Normal
+Price: $10.99
+Response: CARD_DECLINED
+------------------------------------------------------------
+
+URL: https://teaforteshop.myshopify.com/collections/gourmet-tea-loose-tea-single-steeps-sampler
+Gateway: Normal
+Price: $14.5
+Response: CARD_DECLINED
+------------------------------------------------------------
+
+URL: https://http-www-laflorspices-com-myshopify-com.myshopify.com/products/parsley-flakes-economy
+Gateway: Normal
+Price: $12.98
+Response: CARD_DECLINED
+------------------------------------------------------------
+
+URL: https://jeelabs.myshopify.com/products/rbbb\
+Gateway: Normal
+Price: $10.0
+Response: CARD_DECLINED
+------------------------------------------------------------
+
+URL: https://poisemakeup.myshopify.com/\
+Gateway: Normal
+Price: $11.0
+Response: CARD_DECLINED
+------------------------------------------------------------
+
+URL: https://vanguardworld.myshopify.com/collections/camera-shoulder-bags/products/veo-go-21m-kg-shoulder-bag-khaki
+Gateway: Normal
+Price: $14.99
+Response: CARD_DECLINED
+------------------------------------------------------------
+
+URL: https://grandma-hoerners.myshopify.com/collections/grandmas-deals
+Gateway: Normal
+Price: $13.9
+Response: CARD_DECLINED
+------------------------------------------------------------
+
+URL: https://ole-smoky.myshopify.com
+Gateway: Normal
+Price: $12.95
+Response: CARD_DECLINED
+------------------------------------------------------------
+
+URL: https://justlabcoats1.myshopify.com/collections/school-labcoats
+Gateway: Normal
+Price: $11.98
+Response: CARD_DECLINED
+------------------------------------------------------------
+
+URL: https://morphe-inc.myshopify.com/products/ultralavender-make-it-big-plumping-lip-gloss-trio?utm_source=klaviyo&utm_medium=email&utm_campaign=12282023_us_boxingday-lc_engaged-90day-winback12mo%20%2801hjm8fassnykwn4g8c0ms9tjx%29&tw_source=klaviyo&_kx=eindkhf9wg1ecpezrrfrpbogfuq7a5xai4wsza1uigi%3d.w8pgmb\
+Gateway: Normal
+Price: $13.92
+Response: CARD_DECLINED
+------------------------------------------------------------
+
+URL: https://aavia-shop.myshopify.com
+Gateway: Normal
+Price: $10.0
+Response: CARD_DECLINED
+------------------------------------------------------------
+
+URL: https://stopandsmellthecandles.myshopify.com
+Gateway: Normal
+Price: $13.0
+Response: CARD_DECLINED
+------------------------------------------------------------
+
+URL: https://notebooktherapy.myshopify.com
+Gateway: Normal
+Price: $11.0
+Response: CARD_DECLINED
+------------------------------------------------------------
+
+URL: https://soapboxsoap.myshopify.com/products/coconut-oil-moisture-nourish-shampoo
+Gateway: Normal
+Price: $10.94
+Response: CARD_DECLINED
+------------------------------------------------------------
+
+URL: https://clean-haven-naturals.myshopify.com/collections/soy-wax-melts
+Gateway: Normal
+Price: $13.37
+Response: CARD_DECLINED
+------------------------------------------------------------
+
+URL: https://anaono-intimates.myshopify.com
+Gateway: Normal
+Price: $11.99
+Response: CARD_DECLINED
+------------------------------------------------------------
+
+URL: https://oleada-official.myshopify.com/products/coast-backpack-large-work-bag-for-women-laptop-tote-crossbody-leather-compartment-functional-travel-bag-backpack-14-inch?variant=44283331903674
+Gateway: Normal
+Price: $10.0
+Response: 3D_AUTHENTICATION
+------------------------------------------------------------
+
+URL: https://hyperwear-shop.myshopify.com/products/hyper-ruck-rucking
+Gateway: Normal
+Price: $11.58
+Response: CARD_DECLINED
+------------------------------------------------------------
+
+URL: https://steshaparty.myshopify.com/collections/party-favors
+Gateway: Normal
+Price: $10.9
+Response: CARD_DECLINED
+------------------------------------------------------------
+
+URL: https://token-jewelry-designs.myshopify.com/collections/charm-jewelry
+Gateway: Normal
+Price: $10.5
+Response: CARD_DECLINED
+------------------------------------------------------------
+
+URL: https://gurneys-seeds.myshopify.com
+Gateway: Normal
+Price: $10.98
+Response: CARD_DECLINED
+------------------------------------------------------------
+
+URL: https://rishi-tea-1.myshopify.com/products/organic-cocoa-mint-herbal-teabag-sachets
+Gateway: Normal
+Price: $10.5
+Response: CARD_DECLINED
+------------------------------------------------------------
+
+URL: https://optechusa.myshopify.com/products/compact-sling\
+Gateway: Normal
+Price: $12.55
+Response: CARD_DECLINED
+------------------------------------------------------------
+
+URL: https://evolution-outdoor-design.myshopify.com
+Gateway: Normal
+Price: $12.5
+Response: CARD_DECLINED
+------------------------------------------------------------
+
+URL: https://elizabeth-grant-ca.myshopify.com/products/royale-imperial-honey-day-cream?utm_campaign=2.nov/3/2023
+Gateway: Normal
+Price: $13.0
+Response: CARD_DECLINED
+------------------------------------------------------------
+
+URL: https://lovesaranghae.myshopify.com
+Gateway: Normal
+Price: $14.99
+Response: CARD_DECLINED
+------------------------------------------------------------
+
+URL: https://straight-up-strings.myshopify.com/products/straight-up-strings-for-guitar
+Gateway: Normal
+Price: $14.3
+Response: CARD_DECLINED
+------------------------------------------------------------
+
+URL: https://road-runner-bags-us.myshopify.com
+Gateway: Normal
+Price: $12.16
+Response: CARD_DECLINED
+------------------------------------------------------------
+
+URL: https://ad820e.myshopify.com
+Gateway: Normal
+Price: $10.52
+Response: CARD_DECLINED
+------------------------------------------------------------
+
+URL: https://favorite-fishing.myshopify.com/products/shay-bird-casting-combo?utm_source=4m%20%7c%20engaged%20l90&utm_medium=email&utm_campaign=email%20campaign%20-%20dec%2021%202023%206%3a40%20pm%20%2801hj7fe71m5wqxf3j5brnmvyrk%29&_kx=icklw6ko3g5mse6rgoac3q-a53htsssuia1gfdaa5u8%3d.w96yn3
+Gateway: Normal
+Price: $11.49
+Response: CARD_DECLINED
+------------------------------------------------------------
+
+URL: https://ctainc.myshopify.com/products/gift-bag-card-mkdxxgbc?omnisendcontactid=62d91943c0e5d60017954c64&amp;utm_campaign=campaign%3a+010424_chusale+%28657cc56569e6d5032f007765%29&amp;utm_medium=email&amp;utm_source=omnisend
+Gateway: Normal
+Price: $11.27
+Response: CARD_DECLINED
+------------------------------------------------------------
+
+URL: https://bioelements.myshopify.com/collections/acne-prone-skin
+Gateway: Normal
+Price: $14.5
+Response: CARD_DECLINED
+------------------------------------------------------------
+
+URL: https://wundercosmetics-us.myshopify.com
+Gateway: Normal
+Price: $14.99
+Response: CARD_DECLINED
+------------------------------------------------------------
+
+URL: https://sbs-brakes-inc.myshopify.com/?srsltid=afmbooomvtuufmedemjkwkroyxg3hweaatrlyfvqde1gjg8wt99pjxr8
+Gateway: Normal
+Price: $10.0
+Response: CARD_DECLINED
+------------------------------------------------------------
+
+URL: https://delarahome.myshopify.com
+Gateway: Normal
+Price: $10.0
+Response: CARD_DECLINED
+------------------------------------------------------------
+
+URL: https://atruthseekersdaughter.myshopify.com/\
+Gateway: Normal
+Price: $13.0
+Response: CARD_DECLINED
+------------------------------------------------------------
+
+URL: https://peterchic.myshopify.com/collections/all-products-1111/products/instagone
+Gateway: Normal
+Price: $11.79
+Response: CARD_DECLINED
+------------------------------------------------------------
+
+URL: https://the-ruffled-daisy.myshopify.com/collections/everyday-kits
+Gateway: Normal
+Price: $11.95
+Response: CARD_DECLINED
+------------------------------------------------------------
+
+URL: https://treehouse-kid-and-craft.myshopify.com
+Gateway: Normal
+Price: $13.25
+Response: CARD_DECLINED
+------------------------------------------------------------
+
+URL: https://9c8524-3.myshopify.com/products/velvet-powder-blush?variant=47364761157938
+Gateway: Normal
+Price: $14.0
+Response: CARD_DECLINED
+------------------------------------------------------------
+
+URL: https://onekaelements.myshopify.com/collections/featured-products/products/unscented-body-lotion
+Gateway: Normal
+Price: $13.75
+Response: CARD_DECLINED
+------------------------------------------------------------
+
+URL: https://bliss-world-store.myshopify.com/products/bright-idea-vitamin-c-face-moisturizer
+Gateway: Normal
+Price: $10.74
+Response: CARD_DECLINED
+------------------------------------------------------------
+
+URL: https://fortune-auto.myshopify.com/collections/500-series-coilovers/products/honda-acura-integra-dc2-usdm-1996-2000-500-series-coilovers
+Gateway: Normal
+Price: $13.97
+Response: CARD_DECLINED
+------------------------------------------------------------
+
+URL: https://areaware.myshopify.com/products/every-pet-eats-set
+Gateway: Normal
+Price: $11.25
+Response: CARD_DECLINED
+------------------------------------------------------------
+
+URL: https://levtexhome-b2c.myshopify.com
+Gateway: Normal
+Price: $11.83
+Response: CARD_DECLINED
+------------------------------------------------------------
+
+URL: https://pout-cosmetics-and-skin-studio.myshopify.com
+Gateway: Normal
+Price: $12.0
+Response: CARD_DECLINED
+------------------------------------------------------------
+
+URL: https://eat-smart.myshopify.com/pages/faq
+Gateway: Normal
+Price: $13.48
+Response: CARD_DECLINED
+------------------------------------------------------------
+
+URL: https://chibitronics.myshopify.com/cdn/shop/collections/chibitronics_classroom_set_1024x1024_10146644-f42d-48eb-a855-e0864308a5bb_1200x1200.jpg?v=1593730111
+Gateway: Normal
+Price: $10.0
+Response: CARD_DECLINED
+------------------------------------------------------------
+
+URL: https://magnolia-organics-2.myshopify.com/products/towels
+Gateway: Normal
+Price: $13.94
+Response: CARD_DECLINED
+------------------------------------------------------------
+
+URL: https://the-christmas-ranch.myshopify.com
+Gateway: Normal
+Price: $13.0
+Response: CARD_DECLINED
+------------------------------------------------------------
+
+URL: https://lynsey-deburca.myshopify.com
+Gateway: Normal
+Price: $11.95
+Response: CARD_DECLINED
+------------------------------------------------------------
+
+URL: https://kates-candles.myshopify.com
+Gateway: Normal
+Price: $11.36
+Response: CARD_DECLINED
+------------------------------------------------------------
+
+URL: https://dwellfeel.myshopify.com
+Gateway: Normal
+Price: $13.4
+Response: CARD_DECLINED
+------------------------------------------------------------
+
+URL: https://belrosesaddlery.myshopify.com/products/f-r-e-gift-card?omnisendcontactid=62f4597a83d6c2001d483567&amp;utm_campaign=campaign%3a+gift+card+%286584696df16e99d3131c5b2b%29&amp;utm_medium=email&amp;utm_source=omnisend
+Gateway: Normal
+Price: $10.0
+Response: CARD_DECLINED
+------------------------------------------------------------
+
+URL: https://kawaii-babe.myshopify.com/products/high-slit-bodysuit
+Gateway: Normal
+Price: $10.99
+Response: CARD_DECLINED
+------------------------------------------------------------
+
+URL: https://hair-twisters.myshopify.com/products/ponytail-wrap-silver-6-inch-ponytail-holder?variant=44220930490554
+Gateway: Normal
+Price: $14.99
+Response: CARD_DECLINED
+------------------------------------------------------------
+
+URL: https://joanne-thompson-jewellery.myshopify.com/products/moncrieff-silver-simple-loop-bracelet
+Gateway: Normal
+Price: $13.65
+Response: CARD_DECLINED
+------------------------------------------------------------
+
+URL: https://thelashop-com.myshopify.com/collections/makeup-cases
+Gateway: Normal
+Price: $10.01
+Response: CARD_DECLINED
+------------------------------------------------------------
+
+URL: https://bare-performance-nutrition.myshopify.com/products/g-1-m-sport?utm_source=klaviyo&utm_medium=email&utm_campaign=ambassdor
+Gateway: Normal
+Price: $12.71
+Response: CARD_DECLINED
+------------------------------------------------------------
+
+URL: https://glasses-2-go-opticians.myshopify.com/collections/budget/mens
+Gateway: Normal
+Price: $13.65
+Response: CARD_DECLINED
+------------------------------------------------------------
+
+URL: https://shop-dirtdevil.myshopify.com/products/f2-hepa-filter
+Gateway: Normal
+Price: $11.65
+Response: CARD_DECLINED
+------------------------------------------------------------
+
+URL: https://its-a-10.myshopify.com/collections/travel-size
+Gateway: Normal
+Price: $10.0
+Response: CARD_DECLINED
+------------------------------------------------------------
+
+URL: https://ourgolfgarage.myshopify.com/collections/all
+Gateway: Normal
+Price: $13.99
+Response: CARD_DECLINED
+------------------------------------------------------------
+
+URL: https://perfect-pod.myshopify.com/collections/reusable-capsules
+Gateway: Normal
+Price: $10.99
+Response: CARD_DECLINED
+------------------------------------------------------------
+
+URL: https://constructiveplaythings.myshopify.com/products/toddler-two-shelf-storage
+Gateway: Normal
+Price: $13.38
+Response: CARD_DECLINED
+------------------------------------------------------------
+
+URL: https://yes-hair-australia.myshopify.com
+Gateway: Normal
+Price: $11.33
+Response: CARD_DECLINED
+------------------------------------------------------------
+
+URL: https://steshaparty.myshopify.com
+Gateway: Normal
+Price: $10.9
+Response: CARD_DECLINED
+------------------------------------------------------------
+
+URL: https://ef28ea.myshopify.com
+Gateway: Normal
+Price: $14.86
+Response: CARD_DECLINED
+------------------------------------------------------------
+
+URL: https://prairie-artisan.myshopify.com/collections/freckled-fox
+Gateway: Normal
+Price: $10.0
+Response: CARD_DECLINED
+------------------------------------------------------------
+
+URL: https://greenpan-us.myshopify.com/products/greenlife-healthy-duo-6-quart-slow-cooker-black
+Gateway: Normal
+Price: $12.98
+Response: CARD_DECLINED
+------------------------------------------------------------
+
+URL: https://color-me-beautiful-cosmetics.myshopify.com/products/multi-tasking-sponge
+Gateway: Normal
+Price: $10.95
+Response: CARD_DECLINED
+------------------------------------------------------------
+
+URL: https://its-pretty-personal-llc.myshopify.com/collections/uv-dtf-decals
+Gateway: Normal
+Price: $12.16
+Response: CARD_DECLINED
+------------------------------------------------------------
+
+URL: https://solidgoldpets.myshopify.com
+Gateway: Normal
+Price: $13.98
+Response: CARD_DECLINED
+------------------------------------------------------------
+
+URL: https://loyalty-sense-pos.myshopify.com
+Gateway: Normal
+Price: $14.3
+Response: CARD_DECLINED
+------------------------------------------------------------
+
+URL: https://mudtools.myshopify.com/products/do-all-trim-tool
+Gateway: Normal
+Price: $12.59
+Response: CARD_DECLINED
+------------------------------------------------------------
+
+URL: https://guides-choice.myshopify.com
+Gateway: Normal
+Price: $12.0
+Response: CARD_DECLINED
+------------------------------------------------------------
+
+URL: https://sleep-ap.myshopify.com
+Gateway: Normal
+Price: $11.17
+Response: CARD_DECLINED
+------------------------------------------------------------
+
+URL: https://milanicosmetics.myshopify.com/products/color-fetish-nude-lipstick
+Gateway: Normal
+Price: $11.28
+Response: CARD_DECLINED
+------------------------------------------------------------
+
+URL: https://bootzie.myshopify.com/collections/shop-tropical-body-lotions-body-oils-bath-salts-made-in-maui
+Gateway: Normal
+Price: $10.0
+Response: CARD_DECLINED
+------------------------------------------------------------
+
+URL: https://replenix.myshopify.com/products/antioxidant-hydrating-sunscreen-spf-50
+Gateway: Normal
+Price: $13.97
+Response: CARD_DECLINED
+------------------------------------------------------------
+
+URL: https://twigspaper.myshopify.com/collections/thank-you-greeting-cards
+Gateway: Normal
+Price: $13.95
+Response: CARD_DECLINED
+------------------------------------------------------------
+
+URL: https://lime-line-paint-supply.myshopify.com/products/lime-lime-08-mm-mini-hvlp-automotive-spray-paint-gun-with-bonus-inline-filter-and-air-connector
+Gateway: Normal
+Price: $14.89
+Response: CARD_DECLINED
+------------------------------------------------------------
+
+URL: https://nixoninc.myshopify.com/products/time-teller-acetate-rose-gold-pink-tortoise
+Gateway: Normal
+Price: $10.75
+Response: CARD_DECLINED
+------------------------------------------------------------
+
+URL: https://weatherwoolshop.myshopify.com/pages/the-science-of-wool
+Gateway: Normal
+Price: $10.0
+Response: CARD_DECLINED
+------------------------------------------------------------
+
+URL: https://greenpan-us.myshopify.com/products/bobby-flay-by-greenpan-professional-ceramic-nonstick-13-piece-cookware-set-black
+Gateway: Normal
+Price: $12.98
+Response: CARD_DECLINED
+------------------------------------------------------------
+
+URL: https://3ae8dc-2.myshopify.com
+Gateway: Normal
+Price: $10.99
+Response: CARD_DECLINED
+------------------------------------------------------------
+
+URL: https://wolfandiron.myshopify.com/blogs/feedthewolf/traditional-archery-part-2-wood-types-and-backings
+Gateway: Normal
+Price: $14.65
+Response: CARD_DECLINED
+------------------------------------------------------------
+
+URL: https://archipelago-2.myshopify.com/collections/travel-sizes\
+Gateway: Normal
+Price: $12.37
+Response: CARD_DECLINED
+------------------------------------------------------------
+
+URL: https://607a51.myshopify.com/collections/gloves-and-sleeves
+Gateway: Normal
+Price: $12.89
+Response: CARD_DECLINED
+------------------------------------------------------------
+
+URL: https://138a99-85.myshopify.com
+Gateway: Normal
+Price: $11.0
+Response: CARD_DECLINED
+------------------------------------------------------------
+
+URL: https://case-monkey-1.myshopify.com/blogs/news/how-to-fix-not-charging-on-iphone-iphone-14-pro
+Gateway: Normal
+Price: $12.99
+Response: CARD_DECLINED
+------------------------------------------------------------
+
+URL: https://moira-beauty.myshopify.com/products/complete-wear-powder-foundation-200w
+Gateway: Normal
+Price: $11.5
+Response: CARD_DECLINED
+------------------------------------------------------------
+
+URL: https://onlyonestopshop.myshopify.com/products/clear-5oz-plastic-bowls-40ct
+Gateway: Normal
+Price: $10.99
+Response: CARD_DECLINED
+------------------------------------------------------------
+
+URL: https://glowbiotics.myshopify.com/collections/combination-skin\
+Gateway: Normal
+Price: $10.45
+Response: CARD_DECLINED
+------------------------------------------------------------
+
+URL: https://not-your-mothers-haircare.myshopify.com/collections/naturals
+Gateway: Normal
+Price: $12.89
+Response: CARD_DECLINED
+------------------------------------------------------------
+
+URL: https://bliss-world-store.myshopify.com/products/cruelty-free-sunscreen-invisible-daily
+Gateway: Normal
+Price: $10.74
+Response: CARD_DECLINED
+------------------------------------------------------------
+
+URL: https://maverick-concept.myshopify.com/products/manhattan-leather-briefcase?variant=40425895690437
+Gateway: Normal
+Price: $10.0
+Response: CARD_DECLINED
+------------------------------------------------------------
+
+URL: https://hello-dtc-us.myshopify.com/products/peace-out-plaque-antigingivitis-mouthwash
+Gateway: Normal
+Price: $12.99
+Response: CARD_DECLINED
+------------------------------------------------------------
+
+URL: https://oaklynnlane.myshopify.com
+Gateway: Normal
+Price: $13.26
+Response: CARD_DECLINED
+------------------------------------------------------------
+
+URL: https://trishmcevoy.myshopify.com/products/high-volume-tubular-mascara?utm_source=30%20days%20engaged&amp;utm_medium=email&amp;utm_campaign=12.9.22%20-%20day%205%20face%20palette%20%2801gkt5r8gdm8kbzeqch5nt3ctd%29&amp;_kx=-gaz0qibvrzstq2aujznaxtkjxonxngdbvqocj60q5grery3kdibbso834gbdclm.y9uqxt
+Gateway: Normal
+Price: $13.72
+Response: CARD_DECLINED
+------------------------------------------------------------
+
+URL: https://milantrix.myshopify.com
+Gateway: Normal
+Price: $13.98
+Response: CARD_DECLINED
+------------------------------------------------------------
+
+URL: https://urbanbodyjewelry.myshopify.com/products/16g-osiris-septum-clicker
+Gateway: Normal
+Price: $11.45
+Response: CARD_DECLINED
+------------------------------------------------------------
+
+URL: https://herbn-eden.myshopify.com/collections/body-oil\
+Gateway: Normal
+Price: $11.83
+Response: CARD_DECLINED
+------------------------------------------------------------
+
+URL: https://pretty-presets.myshopify.com
+Gateway: Normal
+Price: $10.0
+Response: CARD_DECLINED
+------------------------------------------------------------
+
+URL: https://thrift-skate.myshopify.com/\
+Gateway: Normal
+Price: $11.15
+Response: 3D_AUTHENTICATION
+------------------------------------------------------------
+
+URL: https://minus33.myshopify.com/pages/size-chart
+Gateway: Normal
+Price: $11.35
+Response: CARD_DECLINED
+------------------------------------------------------------
+
+URL: https://londontownusa.myshopify.com/pages/coupon-page
+Gateway: Normal
+Price: $10.7
+Response: CARD_DECLINED
+------------------------------------------------------------
+
+URL: https://onlyonestopshop.myshopify.com/products/paper-cup-tan-hot-cold-with-lid-12oz-30ct
+Gateway: Normal
+Price: $10.99
+Response: CARD_DECLINED
+------------------------------------------------------------
+
+URL: https://en-route-jewels.myshopify.com/collections/gold-earrings
+Gateway: Normal
+Price: $11.49
+Response: CARD_DECLINED
+------------------------------------------------------------
+
+URL: https://mainedacf.myshopify.com/collections/real-maine
+Gateway: authorize.net
+Price: $11.8
+Response: CARD_DECLINED
+------------------------------------------------------------
+
+URL: https://planetbox.myshopify.com/collections/all
+Gateway: Normal
+Price: $12.8
+Response: CARD_DECLINED
+------------------------------------------------------------
+
+URL: https://boardroom-bmx-skate.myshopify.com/collections/skate
+Gateway: Normal
+Price: $13.0
+Response: CARD_DECLINED
+------------------------------------------------------------
+
+URL: https://moira-beauty.myshopify.com/products/micro-tip-liquid-liner-001-black?utm_source=moirabeauty.com&utm_medium=email&utm_campaign=daily
+Gateway: Normal
+Price: $11.5
+Response: CARD_DECLINED
+------------------------------------------------------------
+
+URL: https://0e950d-2.myshopify.com
+Gateway: Normal
+Price: $11.0
+Response: CARD_DECLINED
+------------------------------------------------------------
+
+URL: https://kathy-santo-dog-training.myshopify.com
+Gateway: Normal
+Price: $10.0
+Response: CARD_DECLINED
+------------------------------------------------------------
+
+URL: https://shop-without-plastic.myshopify.com
+Gateway: Normal
+Price: $10.13
+Response: CARD_DECLINED
+------------------------------------------------------------
+
+URL: https://cangshan-cutlery-company.myshopify.com
+Gateway: Normal
+Price: $13.7
+Response: CARD_DECLINED
+------------------------------------------------------------
+
+URL: https://tdn-money.myshopify.com/collections/all
+Gateway: Normal
+Price: $14.81
+Response: CARD_DECLINED
+------------------------------------------------------------
+
+URL: https://dermlab.myshopify.com/products/clarifierexfoliator
+Gateway: Normal
+Price: $13.99
+Response: CARD_DECLINED
+------------------------------------------------------------
+
+URL: https://nanoskin-car-care-products.myshopify.com/collections/evergreen-system
+Gateway: Normal
+Price: $11.48
+Response: CARD_DECLINED
+------------------------------------------------------------
+
+URL: https://maoradiance.myshopify.com
+Gateway: Normal
+Price: $11.5
+Response: CARD_DECLINED
+------------------------------------------------------------
+
+URL: https://vita-myr.myshopify.com/collections/travel-trial-size?srsltid=afmbooqyg4q6s0borbw1jkhhvs82v3ytqwemls83gzalx4utlpkk3vyk
+Gateway: PayPal Payments Pro (US)
+Price: $11.5
+Response: CARD_DECLINED
+------------------------------------------------------------
+
+URL: https://viking-cooking-school.myshopify.com
+Gateway: Normal
+Price: $10.09
+Response: CARD_DECLINED
+------------------------------------------------------------
+
+URL: https://constructiveplaythings.myshopify.com/products/tall-storage-shelf
+Gateway: Normal
+Price: $13.38
+Response: CARD_DECLINED
+------------------------------------------------------------
+
+URL: https://kytamericas.myshopify.com
+Gateway: Normal
+Price: $11.99
+Response: CARD_DECLINED
+------------------------------------------------------------
+
+URL: https://shopcrystalscreations.myshopify.com
+Gateway: Normal
+Price: $10.0
+Response: CARD_DECLINED
+------------------------------------------------------------
+
+URL: https://nvliquidation.myshopify.com/\
+Gateway: Normal
+Price: $10.99
+Response: CARD_DECLINED
+------------------------------------------------------------
+
+URL: https://nixoninc.myshopify.com/products/siren-stainless-steel-rose-gold-black
+Gateway: Normal
+Price: $10.75
+Response: CARD_DECLINED
+------------------------------------------------------------
+
+URL: https://pavilionpaper.myshopify.com/collections/all?srsltid=afmbooribwqwyem6ek0o7po1k-hunnqdjqz-_bsxdjwhumil80k276s0
+Gateway: Normal
+Price: $11.95
+Response: CARD_DECLINED
+------------------------------------------------------------
+
+URL: https://jbk-towel-world.myshopify.com
+Gateway: Normal
+Price: $13.73
+Response: CARD_DECLINED
+------------------------------------------------------------
+
+URL: https://ninetwofive-nl.myshopify.com/products/rayen-ring?utm_source=shopfeed.ai
+Gateway: Normal
+Price: $10.9
+Response: CARD_DECLINED
+------------------------------------------------------------
+
+URL: https://drink-wylers-light.myshopify.com/collections/variety-packs
+Gateway: Normal
+Price: $11.69
+Response: CARD_DECLINED
+------------------------------------------------------------
+
+URL: https://tracy-chi.myshopify.com
+Gateway: Normal
+Price: $11.98
+Response: CARD_DECLINED
+------------------------------------------------------------
+
+URL: https://stevemadden.myshopify.com/collections/womens-heels
+Gateway: Normal
+Price: $14.98
+Response: CARD_DECLINED
+------------------------------------------------------------
+
+URL: https://seatsack.myshopify.com/collections/bulk-order/products/read-n-go-classroom-pack
+Gateway: Normal
+Price: $13.64
+Response: CARD_DECLINED
+------------------------------------------------------------
+
+URL: https://inearz-pro.myshopify.com/products/u300
+Gateway: Normal
+Price: $12.15
+Response: CARD_DECLINED
+------------------------------------------------------------
+
+URL: https://steshaparty.myshopify.com/collections/gift-wrap-1
+Gateway: Normal
+Price: $10.9
+Response: CARD_DECLINED
+------------------------------------------------------------
+
+URL: https://odoudsallnatural.myshopify.com/products/water-based-pomade?_kx=eabxjfj3xzlzzmwhulabbht5uoas1idcrt6wvcqw49plz0k0rtip2ppfr6cokbfx.y5pxrq\
+Gateway: Normal
+Price: $10.5
+Response: CARD_DECLINED
+------------------------------------------------------------
+
+URL: https://mavrkusa-dev.myshopify.com/products/premium-barbless-hooks-500pc-pro-pack-bundle\
+Gateway: Normal
+Price: $12.0
+Response: CARD_DECLINED
+------------------------------------------------------------
+
+URL: https://lapelpinplanet.myshopify.com/collections/medical
+Gateway: Normal
+Price: $10.85
+Response: CARD_DECLINED
+------------------------------------------------------------
+
+URL: https://nixoninc.myshopify.com/collections/mens-casual-watches\
+Gateway: Normal
+Price: $10.75
+Response: CARD_DECLINED
+------------------------------------------------------------
+
+URL: https://simplestories.myshopify.com/collections/simple-vintage-digital-collections
+Gateway: Normal
+Price: $12.36
+Response: CARD_DECLINED
+------------------------------------------------------------
+
+URL: https://paradise-arcade.myshopify.com/collections/generic-3
+Gateway: Normal
+Price: $12.02
+Response: CARD_DECLINED
+------------------------------------------------------------
+
+URL: https://11th-street-coffee.myshopify.com
+Gateway: Normal
+Price: $10.5
+Response: CARD_DECLINED
+------------------------------------------------------------
+
+URL: https://papaya-reusables.myshopify.com/\
+Gateway: Normal
+Price: $10.0
+Response: CARD_DECLINED
+------------------------------------------------------------
+
+URL: https://t1d3dgear.myshopify.com/collections/organizers
+Gateway: Normal
+Price: $10.0
+Response: CARD_DECLINED
+------------------------------------------------------------
+
+URL: https://inside-line-equipment.myshopify.com/products/compact-sling?variant=39695814787249
+Gateway: Normal
+Price: $10.0
+Response: CARD_DECLINED
+------------------------------------------------------------
+
+URL: https://3of7project.myshopify.com/collections/air-fresheners
+Gateway: Normal
+Price: $10.98
+Response: CARD_DECLINED
+------------------------------------------------------------
+
+URL: https://lucky-francs.myshopify.com/products/black-gold-double-edge-safety-razor-w-5-disposable-razor-blades-for-wet-shaving
+Gateway: Normal
+Price: $11.98
+Response: CARD_DECLINED
+------------------------------------------------------------
+
+URL: https://pinwheels-toys-games.myshopify.com
+Gateway: Normal
+Price: $12.38
+Response: CARD_DECLINED
+------------------------------------------------------------
+
+URL: https://just-for-nets.myshopify.com
+Gateway: Normal
+Price: $14.51
+Response: CARD_DECLINED
+------------------------------------------------------------
+
+URL: https://i-and-love-and-you-pet-care.myshopify.com/products/dog-kibble-nude-food-red-meat-medley?refsrc=6278447268015&amp;nosto=productpage-nosto-1
+Gateway: Normal
+Price: $10.19
+Response: CARD_DECLINED
+------------------------------------------------------------
+
+URL: https://ozarke.myshopify.com
+Gateway: Normal
+Price: $10.32
+Response: CARD_DECLINED
+------------------------------------------------------------
+
+URL: https://hyperx-us.myshopify.com/pages/price-guarantee
+Gateway: Normal
+Price: $11.81
+Response: CARD_DECLINED
+------------------------------------------------------------
+
+URL: https://mudtools.myshopify.com/products/replacements-wires
+Gateway: Normal
+Price: $12.59
+Response: CARD_DECLINED
+------------------------------------------------------------
+
+URL: https://hangout-lighting-dev.myshopify.com/\
+Gateway: Normal
+Price: $10.5
+Response: CARD_DECLINED
+------------------------------------------------------------
+
+URL: https://tem-marketing.myshopify.com
+Gateway: Normal
+Price: $10.49
+Response: CARD_DECLINED
+------------------------------------------------------------
+
+URL: https://pacinos-signature-line.myshopify.com/products/black-mask-peel-50-ml
+Gateway: Normal
+Price: $12.04
+Response: CARD_DECLINED
+------------------------------------------------------------
+
+URL: https://a-room-of-her-own.myshopify.com
+Gateway: Stripe Card Payments
+Price: $14.0
+Response: CARD_DECLINED
+------------------------------------------------------------
+
+URL: https://reddiamondshop.myshopify.com/collections/single-serve
+Gateway: Stripe Card Payments
+Price: $11.44
+Response: CARD_DECLINED
+------------------------------------------------------------
+
+URL: https://saltair-com.myshopify.com
+Gateway: Normal
+Price: $12.37
+Response: CARD_DECLINED
+------------------------------------------------------------
+
+URL: https://hair-twisters.myshopify.com/products/products/dsc_3085_4126.jpg
+Gateway: Normal
+Price: $14.99
+Response: CARD_DECLINED
+------------------------------------------------------------
+
+URL: https://annafalcke.myshopify.com/pages/customer-reviews
+Gateway: Normal
+Price: $12.0
+Response: CARD_DECLINED
+------------------------------------------------------------
+
+URL: https://onlyonestopshop.myshopify.com/products/34oz-rect-storage-container-3-ct
+Gateway: Normal
+Price: $10.99
+Response: CARD_DECLINED
+------------------------------------------------------------
+
+URL: https://70mai-official.myshopify.com
+Gateway: Normal
+Price: $14.99
+Response: CARD_DECLINED
+------------------------------------------------------------
+
+URL: https://pontoonsports.myshopify.com
+Gateway: Normal
+Price: $13.0
+Response: 3D_AUTHENTICATION
+------------------------------------------------------------
+
+URL: https://giellacosmetics.myshopify.com/collections/giella-collection
+Gateway: authorize.net
+Price: $12.0
+Response: CARD_DECLINED
+------------------------------------------------------------
+
+URL: https://cangshan-cutlery-company.myshopify.com/products/cangshan-tc-series-1021202-swedish-sandvik-14c28n-steel-forged-3-piece-knife-block-set-walnut
+Gateway: Normal
+Price: $13.7
+Response: CARD_DECLINED
+------------------------------------------------------------
+
+URL: https://cagesplus.myshopify.com/collections/economy-batting-cages
+Gateway: Normal
+Price: $12.4
+Response: CARD_DECLINED
+------------------------------------------------------------
+
+URL: https://royal-beardsmen.myshopify.com
+Gateway: Normal
+Price: $11.09
+Response: CARD_DECLINED
+------------------------------------------------------------
+
+URL: https://bloom-anthology.myshopify.com
+Gateway: Normal
+Price: $11.95
+Response: CARD_DECLINED
+------------------------------------------------------------
+
+URL: https://midwest-fragrance-company.myshopify.com/\
+Gateway: Normal
+Price: $10.43
+Response: CARD_DECLINED
+------------------------------------------------------------
+
+URL: https://25e35d-db.myshopify.com
+Gateway: Normal
+Price: $11.0
+Response: CARD_DECLINED
+------------------------------------------------------------
+
+URL: https://my-bubble-squeak.myshopify.com
+Gateway: Normal
+Price: $11.61
+Response: CARD_DECLINED
+------------------------------------------------------------
+
+URL: https://custmbite.myshopify.com
+Gateway: Normal
+Price: $13.96
+Response: CARD_DECLINED
+------------------------------------------------------------
+
+URL: https://julbo-eyewear.myshopify.com/collections/otg-over-the-glasses
+Gateway: Normal
+Price: $13.0
+Response: CARD_DECLINED
+------------------------------------------------------------
+
+URL: https://morphe-inc.myshopify.com/products/along-for-the-glide-6-piece-travel-brush-set?utm_source=klaviyo&amp;utm_medium=email&amp;utm_campaign=011025_us_brushes%20reimagined%20email%20%232%20%2801jh8cdjyjj23qc021t7v6jsr9%29&amp;utm_id=01jh8cdjyjj23qc021t7v6jsr9&amp;tw_source=klaviyo&amp;tw_profile_id=01gz403vr2saqtps7neqyj7ay7&amp;tw_medium=campaign&amp;_kx=eindkhf9wg1ecpezrrfrpbogfuq7a5xai4wsza1uigi.w8pgmb
+Gateway: Normal
+Price: $13.92
+Response: CARD_DECLINED
+------------------------------------------------------------
+
+URL: https://superiorsportsinvestments.myshopify.com/\
+Gateway: Normal
+Price: $14.48
+Response: CARD_DECLINED
+------------------------------------------------------------
+
+URL: https://peace-by-piece-co-and-evolution-of-pxp.myshopify.com
+Gateway: Normal
+Price: $12.07
+Response: CARD_DECLINED
+------------------------------------------------------------
+
+URL: https://moira-beauty.myshopify.com/products/sun-glow-face-body-bronzer-001-sunkissed
+Gateway: Normal
+Price: $11.5
+Response: CARD_DECLINED
+------------------------------------------------------------
+
+URL: https://starizona.myshopify.com/products/askar-5-in-1-m54-filter-drawer
+Gateway: Normal
+Price: $13.23
+Response: CARD_DECLINED
+------------------------------------------------------------
+
+URL: https://the-business-guys.myshopify.com/blogs/lc-business-blog/lc-business-class-tests-making-doing-reflecting
+Gateway: Normal
+Price: $12.0
+Response: CARD_DECLINED
+------------------------------------------------------------
+
+URL: https://luxury-by-sofia-organic-all-natural-cosmetics-skin-care.myshopify.com/products/organic-bronzer
+Gateway: Normal
+Price: $13.0
+Response: CARD_DECLINED
+------------------------------------------------------------
+
+URL: https://gold-plating.myshopify.com
+Gateway: Normal
+Price: $12.52
+Response: CARD_DECLINED
+------------------------------------------------------------
+
+URL: https://nourish-and-refine.myshopify.com/products/ritual-kit
+Gateway: Normal
+Price: $10.75
+Response: CARD_DECLINED
+------------------------------------------------------------
+
+URL: https://themedevnontigertool.myshopify.com/collections/all-tools?filter.p.m.filter.by_category_=hydraulic%20accessories%20
+Gateway: Normal
+Price: $14.81
+Response: CARD_DECLINED
+------------------------------------------------------------
+
+URL: https://oliveetoriel.myshopify.com/collections/family-photos
+Gateway: Normal
+Price: $10.0
+Response: CARD_DECLINED
+------------------------------------------------------------
+
+URL: https://beauty-heroes-us.myshopify.com/collections/body-moisturizers
+Gateway: Normal
+Price: $10.95
+Response: CARD_DECLINED
+------------------------------------------------------------
+
+URL: https://green-pet-shop.myshopify.com/pages/about-us
+Gateway: Normal
+Price: $10.98
+Response: CARD_DECLINED
+------------------------------------------------------------
+
+URL: https://bronze-boss.myshopify.com/products/private-label-dry-body-oil
+Gateway: Normal
+Price: $11.9
+Response: CARD_DECLINED
+------------------------------------------------------------
+
+URL: https://http-www-laflorspices-com-myshopify-com.myshopify.com/products/bay-leaves-economy
+Gateway: Normal
+Price: $12.98
+Response: CARD_DECLINED
+------------------------------------------------------------
+
+URL: https://kitchenkapers.myshopify.com/pages/cookware-materials-and-why-they-matter
+Gateway: Normal
+Price: $13.95
+Response: CARD_DECLINED
+------------------------------------------------------------
+
+URL: https://kleanspa-bath-and-body.myshopify.com/en-ca/collections/fresh-orange-vanilla
+Gateway: Normal
+Price: $11.95
+Response: CARD_DECLINED
+------------------------------------------------------------
+
+URL: https://mount-vernon-coin.myshopify.com/collections/us-coin-sets
+Gateway: Normal
+Price: $12.95
+Response: CARD_DECLINED
+------------------------------------------------------------
+
+URL: https://khpet.myshopify.com/products/thermo-snuggle-cup
+Gateway: Normal
+Price: $13.95
+Response: CARD_DECLINED
+------------------------------------------------------------
+
+URL: https://tdn-money.myshopify.com/cdn/shop/files/bpsc2-4_5-25pocketwithrejectpocket_1100x.jpg?v=1682466379
+Gateway: Normal
+Price: $14.81
+Response: CARD_DECLINED
+------------------------------------------------------------
+
+URL: https://lemonheadla.myshopify.com/products/euphoric-glitter-pro-squad
+Gateway: Normal
+Price: $13.95
+Response: CARD_DECLINED
+------------------------------------------------------------
+
+URL: https://charlie-hustle-2.myshopify.com/products/ku-leggy-jay-quarter-zip-pullover?variant=41418574495827
+Gateway: Normal
+Price: $10.45
+Response: CARD_DECLINED
+------------------------------------------------------------
+
+URL: https://bissuusa.myshopify.com/products/mascara-de-pestanas?utm_campaign=privy_3435624&utm_medium=email&utm_source=privy&utm_email=%40%40%40%409e0cdprth8gpbywa4nbnypf%2fzyjfzbcppeto9ej08rdtvi0c3jnuwwlzwkjbokmkgb%2flqdftchrqgtkiyknvqqz%2bq%2buadyuz4o8ghtc1muvd55gqy8mhtqrquijer9dvyqnhrtgnr55o%2bipm4z%2b%2bwhwxgvlwtci4y2syi7vm7vte5nk%3d
+Gateway: Normal
+Price: $10.89
+Response: CARD_DECLINED
+------------------------------------------------------------
+
+URL: https://tordney.myshopify.com
+Gateway: Normal
+Price: $12.0
+Response: 3D_AUTHENTICATION
+------------------------------------------------------------
+
+URL: https://mothers-polish.myshopify.com/products/california-gold%c2%ae-pure-brazilian-carnauba-wax
+Gateway: Normal
+Price: $13.21
+Response: CARD_DECLINED
+------------------------------------------------------------
+
+URL: https://minormattersbooks.myshopify.com/products/melodie-mcdaniel-riding-through-compton
+Gateway: Normal
+Price: $12.95
+Response: CARD_DECLINED
+------------------------------------------------------------
+
+URL: https://treehouse-kid-and-craft.myshopify.com/pages/store-policy
+Gateway: Normal
+Price: $13.25
+Response: CARD_DECLINED
+------------------------------------------------------------
+
+URL: https://lunadabaytile.myshopify.com/collections/quarter-rounds/products/quarter-round-elements-series
+Gateway: Normal
+Price: $11.0
+Response: CARD_DECLINED
+------------------------------------------------------------
+
+URL: https://v-barbershop.myshopify.com/products/brosh-feather-weight-fiber-pomade?utm_campaign=brosh+launch+#2+-+featherweight+fiber+groom+u_5882792&utm_medium=email&utm_reference=3b2c45d8-140e-3fa4-9152-ee205fe09199&wtbae=22670@inbox.promoarchives.com&utm_source=campaign&y_b_lid=product-1-1
+Gateway: Normal
+Price: $10.99
+Response: CARD_DECLINED
+------------------------------------------------------------
+
+URL: https://yoto-usa.myshopify.com/products/dave-pigeon-how-to-deal-with-bad-cats-and-keep-most-of-your-feathers?srsltid=afmbooovglerbrumawvb_jukf97drmauzkb7mbhwwqwscfhaaulohhtt
+Gateway: Normal
+Price: $13.95
+Response: CARD_DECLINED
+------------------------------------------------------------
+
+URL: https://dalco-officials.myshopify.com
+Gateway: Normal
+Price: $10.99
+Response: CARD_DECLINED
+------------------------------------------------------------
+
+URL: https://modernandchicboutique.myshopify.com/products/m-c-car-trash-bags
+Gateway: Normal
+Price: $12.94
+Response: CARD_DECLINED
+------------------------------------------------------------
+
+URL: https://the-spirit-shoppe.myshopify.com/products/western-michigan-paper-plate-pack
+Gateway: Normal
+Price: $13.54
+Response: CARD_DECLINED
+------------------------------------------------------------
+
+URL: https://beautyhabit.myshopify.com/pages/special-offers-free-gifts
+Gateway: Normal
+Price: $11.78
+Response: CARD_DECLINED
+------------------------------------------------------------
+
+URL: https://swigbyom.myshopify.com
+Gateway: Normal
+Price: $14.12
+Response: CARD_DECLINED
+------------------------------------------------------------
+
+URL: https://9c8524-3.myshopify.com/products/blush-a-la-creme?variant=48645258084658
+Gateway: Normal
+Price: $14.0
+Response: CARD_DECLINED
+------------------------------------------------------------
+
+URL: https://wihatools.myshopify.com/products/10-piece-extra-heavy-duty-softfinish-cushion-grip-driver-tray-set?utm_source=klaviyo&amp;utm_medium=email&amp;utm_campaign=foam%20tray%20father%27s%20day%202024%20%28launch%205.30.2024%29&amp;_kx=epj1hzg3cw3v_qnu2_icsdobakzhbj9wtjrr25cehenl2xcmlvhukoueajxd0tug.qr8qlv
+Gateway: Normal
+Price: $11.17
+Response: CARD_DECLINED
+------------------------------------------------------------
+
+URL: https://one-love-organics.myshopify.com/products/skin-savior-waterless-beauty-balm
+Gateway: Normal
+Price: $10.0
+Response: CARD_DECLINED
+------------------------------------------------------------
+
+URL: https://forge-and-lumber.myshopify.com/products/the-shuttle
+Gateway: Normal
+Price: $14.0
+Response: CARD_DECLINED
+------------------------------------------------------------
+
+URL: https://elm-dirt.myshopify.com/products/aroid-mix/?srsltid=afmboopoqh70miscesupopacx8w_7zwrbtkxaekpaumjzdwgfcqcg5py
+Gateway: Normal
+Price: $13.86
+Response: CARD_DECLINED
+------------------------------------------------------------
+
+URL: https://beeslighting-com.myshopify.com/products/prime-wire-and-cable-ec511935-100-ft-outdoor-heavy-duty-extension-cord-10-3-gauge-sjtw-yellow?pr_prod_strat=e5_desc&pr_rec_id=db4e52e6a&pr_rec_pid=7152558374970&pr_ref_pid=7152559226938&pr_seq=uniform
+Gateway: Normal
+Price: $10.98
+Response: CARD_DECLINED
+------------------------------------------------------------
+
+URL: https://43140e.myshopify.com/collections/hair-brushes
+Gateway: Normal
+Price: $14.0
+Response: CARD_DECLINED
+------------------------------------------------------------
+
+URL: https://black-baccara-oils.myshopify.com/products/statement-ring-3
+Gateway: Normal
+Price: $10.26
+Response: CARD_DECLINED
+------------------------------------------------------------
+
+URL: https://onlyonestopshop.myshopify.com/products/18oz-translucent-cup-50ct
+Gateway: Normal
+Price: $10.99
+Response: CARD_DECLINED
+------------------------------------------------------------
+
+URL: https://charlie-hustle-2.myshopify.com/cdn/shop/files/charlie-hustle_648x.jpg?v=1669133533
+Gateway: Normal
+Price: $10.45
+Response: CARD_DECLINED
+------------------------------------------------------------
+
+URL: https://ariel-rider-ebikes.myshopify.com/products/x-class-52v?utm_source=klaviyo&amp;utm_medium=email&amp;utm_campaign=[bkm]
+Gateway: Normal
+Price: $12.87
+Response: CARD_DECLINED
+------------------------------------------------------------
+
+URL: https://pescador-fly.myshopify.com
+Gateway: Normal
+Price: $10.0
+Response: CARD_DECLINED
+------------------------------------------------------------
+
+URL: https://palladio.myshopify.com/collections/rice-collection
+Gateway: Normal
+Price: $10.76
+Response: CARD_DECLINED
+------------------------------------------------------------
+
+URL: https://shopinkpot.myshopify.com/collections/graduation\
+Gateway: Normal
+Price: $10.43
+Response: CARD_DECLINED
+------------------------------------------------------------
+
+URL: https://championcues.myshopify.com/pages/how-to-change-the-cue-tip
+Gateway: Normal
+Price: $10.43
+Response: CARD_DECLINED
+------------------------------------------------------------
+
+URL: https://khpet.myshopify.com/products/coolin-comfort-bed\
+Gateway: Normal
+Price: $13.95
+Response: CARD_DECLINED
+------------------------------------------------------------
+
+URL: https://rotd-crafters-corner.myshopify.com
+Gateway: Normal
+Price: $11.14
+Response: CARD_DECLINED
+------------------------------------------------------------
+
+URL: https://us-robotimeonline.myshopify.com/products/rolife-night-out-food-stall-diy-miniature-house-dw022
+Gateway: Normal
+Price: $11.99
+Response: 3D_AUTHENTICATION
+------------------------------------------------------------
+
+URL: https://fortune-auto.myshopify.com/collections/honda-500/products/honda-fit-gd3-usdm-2007-2008-500-series-coilovers
+Gateway: Normal
+Price: $13.97
+Response: CARD_DECLINED
+------------------------------------------------------------
+
+URL: https://higher-mind-incense.myshopify.com
+Gateway: Normal
+Price: $10.87
+Response: CARD_DECLINED
+------------------------------------------------------------
+
+URL: https://kf-apps.myshopify.com/products/clutch?utm_source=klaviyo&utm_medium=flow&utm_campaign=new%20abandoned%20cart%3a%20email%202%20updated&utm_id=uqhasc&_kx=gyooesuu9_blrjtmdoga-nbu-bqoh5rt1nc-cjcw8zjjf2mch7prdbpcj0bycdsf.pmmqut
+Gateway: Normal
+Price: $14.99
+Response: CARD_DECLINED
+------------------------------------------------------------
+
+URL: https://tnbotanicals.myshopify.com/products/nutrient-mist-renew\
+Gateway: Normal
+Price: $10.75
+Response: CARD_DECLINED
+------------------------------------------------------------
+
+URL: https://wisconsinred.myshopify.com/collections/all-things-wisconsin/products/lets-go-pack-t-shirt
+Gateway: Normal
+Price: $14.0
+Response: CARD_DECLINED
+------------------------------------------------------------
+
+URL: https://shop-dirtdevil.myshopify.com/products/simplistik-corded-stick-vacuum-vn
+Gateway: Normal
+Price: $11.65
+Response: CARD_DECLINED
+------------------------------------------------------------
+
+URL: https://waterdrop-us.myshopify.com
+Gateway: Normal
+Price: $13.31
+Response: CARD_DECLINED
+------------------------------------------------------------
+
+URL: https://zoneprotects.myshopify.com/products/invisible-hunter-scent-eliminator-shampoo-body-wash
+Gateway: Normal
+Price: $13.85
+Response: CARD_DECLINED
+------------------------------------------------------------
+
+URL: https://skin-authority.myshopify.com
+Gateway: Normal
+Price: $13.97
+Response: CARD_DECLINED
+------------------------------------------------------------
+
+URL: https://riversol.myshopify.com/products/hydrating-body-lotion?utm_source=klaviyo&utm_medium=email&utm_campaign=wdhhyk&utm_id=[email
+Gateway: Normal
+Price: $14.62
+Response: CARD_DECLINED
+------------------------------------------------------------
+
+URL: https://pearl-street-lights.myshopify.com
+Gateway: Normal
+Price: $11.18
+Response: CARD_DECLINED
+------------------------------------------------------------
+
+URL: https://townsendsus.myshopify.com/collections/eyewear\
+Gateway: Normal
+Price: $10.75
+Response: CARD_DECLINED
+------------------------------------------------------------
+
+URL: https://futurizta.myshopify.com/\
+Gateway: Normal
+Price: $13.89
+Response: 3D_AUTHENTICATION
+------------------------------------------------------------
+
+URL: https://flyingeyesoptics.myshopify.com/collections/sunglasses
+Gateway: Normal
+Price: $13.96
+Response: CARD_DECLINED
+------------------------------------------------------------
+
+URL: https://falcon-outfitters-bgsu.myshopify.com
+Gateway: Normal
+Price: $12.99
+Response: CARD_DECLINED
+------------------------------------------------------------
+
+URL: https://federal-military-parts.myshopify.com
+Gateway: Normal
+Price: $12.99
+Response: CARD_DECLINED
+------------------------------------------------------------
+
+URL: https://universal-parks.myshopify.com/collections/clothing
+Gateway: Normal
+Price: $12.85
+Response: CARD_DECLINED
+------------------------------------------------------------
+
+URL: https://sweet-paprika-designs.myshopify.com/blogs/news/recipe-grandma-dorners-banana-cake
+Gateway: Normal
+Price: $11.59
+Response: CARD_DECLINED
+------------------------------------------------------------
+
+URL: https://lapelpinplanet.myshopify.com/collections/gold
+Gateway: Normal
+Price: $10.85
+Response: CARD_DECLINED
+------------------------------------------------------------
+
+URL: https://pacsafe-ltd.myshopify.com
+Gateway: Normal
+Price: $14.98
+Response: CARD_DECLINED
+------------------------------------------------------------
+
+URL: https://travelerguitar.myshopify.com/products/ultra-light-electric-torino-red\
+Gateway: Normal
+Price: $11.99
+Response: CARD_DECLINED
+------------------------------------------------------------
+
+URL: https://noodleandboo.myshopify.com/collections/travel-size/products/nourishing-cream-rinse-travel-size
+Gateway: Normal
+Price: $10.95
+Response: CARD_DECLINED
+------------------------------------------------------------
+
+URL: https://jco-jewellery.myshopify.com/products/little-ball-huggies-hoop?utm_source=add%20to%20cart%20abandoned%20-%202021%20revamp&utm_medium=email&utm_campaign=add%20to%20cart%20abandon%20-%20new%20%232%20%28wpudea%29&_kx=hgpmwiukenodd7nmqdnnhcbzesaouwjs-0-skm_eply%3d.lnzvcl
+Gateway: Normal
+Price: $14.45
+Response: CARD_DECLINED
+------------------------------------------------------------
+
+URL: https://lunadabaytile.myshopify.com/collections/tommy-bahama/products/brick-11
+Gateway: Normal
+Price: $11.0
+Response: CARD_DECLINED
+------------------------------------------------------------
+
+URL: https://spotted-clothes.myshopify.com
+Gateway: Normal
+Price: $11.99
+Response: CARD_DECLINED
+------------------------------------------------------------
+
+URL: https://ablecncus.myshopify.com/products/time-revolution-primestem-100-lifting-set?utm_source=klaviyo&amp;utm_medium=campaign&amp;utm_campaign=the
+Gateway: Normal
+Price: $12.89
+Response: CARD_DECLINED
+------------------------------------------------------------
+
+URL: https://redshiftsports.myshopify.com
+Gateway: Normal
+Price: $10.0
+Response: CARD_DECLINED
+------------------------------------------------------------
+
+URL: https://mayella-skin.myshopify.com
+Gateway: Normal
+Price: $14.0
+Response: CARD_DECLINED
+------------------------------------------------------------
+
+URL: https://our-new-baby-inc.myshopify.com
+Gateway: Normal
+Price: $12.96
+Response: CARD_DECLINED
+------------------------------------------------------------
+
+URL: https://cavalinho-canada.myshopify.com
+Gateway: Normal
+Price: $14.0
+Response: CARD_DECLINED
+------------------------------------------------------------
+
+URL: https://lulyboo.myshopify.com/products/handy-large-multi-use-stroller-hook?utm_source=shopfeed.ai
+Gateway: Normal
+Price: $10.99
+Response: CARD_DECLINED
+------------------------------------------------------------
+
+URL: https://carnivorousplantnursery.myshopify.com/products/icps-lapel-pin
+Gateway: Normal
+Price: $13.9
+Response: CARD_DECLINED
+------------------------------------------------------------
+
+URL: https://fairhillsaddlery.myshopify.com
+Gateway: Normal
+Price: $11.36
+Response: CARD_DECLINED
+------------------------------------------------------------
+
+URL: https://hunterandrose.myshopify.com/collections/dress
+Gateway: Normal
+Price: $12.99
+Response: CARD_DECLINED
+------------------------------------------------------------
+
+URL: https://4e77c3.myshopify.com
+Gateway: Normal
+Price: $12.98
+Response: CARD_DECLINED
+------------------------------------------------------------
+
+URL: https://freemans-creative.myshopify.com/collections/books-1/products/50fatquartertoys
+Gateway: Normal
+Price: $11.0
+Response: CARD_DECLINED
+------------------------------------------------------------
+
+URL: https://chefs-mandala-gourmet-store.myshopify.com/collections/pasta-gift-sets
+Gateway: Normal
+Price: $12.3
+Response: CARD_DECLINED
+------------------------------------------------------------
+
+URL: https://moldycreations.myshopify.com/products/pennywise-phone-case?srsltid=afmboorrh1ycwopfcnaez9ga5ckfsytdjloi_2553foojrpgoiijsizb
+Gateway: authorize.net
+Price: $14.7
+Response: CARD_DECLINED
+------------------------------------------------------------
+
+URL: https://bridgewatercandles.myshopify.com/products/multi-surface-cleaner-sweet-grace?utm_source=klaviyo&utm_medium=campaign&_kx=d4uenyzcfvtkxnn5xbezxud81d6e11y6a-ppy4we3yg%3d.nacuxb
+Gateway: Normal
+Price: $12.15
+Response: CARD_DECLINED
+------------------------------------------------------------
+
+URL: https://4858e8-d3.myshopify.com
+Gateway: Normal
+Price: $14.5
+Response: CARD_DECLINED
+------------------------------------------------------------
+
+URL: https://midwest-laundries-parts.myshopify.com/pages/about-midwest-laundries-2
+Gateway: Normal
+Price: $12.45
+Response: CARD_DECLINED
+------------------------------------------------------------
+
+URL: https://qspjnq-n7.myshopify.com/products/nightcap-decaf?variant=51084028739877&country=ae&currency=eur&srsltid=afmboopiaitpo__jqjrjn1k9dmimyk_-znhvg1bzcugz5mbpyj-jyo8l
+Gateway: Normal
+Price: $10.0
+Response: CARD_DECLINED
+------------------------------------------------------------
+
+URL: https://tvg18.myshopify.com/collections/ares-communications/products/10349-single-frs-gmrs-radio-chest-pack
+Gateway: Normal
+Price: $11.99
+Response: CARD_DECLINED
+------------------------------------------------------------
+
+URL: https://capelin-crew.myshopify.com
+Gateway: Normal
+Price: $11.42
+Response: CARD_DECLINED
+------------------------------------------------------------
+
+URL: https://glasses-2-go-opticians.myshopify.com/collections/designer
+Gateway: Normal
+Price: $13.65
+Response: CARD_DECLINED
+------------------------------------------------------------
+
+URL: https://cateandchloe.myshopify.com/collections/best-sellers/products/giselle-18k-white-gold-plated-hoop-earrings-with-swarovski-crystals?variant=23017374974010
+Gateway: Normal
+Price: $14.94
+Response: CARD_DECLINED
+------------------------------------------------------------
+
+URL: https://northwest-retention.myshopify.com
+Gateway: Normal
+Price: $13.5
+Response: CARD_DECLINED
+------------------------------------------------------------
+
+URL: https://full-circle-beads.myshopify.com/products/bayong-wood-rosary
+Gateway: Normal
+Price: $10.0
+Response: CARD_DECLINED
+------------------------------------------------------------
+
+URL: https://z6qerc-rd.myshopify.com/?srsltid=afmboopbkggsc9cf4uitsfxftf-rx0i5qnfmkoznsn53h_pves8h5jtm
+Gateway: Normal
+Price: $11.94
+Response: CARD_DECLINED
+------------------------------------------------------------
+
+URL: https://aperionaudio.myshopify.com/pages/pro-reviews
+Gateway: Normal
+Price: $10.0
+Response: CARD_DECLINED
+------------------------------------------------------------
+
+URL: https://currenwatches-com.myshopify.com/collections/chronograph
+Gateway: Mollie - Cards
+Price: $12.99
+Response: 3D_AUTHENTICATION
+------------------------------------------------------------
+
+URL: https://moira-beauty.myshopify.com/collections/serum
+Gateway: Normal
+Price: $11.5
+Response: CARD_DECLINED
+------------------------------------------------------------
+
+URL: https://bedvoyage-4244.myshopify.com/collections/bath-towel
+Gateway: Normal
+Price: $10.26
+Response: CARD_DECLINED
+------------------------------------------------------------
+
+URL: https://milanicosmetics.myshopify.com/products/stay-put-brow-pomade-pencil
+Gateway: Normal
+Price: $11.28
+Response: CARD_DECLINED
+------------------------------------------------------------
+
+URL: https://milanicosmetics.myshopify.com/products/make-it-last-matte-matte-finish-charcoal-setting-spray-jumbo-size\
+Gateway: Normal
+Price: $11.28
+Response: CARD_DECLINED
+------------------------------------------------------------
+
+URL: https://nvliquidation.myshopify.com
+Gateway: Normal
+Price: $10.99
+Response: CARD_DECLINED
+------------------------------------------------------------
+
+URL: https://finesse-jewelry.myshopify.com/products/wine-colored-crystal-earrings-on-sterling-french-wire
+Gateway: Normal
+Price: $14.29
+Response: CARD_DECLINED
+------------------------------------------------------------
+
+URL: https://kawaii-babe.myshopify.com/products/matte-liquid-lipstick
+Gateway: Normal
+Price: $10.99
+Response: CARD_DECLINED
+------------------------------------------------------------
+
+URL: https://keenz-stroller-wagons.myshopify.com/collections/replacement-parts
+Gateway: Normal
+Price: $10.11
+Response: CARD_DECLINED
+------------------------------------------------------------
+
+URL: https://justlabcoats1.myshopify.com/pages/embroidery
+Gateway: Normal
+Price: $11.98
+Response: CARD_DECLINED
+------------------------------------------------------------
+
+URL: https://123glow.myshopify.com/collections/cleansers-v2
+Gateway: Normal
+Price: $10.76
+Response: CARD_DECLINED
+------------------------------------------------------------
+
+URL: https://bridesmaidgifts.myshopify.com
+Gateway: Normal
+Price: $12.99
+Response: CARD_DECLINED
+------------------------------------------------------------
+
+URL: https://nivenmorgan.myshopify.com/products/pepper-sage-cedar-candle
+Gateway: Normal
+Price: $13.5
+Response: CARD_DECLINED
+------------------------------------------------------------
+
+URL: https://waterdrop-us.myshopify.com/products/lucy-smart-cap
+Gateway: Normal
+Price: $13.31
+Response: CARD_DECLINED
+------------------------------------------------------------
+
+URL: https://lapelpinplanet.myshopify.com/products/hops-lapel-pin
+Gateway: Normal
+Price: $10.85
+Response: CARD_DECLINED
+------------------------------------------------------------
+
+URL: https://glazers-camera.myshopify.com
+Gateway: Normal
+Price: $12.66
+Response: CARD_DECLINED
+------------------------------------------------------------
+
+URL: https://sweet-harvest-farms.myshopify.com/products/lime-in-de-coconut-aroma-beads-potpouri
+Gateway: Normal
+Price: $13.98
+Response: CARD_DECLINED
+------------------------------------------------------------
+
+URL: https://milaandrose.myshopify.com
+Gateway: Normal
+Price: $10.0
+Response: CARD_DECLINED
+------------------------------------------------------------
+
+URL: https://580-threads.myshopify.com/collections/nemat/products/vanilla-musk-perfume-oil
+Gateway: Normal
+Price: $10.49
+Response: CARD_DECLINED
+------------------------------------------------------------
+
+URL: https://mxpowerplay.myshopify.com
+Gateway: Normal
+Price: $12.7
+Response: CARD_DECLINED
+------------------------------------------------------------
+
+URL: https://roeda.myshopify.com/collections/under-10\
+Gateway: Normal
+Price: $13.9
+Response: CARD_DECLINED
+------------------------------------------------------------
+
+URL: https://nixoninc.myshopify.com/blogs/stories/parts-of-a-watch
+Gateway: Normal
+Price: $10.75
+Response: CARD_DECLINED
+------------------------------------------------------------
+
+URL: https://noononthemoon.myshopify.com/products/laci-floral-wedding-hair-pins
+Gateway: Normal
+Price: $12.0
+Response: CARD_DECLINED
+------------------------------------------------------------
+
+URL: https://melt-by-melissa.myshopify.com/blogs/the-melt-blob/sleeping-beauty-and-the-brain?srsltid=afmboor4cztmfbv8ynrrl83qceyqmt21sdbrqwtu_z1pmamfr5nuzx1i
+Gateway: Normal
+Price: $13.5
+Response: CARD_DECLINED
+------------------------------------------------------------
+
+URL: https://mantisgamingstudios.myshopify.com/products/copy-of-savage-worlds-deadlands-map-pack-4-ambush-pass-pinnacle-entertainment-group?srsltid=afmbooqfgxexm1opyeoadjqdqeuy-2nla0agbxwfc4knkzlmaa6kuvr5
+Gateway: Normal
+Price: $10.95
+Response: CARD_DECLINED
+------------------------------------------------------------
+
+URL: https://simplestories.myshopify.com/collections/lets-go
+Gateway: Normal
+Price: $12.36
+Response: CARD_DECLINED
+------------------------------------------------------------
+
+URL: https://city-mattress.myshopify.com
+Gateway: Normal
+Price: $10.74
+Response: CARD_DECLINED
+------------------------------------------------------------
+
+URL: https://lockpickworld-us.myshopify.com/\
+Gateway: Normal
+Price: $11.34
+Response: CARD_DECLINED
+------------------------------------------------------------
+
+URL: https://udt-seal-store.myshopify.com
+Gateway: Normal
+Price: $12.51
+Response: CARD_DECLINED
+------------------------------------------------------------
+
+URL: https://ltg-b2c-us.myshopify.com/everydaycarry?flow_country=ago
+Gateway: Normal
+Price: $10.7
+Response: CARD_DECLINED
+------------------------------------------------------------
+
+URL: https://palladio.myshopify.com/products/precision-lip-liners\
+Gateway: Normal
+Price: $10.76
+Response: CARD_DECLINED
+------------------------------------------------------------
+
+URL: https://9c8524-3.myshopify.com/cdn/shop/files/3_you_b63ccb5c-a40e-4dc7-8935-0121b35f5f77.jpg?v=1723051662&width=1920
+Gateway: Normal
+Price: $14.0
+Response: CARD_DECLINED
+------------------------------------------------------------
+
+URL: https://kawaii-babe.myshopify.com/products/star-girl-ultimate-palette
+Gateway: Normal
+Price: $10.99
+Response: CARD_DECLINED
+------------------------------------------------------------
+
+URL: https://tlc-direct.myshopify.com/products/amanda-wig?variant=39270786367578
+Gateway: Normal
+Price: $10.7
+Response: CARD_DECLINED
+------------------------------------------------------------
+
+URL: https://stilastyles.myshopify.com/collections/powder
+Gateway: Normal
+Price: $10.75
+Response: CARD_DECLINED
+------------------------------------------------------------
+
+URL: https://ourgolfgarage.myshopify.com
+Gateway: Normal
+Price: $13.99
+Response: CARD_DECLINED
+------------------------------------------------------------
+
+URL: https://kirbypaint.myshopify.com/collections/topside-marine-paint/products/29-colonial-yellow-marine-topside-paint
+Gateway: Normal
+Price: $14.08
+Response: CARD_DECLINED
+------------------------------------------------------------
+
+URL: https://foxy-roxys-supply-co.myshopify.com
+Gateway: Normal
+Price: $13.0
+Response: CARD_DECLINED
+------------------------------------------------------------
+
+URL: https://explodingkittens.myshopify.com/products/mantis-small-version
+Gateway: Normal
+Price: $11.99
+Response: CARD_DECLINED
+------------------------------------------------------------
+
+URL: https://my-better-batch.myshopify.com
+Gateway: Normal
+Price: $14.72
+Response: CARD_DECLINED
+------------------------------------------------------------
+
+URL: https://renee-rouleau-quiz.myshopify.com/products/toning-cloths?utm_source=180%20day%20engaged&amp;utm_medium=email&amp;utm_campaign=10.08%20pore%20%2b%20wrinkle%20%2801j9mn3rav7kdt8m6xfqhj0709%29&amp;triplesource=klaviyo&amp;_kx=ipimis5uczh7mhi4l-lb_ab0h_xdr81vspk1qhndulqvkscvqdg9zykycgkvjv1p.usuk5c
+Gateway: Normal
+Price: $10.94
+Response: CARD_DECLINED
+------------------------------------------------------------
+
+URL: https://en-route-jewels.myshopify.com/collections/statement-rings
+Gateway: Normal
+Price: $11.49
+Response: CARD_DECLINED
+------------------------------------------------------------
+
+URL: https://malathebrand.myshopify.com
+Gateway: Normal
+Price: $10.0
+Response: CARD_DECLINED
+------------------------------------------------------------
+
+URL: https://ollie-xo.myshopify.com
+Gateway: Normal
+Price: $14.14
+Response: CARD_DECLINED
+------------------------------------------------------------
+
+URL: https://deb-tuckers-studio-180-design.myshopify.com/collections/rapid-fire-hunters-star
+Gateway: Normal
+Price: $12.24
+Response: CARD_DECLINED
+------------------------------------------------------------
+
+URL: https://mommymakeup.myshopify.com
+Gateway: Normal
+Price: $12.76
+Response: CARD_DECLINED
+------------------------------------------------------------
+
+URL: https://fortune-auto.myshopify.com/collections/510-series-coilovers/products/acura-integra-type-s-de5-2024-510-series-coilovers-copy
+Gateway: Normal
+Price: $13.97
+Response: CARD_DECLINED
+------------------------------------------------------------
+
+URL: https://happyspacec.myshopify.com/products/5-piece-canvas-wall-arts-moraine-lake-and-mountain-living-room-modular-modern-picture-home-decor
+Gateway: Normal
+Price: $12.66
+Response: CARD_DECLINED
+------------------------------------------------------------
+
+URL: https://reservewheels.myshopify.com/products/fillmore-tubeless-valves/?setstore=1&lang=en
+Gateway: Normal
+Price: $10.74
+Response: CARD_DECLINED
+------------------------------------------------------------
+
+URL: https://weareallbirds.myshopify.com/products/womens-tree-dashers-natural-black-buoyant-pink
+Gateway: Normal
+Price: $12.91
+Response: CARD_DECLINED
+------------------------------------------------------------
+
+URL: https://goodiegirl.myshopify.com/pages/shop
+Gateway: Normal
+Price: $10.0
+Response: CARD_DECLINED
+------------------------------------------------------------
+
+URL: https://tiritacase.myshopify.com
+Gateway: Normal
+Price: $12.0
+Response: CARD_DECLINED
+------------------------------------------------------------
+
+URL: https://moira-beauty.myshopify.com/products/citrus-blossom-hand-cream?utm_source=engaged
+Gateway: Normal
+Price: $11.5
+Response: CARD_DECLINED
+------------------------------------------------------------
+
+URL: https://lynsey-deburca.myshopify.com/collections/types?q=earring
+Gateway: Normal
+Price: $11.95
+Response: CARD_DECLINED
+------------------------------------------------------------
+
+URL: https://offical-vertu.myshopify.com/collections/accessories?srsltid=afmboorbzix7k-mxlwomhokbxphw0ql0rnpn8vehjj98bwg1c6tm5tnl
+Gateway: Normal
+Price: $10.0
+Response: 3D_AUTHENTICATION
+------------------------------------------------------------
+
+URL: https://milanicosmetics.myshopify.com/products/stay-put-liquid-lip
+Gateway: Normal
+Price: $11.28
+Response: CARD_DECLINED
+------------------------------------------------------------
+
+URL: https://nyr-us.myshopify.com/products/reviving-white-tea-facial-mist-1-52-fl-oz
+Gateway: Normal
+Price: $10.74
+Response: CARD_DECLINED
+------------------------------------------------------------
+
+URL: https://hair-twisters.myshopify.com/products/ponytail-wrap-silver-6-inch-ponytail-holder?variant=44220930359482
+Gateway: Normal
+Price: $14.99
+Response: CARD_DECLINED
+------------------------------------------------------------
+
+URL: https://hibar.myshopify.com
+Gateway: Normal
+Price: $13.95
+Response: CARD_DECLINED
+------------------------------------------------------------
+
+URL: https://lapelpinplanet.myshopify.com/collections/history/products/lamp-post-lapel-pin
+Gateway: Normal
+Price: $10.85
+Response: CARD_DECLINED
+------------------------------------------------------------
+
+URL: https://cooks-on-main.myshopify.com/collections/storage
+Gateway: Normal
+Price: $14.94
+Response: CARD_DECLINED
+------------------------------------------------------------
+
+URL: https://theraggedpriest.myshopify.com/products/recall-dress
+Gateway: Normal
+Price: $13.0
+Response: CARD_DECLINED
+------------------------------------------------------------
+
+URL: https://o2trainer-com.myshopify.com
+Gateway: Normal
+Price: $13.95
+Response: CARD_DECLINED
+------------------------------------------------------------
+
+URL: https://pacificpowerbatteries.myshopify.com/\
+Gateway: authorize.net
+Price: $12.15
+Response: CARD_DECLINED
+------------------------------------------------------------
+
+URL: https://moira-beauty.myshopify.com/products/loveheat-cream-blush-016-i-hear-you
+Gateway: Normal
+Price: $11.5
+Response: CARD_DECLINED
+------------------------------------------------------------
+
+URL: https://unrulyjewelry.myshopify.com
+Gateway: Normal
+Price: $13.98
+Response: CARD_DECLINED
+------------------------------------------------------------
+
+URL: https://element-tree-essentials.myshopify.com/products/copy-of-11-oz-citrus-sage-lotion-candle
+Gateway: Normal
+Price: $12.5
+Response: CARD_DECLINED
+------------------------------------------------------------
+
+URL: https://storeys-and-tails.myshopify.com/?ref=molly_rochester
+Gateway: Normal
+Price: $11.0
+Response: CARD_DECLINED
+------------------------------------------------------------
+
+URL: https://gourmet-kitchenworks.myshopify.com
+Gateway: Normal
+Price: $14.45
+Response: CARD_DECLINED
+------------------------------------------------------------
+
+URL: https://lapetitecreme.myshopify.com
+Gateway: Normal
+Price: $12.89
+Response: CARD_DECLINED
+------------------------------------------------------------
+
+URL: https://elguapobitters.myshopify.com
+Gateway: Normal
+Price: $10.73
+Response: CARD_DECLINED
+------------------------------------------------------------
+
+URL: https://camolots.myshopify.com
+Gateway: Normal
+Price: $10.32
+Response: CARD_DECLINED
+------------------------------------------------------------
+
+URL: https://evanhealy.myshopify.com
+Gateway: Normal
+Price: $13.39
+Response: CARD_DECLINED
+------------------------------------------------------------
+
+URL: https://yoto-usa.myshopify.com/collections/library/author-andrew-gold?srsltid=afmboop3fvpkc7wtz88cucnzqinfevt7vl0u-hm8bjx9mtrmq8ecetud
+Gateway: Normal
+Price: $13.95
+Response: CARD_DECLINED
+------------------------------------------------------------
+
+URL: https://flyingeyesoptics.myshopify.com
+Gateway: Normal
+Price: $13.96
+Response: CARD_DECLINED
+------------------------------------------------------------
+
+URL: https://moira-beauty.myshopify.com/products/among-the-wildflower-palette
+Gateway: Normal
+Price: $11.5
+Response: CARD_DECLINED
+------------------------------------------------------------
+
+URL: https://weatherwoolshop.myshopify.com/pages/new-jersey-the-swamp
+Gateway: Normal
+Price: $10.0
+Response: CARD_DECLINED
+------------------------------------------------------------
+
+URL: https://jamisonraejewelry.myshopify.com
+Gateway: Normal
+Price: $12.0
+Response: CARD_DECLINED
+------------------------------------------------------------
+
+URL: https://drmtlgy.myshopify.com/products/anti-aging-bundle
+Gateway: Normal
+Price: $10.44
+Response: CARD_DECLINED
+------------------------------------------------------------
+
+URL: https://lone-rider-adventure-motorcycle-equipment.myshopify.com/blogs/loneriderblog/adventure-riding-gear-basics-what-you-need-to-have
+Gateway: Normal
+Price: $13.5
+Response: CARD_DECLINED
+------------------------------------------------------------
+
+URL: https://favorite-fishing.myshopify.com/products/ghavert-fx-spring-2020?utm_source=4m%20%7c%20engaged%20l90&utm_medium=email&utm_campaign=email%20campaign%20-%20dec%2016%202023%2012%3a24%20pm%20%2801hhsxz4q3qz4bcf26qt4xx5h7%29&_kx=icklw6ko3g5mse6rgoac3q-a53htsssuia1gfdaa5u8%3d.w96yn3
+Gateway: Normal
+Price: $11.49
+Response: CARD_DECLINED
+------------------------------------------------------------
+
+URL: https://maverick-abrasives.myshopify.com
+Gateway: Normal
+Price: $11.0
+Response: CARD_DECLINED
+------------------------------------------------------------
+
+URL: https://d56com.myshopify.com/collections/replacement-parts
+Gateway: Normal
+Price: $13.91
+Response: CARD_DECLINED
+------------------------------------------------------------
+
+URL: https://simplimagic.myshopify.com/collections/cosmetics
+Gateway: Normal
+Price: $11.82
+Response: CARD_DECLINED
+------------------------------------------------------------
+
+URL: https://intelchange.myshopify.com/collections/lifestyle\
+Gateway: Normal
+Price: $13.99
+Response: CARD_DECLINED
+------------------------------------------------------------
+
+URL: https://alchemistluxury.myshopify.com
+Gateway: Normal
+Price: $12.75
+Response: CARD_DECLINED
+------------------------------------------------------------
+
+URL: https://misterchevelle.myshopify.com
+Gateway: Normal
+Price: $11.72
+Response: CARD_DECLINED
+------------------------------------------------------------
+
+URL: https://subtl-beauty.myshopify.com
+Gateway: Normal
+Price: $10.95
+Response: CARD_DECLINED
+------------------------------------------------------------
+
+URL: https://oxy-skin-care.myshopify.com
+Gateway: Normal
+Price: $13.95
+Response: CARD_DECLINED
+------------------------------------------------------------
+
+URL: https://richgirlsclubclusters.myshopify.com
+Gateway: Normal
+Price: $14.15
+Response: CARD_DECLINED
+------------------------------------------------------------
+
+URL: https://happy-wax.myshopify.com/products/apple-jam-donut-wax-melts
+Gateway: Normal
+Price: $13.87
+Response: CARD_DECLINED
+------------------------------------------------------------
+
+URL: https://mr-lapel.myshopify.com/\
+Gateway: Normal
+Price: $13.0
+Response: CARD_DECLINED
+------------------------------------------------------------
+
+URL: https://dermae.myshopify.com/products/hydrating-night-cream
+Gateway: Normal
+Price: $12.31
+Response: CARD_DECLINED
+------------------------------------------------------------
+
+URL: https://maison-berger-paris.myshopify.com/products/sandalwood-lamp-fragrance-500-ml-16-9-oz?utm_source=email&amp;utm_medium=email&amp;utm_campaign=us_fragrance%20finder_13%20august_all%20profiles%20%2801h7ark9x8pe9wwdvx7fpshnjz%29&amp;variation=b&amp;_kx=er2l4i-_7lhisfdwcddoiiyefjyprtk70iqbfrpc735auho7rbacqztg_hboklpd.lihmtr
+Gateway: Normal
+Price: $11.83
+Response: CARD_DECLINED
+------------------------------------------------------------
+
+URL: https://paper-raven-co.myshopify.com/collections/valentines-day/products/valentines-vintage-coupon-card
+Gateway: Normal
+Price: $10.0
+Response: CARD_DECLINED
+------------------------------------------------------------
+
+URL: https://cangshan-cutlery-company.myshopify.com/products/cangshan-sanford-series-1027150-german-steel-12-piece-knife-block-set-acacia
+Gateway: Normal
+Price: $13.7
+Response: CARD_DECLINED
+------------------------------------------------------------
+
+URL: https://homestead-coffee.myshopify.com/pages/wholesale
+Gateway: Normal
+Price: $11.54
+Response: CARD_DECLINED
+------------------------------------------------------------
+
+URL: https://onlyonestopshop.myshopify.com/products/60oz-gold-plastic-bowl-1ct
+Gateway: Normal
+Price: $10.99
+Response: CARD_DECLINED
+------------------------------------------------------------
+
+URL: https://hair-twisters.myshopify.com/products/mini-hair-wrap-6-inch-women-accessory?variant=44235585618106
+Gateway: Normal
+Price: $14.99
+Response: CARD_DECLINED
+------------------------------------------------------------
+
+URL: https://maymartininc.myshopify.com/products/three-pearl-necklace
+Gateway: Normal
+Price: $13.95
+Response: CARD_DECLINED
+------------------------------------------------------------
+
+URL: https://fiendish-thingies.myshopify.com/collections/zombeans
+Gateway: Normal
+Price: $10.0
+Response: CARD_DECLINED
+------------------------------------------------------------
+
+URL: https://onlinemedicalsupply.myshopify.com/collections/adhesive-strip-bandages\
+Gateway: Normal
+Price: $11.0
+Response: CARD_DECLINED
+------------------------------------------------------------
+
+URL: https://petes-extraordinary-granola-llc.myshopify.com
+Gateway: Normal
+Price: $10.0
+Response: CARD_DECLINED
+------------------------------------------------------------
+
+URL: https://blissy-brand.myshopify.com/products/blissy-scrunchies-black
+Gateway: Normal
+Price: $13.91
+Response: CARD_DECLINED
+------------------------------------------------------------
+
+URL: https://red-apple-farm-online-market.myshopify.com/products/fudge-individual-piece?srsltid=afmboora6pw-jhoj1k8pptja96pb7p4vy-uo-sdr2ndzve0lxsb92nuu
+Gateway: Normal
+Price: $13.36
+Response: CARD_DECLINED
+------------------------------------------------------------
+
+URL: https://happyspacec.myshopify.com/products/autumn-harvest-decorative-wreath
+Gateway: Normal
+Price: $12.66
+Response: CARD_DECLINED
+------------------------------------------------------------
+
+URL: https://deb-tuckers-studio-180-design.myshopify.com/collections/downloadable-technique-sheets
+Gateway: Normal
+Price: $12.24
+Response: CARD_DECLINED
+------------------------------------------------------------
+
+URL: https://james-river-archery.myshopify.com/collections/hunter-safety-system
+Gateway: Normal
+Price: $12.94
+Response: CARD_DECLINED
+------------------------------------------------------------
+
+URL: https://en-route-jewels.myshopify.com/collections/hoop-earrings
+Gateway: Normal
+Price: $11.49
+Response: CARD_DECLINED
+------------------------------------------------------------
+
+URL: https://we-are-portugal.myshopify.com
+Gateway: Normal
+Price: $14.0
+Response: CARD_DECLINED
+------------------------------------------------------------
+
+URL: https://sweet-harvest-farms.myshopify.com/products/lavender-aroma-beads-potpouri
+Gateway: Normal
+Price: $13.98
+Response: CARD_DECLINED
+------------------------------------------------------------
+
+URL: https://simplethingsil.myshopify.com/\
+Gateway: Normal
+Price: $12.66
+Response: CARD_DECLINED
+------------------------------------------------------------
+
+URL: https://elcie-cosmetics.myshopify.com
+Gateway: Normal
+Price: $13.99
+Response: CARD_DECLINED
+------------------------------------------------------------
+
+URL: https://constructiveplaythings.myshopify.com/products/pretend-and-playr-teaching-cash-register
+Gateway: Normal
+Price: $13.38
+Response: CARD_DECLINED
+------------------------------------------------------------
+
+URL: https://southernswells.myshopify.com/collections/%e2%9a%be-baseball
+Gateway: Normal
+Price: $13.0
+Response: CARD_DECLINED
+------------------------------------------------------------
+
+URL: https://skagitwoolen.myshopify.com
+Gateway: Normal
+Price: $11.0
+Response: CARD_DECLINED
+------------------------------------------------------------
+
+URL: https://rent-a-romper.myshopify.com
+Gateway: Normal
+Price: $11.83
+Response: CARD_DECLINED
+------------------------------------------------------------
+
+URL: https://case-monkey-1.myshopify.com/cdn/shop/files/final-01_8a76ef87-2761-47e0-980a-7cf20300f77f_1200x1200.jpg?v=1744116637
+Gateway: Normal
+Price: $12.99
+Response: CARD_DECLINED
+------------------------------------------------------------
+
+URL: https://morganpipes.myshopify.com
+Gateway: Normal
+Price: $12.0
+Response: CARD_DECLINED
+------------------------------------------------------------
+
+URL: https://migente.myshopify.com
+Gateway: Normal
+Price: $10.5
+Response: CARD_DECLINED
+------------------------------------------------------------
+
+URL: https://l-cook-design.myshopify.com
+Gateway: Normal
+Price: $14.89
+Response: CARD_DECLINED
+------------------------------------------------------------
+
+URL: https://edens-garden-2.myshopify.com/products/argan
+Gateway: Normal
+Price: $10.28
+Response: CARD_DECLINED
+------------------------------------------------------------
+
+URL: https://guest-outfitters.myshopify.com/products/beekman-1802-cleansing-bar-soap
+Gateway: Normal
+Price: $11.64
+Response: CARD_DECLINED
+------------------------------------------------------------
+
+URL: https://qspjnq-n7.myshopify.com/products/nightcap-decaf?variant=51084028739877&amp;country=ae&amp;currency=eur&amp;srsltid=afmboopiaitpo__jqjrjn1k9dmimyk_-znhvg1bzcugz5mbpyj-jyo8l
+Gateway: Normal
+Price: $10.0
+Response: CARD_DECLINED
+------------------------------------------------------------
+
+URL: https://packitdev.myshopify.com/products/freezable-lunch-bag
+Gateway: Normal
+Price: $10.0
+Response: CARD_DECLINED
+------------------------------------------------------------
+
+URL: https://nippon-kodo-store.myshopify.com/pages/incense
+Gateway: Normal
+Price: $11.17
+Response: CARD_DECLINED
+------------------------------------------------------------
+
+URL: https://orchardcorset-2.myshopify.com/pages/waist-training-pros-cons
+Gateway: Normal
+Price: $11.72
+Response: CARD_DECLINED
+------------------------------------------------------------
+
+URL: https://beauty-culture-medspa.myshopify.com/products/ha-immerse-travel-size
+Gateway: Normal
+Price: $11.9
+Response: CARD_DECLINED
+------------------------------------------------------------
+
+URL: https://zinglifestore.myshopify.com/products/wide-brim-classic-white-black
+Gateway: Normal
+Price: $10.74
+Response: CARD_DECLINED
+------------------------------------------------------------
+
+URL: https://xgody.myshopify.com/products/xgody-mate10-5-5-hd-screen
+Gateway: Stripe Card Payments
+Price: $13.9
+Response: CARD_DECLINED
+------------------------------------------------------------
+
+URL: https://elloproducts.myshopify.com
+Gateway: Normal
+Price: $10.73
+Response: CARD_DECLINED
+------------------------------------------------------------
+
+URL: https://awl-made-here.myshopify.com
+Gateway: Normal
+Price: $12.0
+Response: CARD_DECLINED
+------------------------------------------------------------
+
+URL: https://savvy-sleepers.myshopify.com/collections/frontpage
+Gateway: Normal
+Price: $14.9
+Response: CARD_DECLINED
+------------------------------------------------------------
+
+URL: https://seekbamboo11.myshopify.com/products/bamboo-toilet-paper?_rdiscovery-handle=bamboo-toilet-paper&amp;_rdiscovery-smart-search-feature=quick%20view&amp;_rdiscovery-search-term=
+Gateway: Normal
+Price: $12.13
+Response: CARD_DECLINED
+------------------------------------------------------------
+
+URL: https://lakfoods.myshopify.com/collections/religious-products/products/hem-incense-sticks-mogra-single-pack
+Gateway: Normal
+Price: $11.7
+Response: CARD_DECLINED
+------------------------------------------------------------
+
+URL: https://moira-beauty.myshopify.com/products/cream-mega-waterproof-concealer
+Gateway: Normal
+Price: $11.5
+Response: CARD_DECLINED
+------------------------------------------------------------
+
+URL: https://medicine-of-the-people.myshopify.com/products/sage-lavender-cream-calming-moisturizer
+Gateway: Normal
+Price: $10.5
+Response: CARD_DECLINED
+------------------------------------------------------------
+
+URL: https://syx-moto.myshopify.com
+Gateway: Normal
+Price: $10.96
+Response: CARD_DECLINED
+------------------------------------------------------------
+
+URL: https://l-cook-design.myshopify.com/collections/necklaces
+Gateway: Normal
+Price: $14.89
+Response: CARD_DECLINED
+------------------------------------------------------------
+
+URL: https://brandonbird.myshopify.com/products/the-nicolas-cage-adventure-set
+Gateway: Normal
+Price: $11.75
+Response: CARD_DECLINED
+------------------------------------------------------------
+
+URL: https://cateandchloe.myshopify.com/collections/sale-bracelets
+Gateway: Normal
+Price: $14.94
+Response: CARD_DECLINED
+------------------------------------------------------------
+
+URL: https://grand-wedding-exit.myshopify.com/blogs/wedding-sparkler-ideas/cheap-wedding-favors-ideas\
+Gateway: Normal
+Price: $10.75
+Response: CARD_DECLINED
+------------------------------------------------------------
+
+URL: https://kissyanjewelry.myshopify.com/collections/chain-anklets-1
+Gateway: Normal
+Price: $12.29
+Response: CARD_DECLINED
+------------------------------------------------------------
+
+URL: https://pepe-ganga-pr-2.myshopify.com
+Gateway: Normal
+Price: $13.24
+Response: CARD_DECLINED
+------------------------------------------------------------
+
+URL: https://lorenzouomo.myshopify.com
+Gateway: Normal
+Price: $10.0
+Response: CARD_DECLINED
+------------------------------------------------------------
+
+URL: https://alan-richard-textiles-ltd.myshopify.com/collections/upholstery-supplies
+Gateway: Normal
+Price: $11.76
+Response: CARD_DECLINED
+------------------------------------------------------------
+
+URL: https://battery-eliminator-store.myshopify.com/index.php?id_category=6&controller=category
+Gateway: Normal
+Price: $10.45
+Response: CARD_DECLINED
+------------------------------------------------------------
+
+URL: https://vicfirthshop.myshopify.com/products/american-classicr-8d
+Gateway: Normal
+Price: $11.78
+Response: CARD_DECLINED
+------------------------------------------------------------
+
+URL: https://alla-lighting-inc.myshopify.com/collections/led-interior-lights-bulb-replacement-12v-cars-trucks
+Gateway: Normal
+Price: $11.98
+Response: CARD_DECLINED
+------------------------------------------------------------
+
+URL: https://wise-company-emergency-food.myshopify.com/products/extreme-patriot-bundle
+Gateway: Normal
+Price: $14.95
+Response: CARD_DECLINED
+------------------------------------------------------------
+
+URL: https://renee-rouleau-quiz.myshopify.com/collections/specialty-serums
+Gateway: Normal
+Price: $10.94
+Response: CARD_DECLINED
+------------------------------------------------------------
+
+URL: https://morphe-inc.myshopify.com/products/along-for-the-glide-6-piece-travel-brush-set?utm_source=klaviyo&amp;utm_medium=email&amp;utm_campaign=011025_us_brushes
+Gateway: Normal
+Price: $13.92
+Response: CARD_DECLINED
+------------------------------------------------------------
+
+URL: https://public-hunter.myshopify.com
+Gateway: Normal
+Price: $12.95
+Response: CARD_DECLINED
+------------------------------------------------------------
+
+URL: https://constructiveplaythings.myshopify.com/collections/market-play
+Gateway: Normal
+Price: $13.38
+Response: CARD_DECLINED
+------------------------------------------------------------
+
+URL: https://renee-rouleau-quiz.myshopify.com/products/anti-cyst-treatment?utm_source=180%20day%20engaged&utm_medium=email&utm_campaign=12.31%20hangover%20blog%20%2801jg25he2kvp0ceq92xcbfj762%29&triplesource=klaviyo&_kx=o18zlr52hfglncuexiex_lx6tmfn05isxm5tyis8cs8.usuk5c
+Gateway: Normal
+Price: $10.94
+Response: CARD_DECLINED
+------------------------------------------------------------
+
+URL: https://esqidodev.myshopify.com
+Gateway: Normal
+Price: $14.99
+Response: CARD_DECLINED
+------------------------------------------------------------
+
+URL: https://ofracosmetics.myshopify.com/products/fixline-eyeliner-gel-brown?variant=43386745941&amp;country=us&amp;currency=usd
+Gateway: Normal
+Price: $11.29
+Response: CARD_DECLINED
+------------------------------------------------------------
+
+URL: https://bengalsandbandits.myshopify.com
+Gateway: Normal
+Price: $10.95
+Response: CARD_DECLINED
+------------------------------------------------------------
+
+URL: https://setandstones.myshopify.com/collections/labor-day-sale/products/shelly-anklet
+Gateway: Normal
+Price: $12.37
+Response: CARD_DECLINED
+------------------------------------------------------------
+
+URL: https://mudpuppy-kids.myshopify.com
+Gateway: Normal
+Price: $13.95
+Response: CARD_DECLINED
+------------------------------------------------------------
+
+URL: https://reparations-club.myshopify.com/products/get-good-with-money-budgetnista\
+Gateway: Normal
+Price: $10.98
+Response: CARD_DECLINED
+------------------------------------------------------------
+
+URL: https://troubadour.myshopify.com
+Gateway: Normal
+Price: $10.0
+Response: CARD_DECLINED
+------------------------------------------------------------
+
+URL: https://bluewaterdiveshop.myshopify.com/collections/accessories
+Gateway: Normal
+Price: $10.45
+Response: CARD_DECLINED
+------------------------------------------------------------
+
+URL: https://michelenes-jafra-goodies.myshopify.com/cdn/shop/products/blushbronze_grande.png?v=1657982617
+Gateway: Normal
+Price: $14.5
+Response: CARD_DECLINED
+------------------------------------------------------------
+
+URL: https://prairie-artisan.myshopify.com/products/emma-eau-de-parfum
+Gateway: Normal
+Price: $10.0
+Response: CARD_DECLINED
+------------------------------------------------------------
+
+URL: https://pavilionpaper.myshopify.com/products/pavilion-salad-dessert-plates-in-green-set-of-8?srsltid=afmbooq3mbs9h7mbaz0qp7s6yag3jrsgewcxepwweikqisowl25jezrg
+Gateway: Normal
+Price: $11.95
+Response: CARD_DECLINED
+------------------------------------------------------------
+
+URL: https://reston-lloyd.myshopify.com/products/copy-of-silhouette-ultra-thin-41-fru-pant-bar-skirt-hook-hanger-black
+Gateway: Normal
+Price: $11.4
+Response: CARD_DECLINED
+------------------------------------------------------------
+
+URL: https://mikokos-shop.myshopify.com
+Gateway: Normal
+Price: $11.95
+Response: CARD_DECLINED
+------------------------------------------------------------
+
+URL: https://vicfirthshop.myshopify.com/products/american-concept-freestyle-55a
+Gateway: Normal
+Price: $11.78
+Response: CARD_DECLINED
+------------------------------------------------------------
+
+URL: https://us-robotimeonline.myshopify.com/products/robud-flower-swivel-chair
+Gateway: Normal
+Price: $11.99
+Response: 3D_AUTHENTICATION
+------------------------------------------------------------
+
+URL: https://free-spirit-mountain-spa.myshopify.com/collections/gift-certificates
+Gateway: Normal
+Price: $14.9
+Response: CARD_DECLINED
+------------------------------------------------------------
+
+URL: https://mdfinstrumentsusa.myshopify.com/pages/faq
+Gateway: Normal
+Price: $10.75
+Response: CARD_DECLINED
+------------------------------------------------------------
+
+URL: https://tlc-direct.myshopify.com
+Gateway: Normal
+Price: $10.7
+Response: CARD_DECLINED
+------------------------------------------------------------
+
+URL: https://info-7810.myshopify.com
+Gateway: Normal
+Price: $10.0
+Response: CARD_DECLINED
+------------------------------------------------------------
+
+URL: https://boonboo.myshopify.com
+Gateway: Normal
+Price: $11.75
+Response: CARD_DECLINED
+------------------------------------------------------------
+
+URL: https://shop-high-limit-racing.myshopify.com
+Gateway: Normal
+Price: $11.15
+Response: CARD_DECLINED
+------------------------------------------------------------
+
+URL: https://sunski.myshopify.com/products/puerto
+Gateway: Normal
+Price: $10.22
+Response: CARD_DECLINED
+------------------------------------------------------------
+
+URL: https://f1f57d-d1.myshopify.com/blogs/news/connecting-water-for-multiple-garden-kits
+Gateway: Normal
+Price: $10.49
+Response: CARD_DECLINED
+------------------------------------------------------------
+
+URL: https://jerky-com.myshopify.com/collections/jerky-combos
+Gateway: Normal
+Price: $11.9
+Response: CARD_DECLINED
+------------------------------------------------------------
+
+URL: https://stilastyles.myshopify.com/collections/bronzer\
+Gateway: Normal
+Price: $10.75
+Response: CARD_DECLINED
+------------------------------------------------------------
+
+URL: https://asio-gear-llc.myshopify.com
+Gateway: Normal
+Price: $13.94
+Response: CARD_DECLINED
+------------------------------------------------------------
+
+URL: https://hyx2mk-x1.myshopify.com/philips?color=904,829,3329&amp;cord_length=1006,1036&amp;cord_type=610,613&amp;outlets=745,730,739&amp;power_type=2413,2437,3228
+Gateway: Normal
+Price: $10.49
+Response: CARD_DECLINED
+------------------------------------------------------------
+
+URL: https://bef3fc-54.myshopify.com/?utm_medium=scamadviser.com&amp;utm_campaign=scamadviser.com
+Gateway: Normal
+Price: $11.9
+Response: CARD_DECLINED
+------------------------------------------------------------
+
+URL: https://the-spice-well.myshopify.com/products/new-salt-30-on-the-go-individual-servings
+Gateway: Normal
+Price: $10.22
+Response: CARD_DECLINED
+------------------------------------------------------------
+
+URL: https://ee214b.myshopify.com
+Gateway: Normal
+Price: $12.9
+Response: CARD_DECLINED
+------------------------------------------------------------
+
+URL: https://vicfirthshop.myshopify.com/products/signature-series-nicko-mcbrain
+Gateway: Normal
+Price: $11.78
+Response: CARD_DECLINED
+------------------------------------------------------------
+
+URL: https://kawaii-babe.myshopify.com/products/chunky-lace-up-ankle-boots
+Gateway: Normal
+Price: $10.99
+Response: CARD_DECLINED
+------------------------------------------------------------
+
+URL: https://buybullk.myshopify.com/\
+Gateway: Normal
+Price: $11.98
+Response: CARD_DECLINED
+------------------------------------------------------------
+
+URL: https://twisted-foods-cookie-dough.myshopify.com
+Gateway: Normal
+Price: $10.99
+Response: CARD_DECLINED
+------------------------------------------------------------
+
+URL: https://the-ruffled-daisy.myshopify.com/products/crystal-star-quilt-block-12x12
+Gateway: Normal
+Price: $11.95
+Response: CARD_DECLINED
+------------------------------------------------------------
+
+URL: https://lifeart-vision.myshopify.com
+Gateway: Normal
+Price: $11.99
+Response: CARD_DECLINED
+------------------------------------------------------------
+
+URL: https://nixoninc.myshopify.com/products/pass-vegan-leather-coin-wallet-black
+Gateway: Normal
+Price: $10.75
+Response: CARD_DECLINED
+------------------------------------------------------------
+
+URL: https://big-star-lights-na.myshopify.com/collections/adapters-splitters
+Gateway: Normal
+Price: $11.71
+Response: CARD_DECLINED
+------------------------------------------------------------
+
+URL: https://greens-steel.myshopify.com
+Gateway: Normal
+Price: $14.0
+Response: CARD_DECLINED
+------------------------------------------------------------
+
+URL: https://tdn-money.myshopify.com/products/bps-c1-two-pocket-with-reject-pocket\
+Gateway: Normal
+Price: $14.81
+Response: CARD_DECLINED
+------------------------------------------------------------
+
+URL: https://urbanic-paper-boutique.myshopify.com/collections/desk/desk-items
+Gateway: Normal
+Price: $12.2
+Response: CARD_DECLINED
+------------------------------------------------------------
+
+URL: https://lapelpinplanet.myshopify.com/collections/arts
+Gateway: Normal
+Price: $10.85
+Response: CARD_DECLINED
+------------------------------------------------------------
+
+URL: https://onlyonestopshop.myshopify.com/products/aluminum-pan-1-2-size-deep-pan-heavy-weight-9-x-13
+Gateway: Normal
+Price: $10.99
+Response: CARD_DECLINED
+------------------------------------------------------------
+
+URL: https://plastic-free-pursuit.myshopify.com
+Gateway: Normal
+Price: $11.0
+Response: CARD_DECLINED
+------------------------------------------------------------
+
+URL: https://ltg-b2c-us.myshopify.com/collections/replacement-parts\
+Gateway: Normal
+Price: $10.7
+Response: CARD_DECLINED
+------------------------------------------------------------
+
+URL: https://storeyourboard.myshopify.com/collections/garage-storage
+Gateway: Normal
+Price: $11.8
+Response: CARD_DECLINED
+------------------------------------------------------------
+
+URL: https://grassflap.myshopify.com/products/41w70-5-a4
+Gateway: Normal
+Price: $10.76
+Response: CARD_DECLINED
+------------------------------------------------------------
+
+URL: https://fab-brows.myshopify.com
+Gateway: Normal
+Price: $14.0
+Response: CARD_DECLINED
+------------------------------------------------------------
+
+URL: https://pomkin.myshopify.com/collections/ski-gloves
+Gateway: Normal
+Price: $10.0
+Response: CARD_DECLINED
+------------------------------------------------------------
+
+URL: https://rawr-bars.myshopify.com
+Gateway: Normal
+Price: $10.0
+Response: CARD_DECLINED
+------------------------------------------------------------
+
+URL: https://turin-grinders.myshopify.com
+Gateway: Normal
+Price: $11.81
+Response: CARD_DECLINED
+------------------------------------------------------------
+
+URL: https://faithgatewaystore.myshopify.com/products/the-case-for-faith-study-guide-revised-edition-investigating-the-toughest-objections-to-christianity-1
+Gateway: Normal
+Price: $10.14
+Response: CARD_DECLINED
+------------------------------------------------------------
+
+URL: https://its-a-10.myshopify.com
+Gateway: Normal
+Price: $10.0
+Response: CARD_DECLINED
+------------------------------------------------------------
+
+URL: https://marville.myshopify.com/collections/icons-essentials\
+Gateway: Normal
+Price: $14.0
+Response: CARD_DECLINED
+------------------------------------------------------------
+
+URL: https://the-ruffled-daisy.myshopify.com/collections/basket-interchangeables
+Gateway: Normal
+Price: $11.95
+Response: CARD_DECLINED
+------------------------------------------------------------
+
+URL: https://ofracosmetics.myshopify.com/products/blush-punch?variant=45735452629&country=us&currency=usd
+Gateway: Normal
+Price: $11.29
+Response: CARD_DECLINED
+------------------------------------------------------------
+
+URL: https://noso-patches-hq.myshopify.com
+Gateway: Normal
+Price: $11.0
+Response: CARD_DECLINED
+------------------------------------------------------------
+
+URL: https://beeslighting-com.myshopify.com/collections/led-plug-in-light-bulbs\
+Gateway: Normal
+Price: $10.98
+Response: CARD_DECLINED
+------------------------------------------------------------
+
+URL: https://petdoors-com.myshopify.com
+Gateway: Normal
+Price: $10.74
+Response: CARD_DECLINED
+------------------------------------------------------------
+
+URL: https://my-social-book.myshopify.com/pages/book-from-facebook
+Gateway: Normal
+Price: $11.9
+Response: CARD_DECLINED
+------------------------------------------------------------
+
+URL: https://sleep-ap.myshopify.com/products/airfit-p30i-starter-pack?utm_source=klaviyo&utm_medium=email&utm_campaign=product
+Gateway: Normal
+Price: $11.17
+Response: CARD_DECLINED
+------------------------------------------------------------
+
+URL: https://comsetiques-omy.myshopify.com/en/products/lait-nettoyant-nutri-b5?variant=42666284908597
+Gateway: Normal
+Price: $12.49
+Response: CARD_DECLINED
+------------------------------------------------------------
+
+URL: https://reston-lloyd.myshopify.com/products/3pc-plastic-utensil-holders-lemon
+Gateway: Normal
+Price: $11.4
+Response: CARD_DECLINED
+------------------------------------------------------------
+
+URL: https://ranifoods.myshopify.com
+Gateway: Normal
+Price: $11.98
+Response: CARD_DECLINED
+------------------------------------------------------------
+
+URL: https://noodleandboo.myshopify.com/collections/travel-size\
+Gateway: Normal
+Price: $10.95
+Response: CARD_DECLINED
+------------------------------------------------------------
+
+URL: https://moira-beauty.myshopify.com/products/nude-beige-complete-wear-foundation?utm_source=engaged
+Gateway: Normal
+Price: $11.5
+Response: CARD_DECLINED
+------------------------------------------------------------
+
+URL: https://ultimate-bark-control.myshopify.com/collections/barkwise-accessories
+Gateway: Normal
+Price: $11.9
+Response: CARD_DECLINED
+------------------------------------------------------------
+
+URL: https://mama-wunderbar.myshopify.com
+Gateway: Normal
+Price: $10.77
+Response: CARD_DECLINED
+------------------------------------------------------------
+
+URL: https://constructiveplaythings.myshopify.com/products/deluxe-hands-free-diaper-pail
+Gateway: Normal
+Price: $13.38
+Response: CARD_DECLINED
+------------------------------------------------------------
+
+URL: https://marimix-shop.myshopify.com/products/celebration-bundle-single-serve-gift
+Gateway: Normal
+Price: $13.94
+Response: CARD_DECLINED
+------------------------------------------------------------
+
+URL: https://ten-little-dev.myshopify.com
+Gateway: Normal
+Price: $12.35
+Response: CARD_DECLINED
+------------------------------------------------------------
+
+URL: https://heyastrobabe-com.myshopify.com
+Gateway: Normal
+Price: $14.51
+Response: CARD_DECLINED
+------------------------------------------------------------
+
+URL: https://057711.myshopify.com/products/2-pk-green-shaving-cream-mental-health-awareness
+Gateway: Normal
+Price: $10.98
+Response: CARD_DECLINED
+------------------------------------------------------------
+
+URL: https://elm-dirt.myshopify.com/collections/all?srsltid=afmbooq62cpsiopbllofvy8-ddbzfnedo97xzircaq8giu-bmtsslmqd
+Gateway: Normal
+Price: $13.86
+Response: CARD_DECLINED
+------------------------------------------------------------
+
+URL: https://kashbeautycosmetics.myshopify.com
+Gateway: Normal
+Price: $12.28
+Response: CARD_DECLINED
+------------------------------------------------------------
+
+URL: https://sports-team-accessories.myshopify.com
+Gateway: Normal
+Price: $11.19
+Response: CARD_DECLINED
+------------------------------------------------------------
+
+URL: https://great-eastern-entertainment.myshopify.com
+Gateway: Normal
+Price: $14.0
+Response: CARD_DECLINED
+------------------------------------------------------------
+
+URL: https://icon-botanica.myshopify.com
+Gateway: Normal
+Price: $12.0
+Response: CARD_DECLINED
+------------------------------------------------------------
+
+URL: https://onlyonestopshop.myshopify.com/products/12-clear-plastic-tongs-1ct
+Gateway: Normal
+Price: $10.99
+Response: CARD_DECLINED
+------------------------------------------------------------
+
+URL: https://something-sweet-party-favors-llc.myshopify.com/products/tea-time-7-in-premium-paper-plates-blue-set-of-16?srsltid=afmbooo-auw6zi0-mg19xsc4m37ubivs0o__uutxqfiyqjkfe4ff6fro
+Gateway: Normal
+Price: $12.0
+Response: CARD_DECLINED
+------------------------------------------------------------
+
+URL: https://savor-it-all.myshopify.com/products/the-folio-document-organizer?utm_source=klaviyo&utm_medium=flow&_kx=uefbf_tcqx1zuumr-drfypou7oa0lxmehhilgl1e1dg%3d.scxrvx\
+Gateway: Normal
+Price: $10.7
+Response: CARD_DECLINED
+------------------------------------------------------------
+
+URL: https://lemieuxstore.myshopify.com/products/hyaluronic-serum
+Gateway: Normal
+Price: $11.15
+Response: CARD_DECLINED
+------------------------------------------------------------
+
+URL: https://e50ae7.myshopify.com/pages/affiliates
+Gateway: Normal
+Price: $14.99
+Response: 3D_AUTHENTICATION
+------------------------------------------------------------
+
+URL: https://subtl-beauty.myshopify.com/products/highligher?utm_source=email&utm_medium=campaign-email&utm_campaign=3%2f2%20-%203%20min%20look%20%2812%2f8%20clone%29%20%2801gtfp499k0yd9myvp1nndfw52%29&triplesource=klaviyo&_kx=h1spexxaodwlmt7aroe5wfnqxwfzultfxviaiasnosbvfm4gvbzdji0vgn8ir4nh.jz7fne
+Gateway: Normal
+Price: $10.95
+Response: CARD_DECLINED
+------------------------------------------------------------
+
+URL: https://globe-data-store.myshopify.com
+Gateway: Normal
+Price: $12.0
+Response: CARD_DECLINED
+------------------------------------------------------------
+
+URL: https://bioelements.myshopify.com/products/raydefense
+Gateway: Normal
+Price: $14.5
+Response: CARD_DECLINED
+------------------------------------------------------------
+
+URL: https://doublesoul.myshopify.com/products/quarter-6-pack-wonderland
+Gateway: Normal
+Price: $10.95
+Response: CARD_DECLINED
+------------------------------------------------------------
+
+URL: https://jyoungtest.myshopify.com
+Gateway: Normal
+Price: $13.0
+Response: CARD_DECLINED
+------------------------------------------------------------
+
+URL: https://oxygen-advantage.myshopify.com
+Gateway: Normal
+Price: $10.95
+Response: CARD_DECLINED
+------------------------------------------------------------
+
+URL: https://renee-rouleau-quiz.myshopify.com/products/aha-bha-blemish-control-cleanser?utm_source=180
+Gateway: Normal
+Price: $10.94
+Response: CARD_DECLINED
+------------------------------------------------------------
+
+URL: https://oboticario-direct.myshopify.com/collections/gifts
+Gateway: Normal
+Price: $12.31
+Response: CARD_DECLINED
+------------------------------------------------------------
+
+URL: https://lemieuxstore.myshopify.com/collections/moisturizers
+Gateway: Normal
+Price: $11.15
+Response: CARD_DECLINED
+------------------------------------------------------------
+
+URL: https://titos-vodka.myshopify.com
+Gateway: Normal
+Price: $10.3
+Response: CARD_DECLINED
+------------------------------------------------------------
+
+URL: https://not-your-mothers-haircare.myshopify.com/collections/curl-talk
+Gateway: Normal
+Price: $12.89
+Response: CARD_DECLINED
+------------------------------------------------------------
+
+URL: https://l-cook-design.myshopify.com/collections/yellow-gold
+Gateway: Normal
+Price: $14.89
+Response: CARD_DECLINED
+------------------------------------------------------------
+
+URL: https://wepersonalcare.myshopify.com/products/therapeutic-candles-beeswax
+Gateway: Normal
+Price: $13.94
+Response: CARD_DECLINED
+------------------------------------------------------------
+
+URL: https://baebrow.myshopify.com/products/launch-offer-all-caps-powder-henna-capsules?utm_source=klaviyo&utm_medium=campaign&utm_campaign=launch
+Gateway: Normal
+Price: $11.8
+Response: 3D_AUTHENTICATION
+------------------------------------------------------------
+
+URL: https://eks-brand.myshopify.com/collections/frontpage\
+Gateway: Normal
+Price: $13.37
+Response: CARD_DECLINED
+------------------------------------------------------------
+
+URL: https://happyspacec.myshopify.com/products/modern-creative-bird-wall-lamp-owl-eagle-shape-projector-atmosphere-sconce-light-3d-print-body-animal-lighting-lustre-home-decor
+Gateway: Normal
+Price: $12.66
+Response: CARD_DECLINED
+------------------------------------------------------------
+
+URL: https://goodchemistry.myshopify.com/products/queen-bee-perfume
+Gateway: Normal
+Price: $13.94
+Response: CARD_DECLINED
+------------------------------------------------------------
+
+URL: https://mandujourshop.myshopify.com/blogs/post/when-do-stores-start-selling-halloween-stuff-halloween-2023-guide?srsltid=afmbooqfqd5hwevn4jtdw9qeqrnkvnh-n1tjzh5rbvqagl-t9tyz8qwj
+Gateway: Normal
+Price: $12.7
+Response: CARD_DECLINED
+------------------------------------------------------------
+
+URL: https://burlap-kitchen.myshopify.com
+Gateway: Normal
+Price: $11.98
+Response: CARD_DECLINED
+------------------------------------------------------------
+
+URL: https://inside-line-equipment.myshopify.com/products/apex-mini?variant=41354781589681
+Gateway: Normal
+Price: $10.0
+Response: CARD_DECLINED
+------------------------------------------------------------
+
+URL: https://lapelpinplanet.myshopify.com/collections/pushpins
+Gateway: Normal
+Price: $10.85
+Response: CARD_DECLINED
+------------------------------------------------------------
+
+URL: https://urbanbodyjewelry.myshopify.com/products/cat-face-labret-post
+Gateway: Normal
+Price: $11.45
+Response: CARD_DECLINED
+------------------------------------------------------------
+
+URL: https://eroding-winds.myshopify.com/products/todd-rundgren-todd-lp-orange-and-green-vinyl-rsd-2024
+Gateway: Normal
+Price: $10.0
+Response: CARD_DECLINED
+------------------------------------------------------------
+
+URL: https://tistik.myshopify.com/pages/about-us
+Gateway: Normal
+Price: $10.0
+Response: CARD_DECLINED
+------------------------------------------------------------
+
+URL: https://swanhose.myshopify.com/blogs/all-about-hoses/the-flow-rate-of-a-garden-hose-explained-swanhose?_pos=1&_sid=10b5a028d&_ss=r
+Gateway: Normal
+Price: $10.36
+Response: CARD_DECLINED
+------------------------------------------------------------
+
+URL: https://constructiveplaythings.myshopify.com/products/treasured-tales-big-books-silly-sally
+Gateway: Normal
+Price: $13.38
+Response: CARD_DECLINED
+------------------------------------------------------------
+
+URL: https://cateandchloe.myshopify.com/collections/rose-gold-jewelry/products/olivia-18k-white-gold-plated-tennis-bracelet-with-simulated-diamond-crystals?variant=20390472327
+Gateway: Normal
+Price: $14.94
+Response: CARD_DECLINED
+------------------------------------------------------------
+
+URL: https://usa-koala-eco.myshopify.com/products/natural-multi-purpose-kitchen-cleaner?variant=41092714659976
+Gateway: Normal
+Price: $11.0
+Response: CARD_DECLINED
+------------------------------------------------------------
+
+URL: https://elaina-badro-cosmetics.myshopify.com
+Gateway: Normal
+Price: $10.0
+Response: CARD_DECLINED
+------------------------------------------------------------
+
+URL: https://boot-country-shop-bc.myshopify.com
+Gateway: Normal
+Price: $13.95
+Response: CARD_DECLINED
+------------------------------------------------------------
+
+URL: https://londontownusa.myshopify.com/products/rose-gold-hand-peel?variant=40847813509313&amp;_rdiscovery-handle=rose-gold-hand-peel&amp;_rdiscovery-widget=235260
+Gateway: Normal
+Price: $10.7
+Response: CARD_DECLINED
+------------------------------------------------------------
+
+URL: https://intheweeeds.myshopify.com/products/wrapping-paper-sets-❄️
+Gateway: Normal
+Price: $10.99
+Response: CARD_DECLINED
+------------------------------------------------------------
+
+URL: https://yoto-usa.myshopify.com/products/starter-pack-for-little-kids?srsltid=afmboorh4pyljyapf5lepb1nla6qkll4egiwrad50sqtcxdjxbpcmrjl
+Gateway: Normal
+Price: $13.95
+Response: CARD_DECLINED
+------------------------------------------------------------
+
+URL: https://bracken-store-2.myshopify.com/pages/student-discount\
+Gateway: Normal
+Price: $13.65
+Response: CARD_DECLINED
+------------------------------------------------------------
+
+URL: https://callio-fragrance.myshopify.com/collections/valentines-day-favorites
+Gateway: Normal
+Price: $10.0
+Response: CARD_DECLINED
+------------------------------------------------------------
+
+URL: https://internationalsheepdogsociety.myshopify.com
+Gateway: Normal
+Price: $12.0
+Response: CARD_DECLINED
+------------------------------------------------------------
+
+URL: https://shopbellso.myshopify.com/\
+Gateway: Normal
+Price: $11.46
+Response: CARD_DECLINED
+------------------------------------------------------------
+
+URL: https://monicaandandyonline.myshopify.com/products/on-the-go-one-piece_pink-ribbons
+Gateway: Normal
+Price: $10.0
+Response: CARD_DECLINED
+------------------------------------------------------------
+
+URL: https://helloeonskin.myshopify.com/collections/apple-watch-straps
+Gateway: Normal
+Price: $14.89
+Response: CARD_DECLINED
+------------------------------------------------------------
+
+URL: https://trade2013.myshopify.com/collections/unbranded-brand-selvedge-denim
+Gateway: Normal
+Price: $10.0
+Response: CARD_DECLINED
+------------------------------------------------------------
+
+URL: https://fabscrap.myshopify.com
+Gateway: Normal
+Price: $10.5
+Response: CARD_DECLINED
+------------------------------------------------------------
+
+URL: https://kylie-jenner-us.myshopify.com/products/birthday-pr-box\
+Gateway: Normal
+Price: $11.77
+Response: CARD_DECLINED
+------------------------------------------------------------
+
+URL: https://noodleandboo.myshopify.com/collections/wipes
+Gateway: Normal
+Price: $10.95
+Response: CARD_DECLINED
+------------------------------------------------------------
+
+URL: https://karolicosmetics.myshopify.com/products/mattifying-face-primer
+Gateway: Normal
+Price: $13.89
+Response: CARD_DECLINED
+------------------------------------------------------------
+
+URL: https://cordee-cases.myshopify.com/collections/phone-cases
+Gateway: Normal
+Price: $10.37
+Response: CARD_DECLINED
+------------------------------------------------------------
+
+URL: https://happyspacec.myshopify.com/products/decorative-paintings
+Gateway: Normal
+Price: $12.66
+Response: 3D_AUTHENTICATION
+------------------------------------------------------------
+
+URL: https://iwasbrokenowimnot.myshopify.com/products/participant-kit-i-was-broke-now-im-not-group-study
+Gateway: Normal
+Price: $10.0
+Response: CARD_DECLINED
+------------------------------------------------------------
+
+URL: https://mammas-liquid-love-breast-milk-jewelry.myshopify.com
+Gateway: Normal
+Price: $11.0
+Response: CARD_DECLINED
+------------------------------------------------------------
+
+URL: https://aka-20-pearl.myshopify.com
+Gateway: Normal
+Price: $14.75
+Response: CARD_DECLINED
+------------------------------------------------------------
+
+URL: https://757d08-2.myshopify.com
+Gateway: Normal
+Price: $14.92
+Response: CARD_DECLINED
+------------------------------------------------------------
+
+URL: https://larissa-loden.myshopify.com
+Gateway: Normal
+Price: $10.0
+Response: CARD_DECLINED
+------------------------------------------------------------
+
+URL: https://nippon-kodo-store.myshopify.com/pages/how-to-use-incense
+Gateway: Normal
+Price: $11.17
+Response: CARD_DECLINED
+------------------------------------------------------------
+
+URL: https://proraso-company.myshopify.com/products/shaving-cream-in-a-tube-moisturizing-nourishing-formula
+Gateway: Normal
+Price: $14.0
+Response: CARD_DECLINED
+------------------------------------------------------------
+
+URL: https://most-amazing.myshopify.com
+Gateway: Normal
+Price: $11.49
+Response: CARD_DECLINED
+------------------------------------------------------------
+
+URL: https://jouercosmetics.myshopify.com/products/essential-lip-enhancer?utm_source=klaviyo&utm_medium=email&utm_campaign=07.7.24%20fourth%20of%20july%20promo%20last%20chance%20%28free%20bag%20%2460%2b%29%20%282024-07-07%29&_kx=bxc3gcfgret5y7kbcnl_ywuetqhrpyvplg02ttswpqtljr4hxdlbdikkkcc0jfp9.pcxyyy\
+Gateway: Normal
+Price: $14.95
+Response: CARD_DECLINED
+------------------------------------------------------------
+
+URL: https://agtequipment.myshopify.com/products/micro-auger-m-ag
+Gateway: Normal
+Price: $14.0
+Response: CARD_DECLINED
+------------------------------------------------------------
+
+URL: https://the-funeral-program-site.myshopify.com
+Gateway: Normal
+Price: $11.95
+Response: CARD_DECLINED
+------------------------------------------------------------
+
+URL: https://orcas-island-leather-goods.myshopify.com
+Gateway: Normal
+Price: $11.99
+Response: CARD_DECLINED
+------------------------------------------------------------
+
+URL: https://casadellunknown.myshopify.com/\
+Gateway: Normal
+Price: $10.0
+Response: CARD_DECLINED
+------------------------------------------------------------
+
+URL: https://more-mtb.myshopify.com
+Gateway: Normal
+Price: $10.0
+Response: CARD_DECLINED
+------------------------------------------------------------
+
+URL: https://virgil-normal.myshopify.com
+Gateway: Normal
+Price: $14.16
+Response: CARD_DECLINED
+------------------------------------------------------------
+
+URL: https://learningmedia.myshopify.com
+Gateway: Normal
+Price: $12.0
+Response: CARD_DECLINED
+------------------------------------------------------------
+
+URL: https://gracious-bridal-design-house.myshopify.com/collections/soft-plastic-cups
+Gateway: Normal
+Price: $11.94
+Response: CARD_DECLINED
+------------------------------------------------------------
+
+URL: https://picture-hardware.myshopify.com
+Gateway: Normal
+Price: $10.14
+Response: CARD_DECLINED
+------------------------------------------------------------
+
+URL: https://classy-chargers.myshopify.com/\
+Gateway: Normal
+Price: $11.95
+Response: CARD_DECLINED
+------------------------------------------------------------
+
+URL: https://mount-vernon-coin.myshopify.com/collections/world-coins-other-countries
+Gateway: Normal
+Price: $12.95
+Response: CARD_DECLINED
+------------------------------------------------------------
+
+URL: https://revive-al-by-jack-cookies.myshopify.com
+Gateway: Normal
+Price: $11.14
+Response: CARD_DECLINED
+------------------------------------------------------------
+
+URL: https://andrew-logan.myshopify.com/collections/rings/products/yellow-square-cocktail-ring
+Gateway: Normal
+Price: $13.65
+Response: CARD_DECLINED
+------------------------------------------------------------
+
+URL: https://spartan-mounts.myshopify.com
+Gateway: Normal
+Price: $10.05
+Response: CARD_DECLINED
+------------------------------------------------------------
+
+URL: https://en-route-jewels.myshopify.com/collections/boho-baddie-collection
+Gateway: Normal
+Price: $11.49
+Response: CARD_DECLINED
+------------------------------------------------------------
+
+URL: https://ticcorp.myshopify.com/collections/omni-speakers
+Gateway: Normal
+Price: $10.36
+Response: CARD_DECLINED
+------------------------------------------------------------
+
+URL: https://thebondir.myshopify.com/collections/collars-leashes
+Gateway: Normal
+Price: $13.98
+Response: 3D_AUTHENTICATION
+------------------------------------------------------------
+
+URL: https://bullmoosesg.myshopify.com
+Gateway: Normal
+Price: $10.0
+Response: CARD_DECLINED
+------------------------------------------------------------
+
+URL: https://milanicosmetics.myshopify.com/products/baked-bronzer
+Gateway: Normal
+Price: $11.28
+Response: CARD_DECLINED
+------------------------------------------------------------
+
+URL: https://redishadestore.myshopify.com/collections/paper-shades
+Gateway: Normal
+Price: $12.83
+Response: CARD_DECLINED
+------------------------------------------------------------
+
+URL: https://delphinium-home.myshopify.com
+Gateway: Normal
+Price: $14.49
+Response: CARD_DECLINED
+------------------------------------------------------------
+
+URL: https://bullhidebelts.myshopify.com/pages/about-us
+Gateway: Normal
+Price: $10.59
+Response: CARD_DECLINED
+------------------------------------------------------------
+
+URL: https://3dcarcare.myshopify.com
+Gateway: Normal
+Price: $11.5
+Response: CARD_DECLINED
+------------------------------------------------------------
+
+URL: https://caked-makeup.myshopify.com/products/your-eyes-only
+Gateway: Normal
+Price: $10.63
+Response: CARD_DECLINED
+------------------------------------------------------------
+
+URL: https://ebd0c7-3.myshopify.com/products/39126
+Gateway: Normal
+Price: $12.58
+Response: CARD_DECLINED
+------------------------------------------------------------
+
+URL: https://pureglospa.myshopify.com
+Gateway: Normal
+Price: $12.9
+Response: CARD_DECLINED
+------------------------------------------------------------
+
+URL: https://simple-modern.myshopify.com/products/summit-kids-water-bottle-with-straw-lid-14oz?utm_campaign=copy%20of%20copy%20of%20email%20%231%20%28rsnfxy%29&amp;utm_medium=email&amp;utm_source=browse%20abandonment&amp;_kx=g82gt2f4pyh2vmtqvxgxljwjkddrz-yshqfod1bgghs%3d.rmj3li
+Gateway: Normal
+Price: $13.95
+Response: CARD_DECLINED
+------------------------------------------------------------
+
+URL: https://mg-naturals.myshopify.com
+Gateway: Normal
+Price: $10.0
+Response: CARD_DECLINED
+------------------------------------------------------------
+
+URL: https://alrossa.myshopify.com/products/cyril-r-salter-indian-sandalwood-luxury-shaving-cream
+Gateway: Normal
+Price: $13.45
+Response: CARD_DECLINED
+------------------------------------------------------------
+
+URL: https://cangshan-cutlery-company.myshopify.com/products/cangshan-n1-series-4-piece-leather-roll-knife-set-silver
+Gateway: Normal
+Price: $13.7
+Response: CARD_DECLINED
+------------------------------------------------------------
+
+URL: https://bliss-world-store.myshopify.com/products/fab-foaming-facial-cleanser-exfoliator?utm_source=klaviyo&utm_medium=email&utm_campaign=4.26.25%20%7c%20email%20resend%20%7c%20earth%20savings%20week%20last%20chance%20%7c%20mm&utm_klaviyo_id=01jg5ahkbkk4s1jshke1ghh4e8&tw_source=klaviyo&_kx=0iqdmg0olvhpmz0iuwtoyxuwqr6xww6ujzsrs104irt4upeqs8puwxyyp6rapqun.uj2khz
+Gateway: Normal
+Price: $10.74
+Response: CARD_DECLINED
+------------------------------------------------------------
+
+URL: https://anua-us.myshopify.com/collections/soothing-calming
+Gateway: Normal
+Price: $10.49
+Response: CARD_DECLINED
+------------------------------------------------------------
+
+URL: https://maverick-concept.myshopify.com/products/explorer-light-backpack?variant=35889788715161
+Gateway: Normal
+Price: $10.0
+Response: CARD_DECLINED
+------------------------------------------------------------
+
+URL: https://madebydentists.myshopify.com
+Gateway: Normal
+Price: $12.94
+Response: CARD_DECLINED
+------------------------------------------------------------
+
+URL: https://ovie-life.myshopify.com
+Gateway: Normal
+Price: $12.0
+Response: CARD_DECLINED
+------------------------------------------------------------
+
+URL: https://stitch-and-feather.myshopify.com/collections/hair-clips
+Gateway: Normal
+Price: $10.0
+Response: CARD_DECLINED
+------------------------------------------------------------
+
+URL: https://supa-cent.myshopify.com/\
+Gateway: Normal
+Price: $14.56
+Response: CARD_DECLINED
+------------------------------------------------------------
+
+URL: https://seabearsmokehouse.myshopify.com/products/lemon-lovers-mini-bundt-cakes
+Gateway: Normal
+Price: $13.99
+Response: CARD_DECLINED
+------------------------------------------------------------
+
+URL: https://renee-rouleau-quiz.myshopify.com/products/aha-bha-blemish-control-cleanser?utm_source=180%20day%20engaged&utm_medium=email&utm_campaign=12.31%20hangover%20blog%20%2801jg25he2kvp0ceq92xcbfj762%29&triplesource=klaviyo&_kx=o18zlr52hfglncuexiex_lx6tmfn05isxm5tyis8cs8.usuk5c\
+Gateway: Normal
+Price: $10.94
+Response: CARD_DECLINED
+------------------------------------------------------------
+
+URL: https://farm-daddy.myshopify.com
+Gateway: Normal
+Price: $12.99
+Response: CARD_DECLINED
+------------------------------------------------------------
+
+URL: https://kbqw3g-xs.myshopify.com
+Gateway: Normal
+Price: $10.0
+Response: CARD_DECLINED
+------------------------------------------------------------
+
+URL: https://rmcroasters.myshopify.com/products/2oz-single-serve-bags-1
+Gateway: Normal
+Price: $10.75
+Response: CARD_DECLINED
+------------------------------------------------------------
+
+URL: https://rodial-usd.myshopify.com/products/rose-gold-duo-edit
+Gateway: Checkout.com - Onsite Payments
+Price: $11.6
+Response: 3D_AUTHENTICATION
+------------------------------------------------------------
+
+URL: https://collectivemindsstore.myshopify.com
+Gateway: Normal
+Price: $10.72
+Response: CARD_DECLINED
+------------------------------------------------------------
+
+URL: https://indigo-tangerine-brand.myshopify.com
+Gateway: Normal
+Price: $10.4
+Response: CARD_DECLINED
+------------------------------------------------------------
+
+URL: https://onlyonestopshop.myshopify.com/products/red-round-plastic-plate-7-10ct\
+Gateway: Normal
+Price: $10.99
+Response: CARD_DECLINED
+------------------------------------------------------------
+
+URL: https://doll-smash.myshopify.com/products/intrigue-false-lashes
+Gateway: Normal
+Price: $11.0
+Response: CARD_DECLINED
+------------------------------------------------------------
+
+URL: https://milanicosmetics.myshopify.com/products/bright-side-illuminating-primer
+Gateway: Normal
+Price: $11.28
+Response: CARD_DECLINED
+------------------------------------------------------------
+
+URL: https://umai-dry.myshopify.com/collections/commercial
+Gateway: Normal
+Price: $12.6
+Response: CARD_DECLINED
+------------------------------------------------------------
+
+URL: https://swirlline.myshopify.com/products/wireless-beanie-wireless-headphones-hat-and-scarf-set-for-winter-outdoor-men-women-warm-knitted-music-hat-black?variant=41439511117979
+Gateway: Normal
+Price: $13.89
+Response: CARD_DECLINED
+------------------------------------------------------------
+
+URL: https://uche-hair.myshopify.com/products/bundle-deal
+Gateway: Normal
+Price: $14.98
+Response: CARD_DECLINED
+------------------------------------------------------------
+
+URL: https://dichickos.myshopify.com/pages/crispy-baked-chicken-wings
+Gateway: Normal
+Price: $12.36
+Response: CARD_DECLINED
+------------------------------------------------------------
+
+URL: https://flaire-accessories.myshopify.com/collections/gold-plated
+Gateway: Normal
+Price: $11.5
+Response: CARD_DECLINED
+------------------------------------------------------------
+
+URL: https://first-element.myshopify.com/pages/packaging
+Gateway: Normal
+Price: $11.0
+Response: CARD_DECLINED
+------------------------------------------------------------
+
+URL: https://alterre.myshopify.com/collections/travel-friendly
+Gateway: Normal
+Price: $10.75
+Response: CARD_DECLINED
+------------------------------------------------------------
+
+URL: https://modernnaturalbaby.myshopify.com
+Gateway: Normal
+Price: $14.98
+Response: CARD_DECLINED
+------------------------------------------------------------
+
+URL: https://cdtd8i-du.myshopify.com/collections/simple-elements-minimalist-bath-accessories
+Gateway: Normal
+Price: $11.0
+Response: CARD_DECLINED
+------------------------------------------------------------
+
+URL: https://milb-northwestarkansasnaturals.myshopify.com/collections/all-caps
+Gateway: Normal
+Price: $10.64
+Response: CARD_DECLINED
+------------------------------------------------------------
+
+URL: https://wise-company-emergency-food.myshopify.com/products/wise-food-storage-60-serving-emergency-food-supply
+Gateway: Normal
+Price: $14.95
+Response: CARD_DECLINED
+------------------------------------------------------------
+
+URL: https://stevieawards.myshopify.com/products/peoples-choice-stevie-award-for-favorite-customer-service
+Gateway: Normal
+Price: $12.5
+Response: CARD_DECLINED
+------------------------------------------------------------
+
+URL: https://long-made-co.myshopify.com/\
+Gateway: Normal
+Price: $10.0
+Response: CARD_DECLINED
+------------------------------------------------------------
+
+URL: https://haute-shop-boutique-3379.myshopify.com
+Gateway: Normal
+Price: $11.77
+Response: CARD_DECLINED
+------------------------------------------------------------
+
+URL: https://second-chance-thrift-store-bridge.myshopify.com/collections/accessories
+Gateway: Normal
+Price: $12.71
+Response: CARD_DECLINED
+------------------------------------------------------------
+
+URL: https://blissy-brand.myshopify.com/products/sleep-mask-blue
+Gateway: Normal
+Price: $13.91
+Response: CARD_DECLINED
+------------------------------------------------------------
+
+URL: https://la-bella-donna-minerals.myshopify.com/collections/sun/products/lbd-women-spf-50
+Gateway: Normal
+Price: $14.25
+Response: CARD_DECLINED
+------------------------------------------------------------
+
+URL: https://pure-daily-care.myshopify.com/products/multi-peptide-youth-serum
+Gateway: Normal
+Price: $12.2
+Response: CARD_DECLINED
+------------------------------------------------------------
+
+URL: https://abfe.myshopify.com/collections/all-software/marketline-total-fuel
+Gateway: Normal
+Price: $14.0
+Response: CARD_DECLINED
+------------------------------------------------------------
+
+URL: https://select-sport.myshopify.com/products/training-hurdle-6-pack-and-bag
+Gateway: Normal
+Price: $11.99
+Response: CARD_DECLINED
+------------------------------------------------------------
+
+URL: https://lapelpinplanet.myshopify.com/products/coffee-bean-lapel-pin
+Gateway: Normal
+Price: $10.85
+Response: CARD_DECLINED
+------------------------------------------------------------
+
+URL: https://cobra-foam-inserts.myshopify.com/collections/tool-inserts
+Gateway: Normal
+Price: $10.9
+Response: CARD_DECLINED
+------------------------------------------------------------
+
+URL: https://truskinnaturals.myshopify.com/products/hyaluronic-acid-serum-for-skin-face
+Gateway: Normal
+Price: $11.78
+Response: CARD_DECLINED
+------------------------------------------------------------
+
+URL: https://subtronics-store.myshopify.com
+Gateway: Normal
+Price: $13.87
+Response: CARD_DECLINED
+------------------------------------------------------------
+
+URL: https://forge-and-lumber.myshopify.com/products/the-shuttle\
+Gateway: Normal
+Price: $14.0
+Response: CARD_DECLINED
+------------------------------------------------------------
+
+URL: https://angel-studios-boutique.myshopify.com/collections/angel-samples-lashes/products/nude-lipsticks\
+Gateway: Normal
+Price: $10.0
+Response: CARD_DECLINED
+------------------------------------------------------------
+
+URL: https://shady-grove-candles.myshopify.com
+Gateway: Normal
+Price: $13.5
+Response: CARD_DECLINED
+------------------------------------------------------------
+
+URL: https://adc4ca-2.myshopify.com/pages/testimonials
+Gateway: Normal
+Price: $10.0
+Response: CARD_DECLINED
+------------------------------------------------------------
+
+URL: https://bentleydiamond.myshopify.com/pages/about
+Gateway: Normal
+Price: $10.0
+Response: CARD_DECLINED
+------------------------------------------------------------
+
+URL: https://la-bella-donna-minerals.myshopify.com/collections/face/products/loose-mineral-foundation-spf-50
+Gateway: Normal
+Price: $14.25
+Response: CARD_DECLINED
+------------------------------------------------------------
+
+URL: https://renee-rouleau-quiz.myshopify.com/products/hydrabounce-firming-eye-creme?utm_source=180
+Gateway: Normal
+Price: $10.94
+Response: CARD_DECLINED
+------------------------------------------------------------
+
+URL: https://salonpunk.myshopify.com/products/the-salon-punk-book?srsltid=afmboopo-dzexppnp4iuvwr202ea1wxcvnpf9nh-3xxrvtqj1slw3jlg
+Gateway: Normal
+Price: $14.0
+Response: CARD_DECLINED
+------------------------------------------------------------
+
+URL: https://homeflatpack.myshopify.com/collections/dining-tables-chairs
+Gateway: Normal
+Price: $11.0
+Response: CARD_DECLINED
+------------------------------------------------------------
+
+URL: https://soapboxsoap.myshopify.com/products/spiced-vanilla-holiday-moisturizing-hand-soap-3-pack
+Gateway: Normal
+Price: $10.94
+Response: CARD_DECLINED
+------------------------------------------------------------
+
+URL: https://judofanatics.myshopify.com/collections/daily-deals
+Gateway: Normal
+Price: $10.0
+Response: CARD_DECLINED
+------------------------------------------------------------
+
+URL: https://juicedelivery.myshopify.com/products/variety-pack-superade-16-pack
+Gateway: Normal
+Price: $10.0
+Response: CARD_DECLINED
+------------------------------------------------------------
+
+URL: https://landrysinc.myshopify.com/de/collections/bubba-gump-shrimp-co-official-page/products/bubba-gump-shopper-tote-iconic-graphics
+Gateway: Normal
+Price: $14.9
+Response: CARD_DECLINED
+------------------------------------------------------------
+
+URL: https://fcgoods.myshopify.com
+Gateway: Normal
+Price: $12.45
+Response: CARD_DECLINED
+------------------------------------------------------------
+
+URL: https://greenpan-us.myshopify.com/products/nova-ceramic-nonstick-8-frypan-ocean
+Gateway: Normal
+Price: $12.98
+Response: CARD_DECLINED
+------------------------------------------------------------
+
+URL: https://the-spice-well.myshopify.com/products/discovery-gift-set
+Gateway: Normal
+Price: $10.22
+Response: CARD_DECLINED
+------------------------------------------------------------
+
+URL: https://umai-dry.myshopify.com
+Gateway: Normal
+Price: $12.6
+Response: CARD_DECLINED
+------------------------------------------------------------
+
+URL: https://clare-v-staging16.myshopify.com/products/coin-clutch-iris-italian-nappa
+Gateway: Normal
+Price: $10.76
+Response: CARD_DECLINED
+------------------------------------------------------------
+
+URL: https://ablecncus.myshopify.com/\
+Gateway: Normal
+Price: $12.89
+Response: CARD_DECLINED
+------------------------------------------------------------
+
+URL: https://miabymassiel.myshopify.com/pages/bridal
+Gateway: Normal
+Price: $10.75
+Response: CARD_DECLINED
+------------------------------------------------------------
+
+URL: https://curlykids-hair-care-shop.myshopify.com/products/curly-gel-moisturizer
+Gateway: Normal
+Price: $13.0
+Response: CARD_DECLINED
+------------------------------------------------------------
+
+URL: https://cycloworld.myshopify.com
+Gateway: Normal
+Price: $11.95
+Response: CARD_DECLINED
+------------------------------------------------------------
+
+URL: https://leightonlam.myshopify.com/collections/pearls
+Gateway: Normal
+Price: $10.0
+Response: CARD_DECLINED
+------------------------------------------------------------
+
+URL: https://erinmade.myshopify.com
+Gateway: Normal
+Price: $13.19
+Response: CARD_DECLINED
+------------------------------------------------------------
+
+URL: https://granite-stone-family.myshopify.com/products/granitestone-armor-max-pots-and-pans-20-pc-ultimate-durable-nonstick-cookware-set-and-knives-set
+Gateway: Normal
+Price: $14.99
+Response: CARD_DECLINED
+------------------------------------------------------------
+
+URL: https://the-country-connection.myshopify.com
+Gateway: Normal
+Price: $10.0
+Response: CARD_DECLINED
+------------------------------------------------------------
+
+URL: https://carnivorousplantnursery.myshopify.com/products/beginners-set-1
+Gateway: Normal
+Price: $13.9
+Response: CARD_DECLINED
+------------------------------------------------------------
+
+URL: https://yotamd.myshopify.com
+Gateway: Normal
+Price: $10.0
+Response: CARD_DECLINED
+------------------------------------------------------------
+
+URL: https://zum-indigowild-com.myshopify.com/collections/all-gifts
+Gateway: Normal
+Price: $13.87
+Response: CARD_DECLINED
+------------------------------------------------------------
+
+URL: https://weatherflow-smart-weather.myshopify.com
+Gateway: Normal
+Price: $12.33
+Response: CARD_DECLINED
+------------------------------------------------------------
+
+URL: https://popdarts.myshopify.com
+Gateway: Normal
+Price: $11.67
+Response: CARD_DECLINED
+------------------------------------------------------------
+
+URL: https://apex-dermatology.myshopify.com
+Gateway: Normal
+Price: $12.9
+Response: CARD_DECLINED
+------------------------------------------------------------
+
+URL: https://homeflatpack.myshopify.com/collections/sofas-armchairs
+Gateway: Normal
+Price: $11.0
+Response: CARD_DECLINED
+------------------------------------------------------------
+
+URL: https://ivanko-barbell-company.myshopify.com
+Gateway: Normal
+Price: $11.5
+Response: CARD_DECLINED
+------------------------------------------------------------
+
+URL: https://sweatxsport.myshopify.com
+Gateway: Normal
+Price: $13.57
+Response: CARD_DECLINED
+------------------------------------------------------------
+
+URL: https://lpar-professional.myshopify.com
+Gateway: Normal
+Price: $13.0
+Response: CARD_DECLINED
+------------------------------------------------------------
+
+URL: https://natural-image.myshopify.com/cdn/shop/products/dsc01580_2_grande.jpg?v=1673904151
+Gateway: Normal
+Price: $10.95
+Response: CARD_DECLINED
+------------------------------------------------------------
+
+URL: https://zukababy.myshopify.com/?srsltid=afmbooq4edzec4ikxcoxdb9j4h0koqkvcpmqucep4smk6hmvgjztp_pp
+Gateway: Normal
+Price: $13.0
+Response: CARD_DECLINED
+------------------------------------------------------------
+
+URL: https://thirstiesbaby.myshopify.com
+Gateway: Normal
+Price: $10.44
+Response: CARD_DECLINED
+------------------------------------------------------------
+
+URL: https://hair-twisters.myshopify.com/https:products/pt6-ur-cg.jpg
+Gateway: Normal
+Price: $14.99
+Response: CARD_DECLINED
+------------------------------------------------------------
+
+URL: https://draftboxes-com.myshopify.com/collections/jockey-boxes
+Gateway: Normal
+Price: $14.56
+Response: CARD_DECLINED
+------------------------------------------------------------
+
+URL: https://dermae.myshopify.com
+Gateway: Normal
+Price: $12.31
+Response: CARD_DECLINED
+------------------------------------------------------------
+
+URL: https://setandstones.myshopify.com/products/personalized-alice-necklace
+Gateway: Normal
+Price: $12.37
+Response: CARD_DECLINED
+------------------------------------------------------------
+
+URL: https://piedmont-pennies.myshopify.com
+Gateway: Normal
+Price: $12.72
+Response: CARD_DECLINED
+------------------------------------------------------------
+
+URL: https://kalypso-co-shades.myshopify.com
+Gateway: Normal
+Price: $14.0
+Response: CARD_DECLINED
+------------------------------------------------------------
+
+URL: https://livly-stockholm.myshopify.com/collections/bows
+Gateway: Normal
+Price: $12.54
+Response: CARD_DECLINED
+------------------------------------------------------------
+
+URL: https://stilastyles.myshopify.com/products/stay-all-day-matte-lip-liner
+Gateway: Normal
+Price: $10.75
+Response: CARD_DECLINED
+------------------------------------------------------------
+
+URL: https://moira-beauty.myshopify.com/products/love-steady-liquid-blush-012-ily
+Gateway: Normal
+Price: $11.5
+Response: CARD_DECLINED
+------------------------------------------------------------
+
+URL: https://neighborlychicago.myshopify.com
+Gateway: Normal
+Price: $12.54
+Response: CARD_DECLINED
+------------------------------------------------------------
+
+URL: https://lapelpinplanet.myshopify.com/collections/americana
+Gateway: Normal
+Price: $10.85
+Response: CARD_DECLINED
+------------------------------------------------------------
+
+URL: https://dermae.myshopify.com/products/sulfur-spot-treatment\
+Gateway: Normal
+Price: $12.31
+Response: CARD_DECLINED
+------------------------------------------------------------
+
+URL: https://maverick-abrasives.myshopify.com/products/case-pack-metal-polishing-compound-bulk-deal
+Gateway: Normal
+Price: $11.0
+Response: CARD_DECLINED
+------------------------------------------------------------
+
+URL: https://greenpan-us.myshopify.com/products/stanley-tucci™-ceramic-nonstick-lasagna-pan-carrara-white
+Gateway: Normal
+Price: $12.98
+Response: CARD_DECLINED
+------------------------------------------------------------
+
+URL: https://mary-maxim.myshopify.com/collections/caron
+Gateway: Normal
+Price: $10.73
+Response: CARD_DECLINED
+------------------------------------------------------------
+
+URL: https://www-buybackstore-com.myshopify.com
+Gateway: Stripe Card Payments
+Price: $10.54
+Response: CARD_DECLINED
+------------------------------------------------------------
+
+URL: https://frizzoff-staging.myshopify.com
+Gateway: Normal
+Price: $10.5
+Response: CARD_DECLINED
+------------------------------------------------------------
+
+URL: https://kangarookids.myshopify.com/collections/resale-toys
+Gateway: Normal
+Price: $13.49
+Response: CARD_DECLINED
+------------------------------------------------------------
+
+URL: https://seisuke-knife.myshopify.com/collections/santoku-all-purpose-knives
+Gateway: Normal
+Price: $10.37
+Response: CARD_DECLINED
+------------------------------------------------------------
+
+URL: https://mitchellbrands.myshopify.com/products/fair-white-original-serum-30ml?utm_source=klaviyo&utm_medium=campaign&utm_campaign=aug
+Gateway: Stripe
+Price: $12.32
+Response: CARD_DECLINED
+------------------------------------------------------------
+
+URL: https://soapboxsoap.myshopify.com/products/citrus-peach-rose-reviving-moisture-liquid-hand-soap-3-pack
+Gateway: Normal
+Price: $10.94
+Response: CARD_DECLINED
+------------------------------------------------------------
+
+URL: https://d63c10-52.myshopify.com/collections/gift-bundles
+Gateway: Normal
+Price: $13.9
+Response: CARD_DECLINED
+------------------------------------------------------------
+
+URL: https://jm0fmu-8z.myshopify.com/collections/travel
+Gateway: Normal
+Price: $11.5
+Response: CARD_DECLINED
+------------------------------------------------------------
+
+URL: https://arcskincare.myshopify.com/collections/sensitive-skin/moisturizer
+Gateway: authorize.net
+Price: $13.5
+Response: CARD_DECLINED
+------------------------------------------------------------
+
+URL: https://arbor-collective-1.myshopify.com/products/satori-splitboard-camber-23-factory-second
+Gateway: Normal
+Price: $11.94
+Response: CARD_DECLINED
+------------------------------------------------------------
+
+URL: https://en-route-jewels.myshopify.com/collections/street-style
+Gateway: Normal
+Price: $11.49
+Response: CARD_DECLINED
+------------------------------------------------------------
+
+URL: https://prairie-artisan.myshopify.com/\
+Gateway: Normal
+Price: $10.0
+Response: CARD_DECLINED
+------------------------------------------------------------
+
+URL: https://woodenhouse-lifelong-quality.myshopify.com/collections/all
+Gateway: Normal
+Price: $11.99
+Response: CARD_DECLINED
+------------------------------------------------------------
+
+URL: https://dragonfly-thrift-boutique.myshopify.com/pages/contact-us
+Gateway: Normal
+Price: $14.3
+Response: CARD_DECLINED
+------------------------------------------------------------
+
+URL: https://a-room-of-her-own.myshopify.com/collections/moisturizers
+Gateway: Stripe Card Payments
+Price: $14.0
+Response: Thank You 14.0
+------------------------------------------------------------
+
+URL: https://allstar-grooming-co.myshopify.com
+Gateway: Normal
+Price: $10.0
+Response: CARD_DECLINED
+------------------------------------------------------------
+
+URL: https://coeur-de-lion-uk.myshopify.com/collections/b-geo-b-cube%c2%ae-multicolour
+Gateway: Normal
+Price: $12.37
+Response: CARD_DECLINED
+------------------------------------------------------------
+
+URL: https://ticcorp.myshopify.com/products/gs5-5-compact-outdoor-weather-resistant-omnidirectional-in-ground-speakers-pair?_pos=5&_sid=311107a89&_ss=r
+Gateway: Normal
+Price: $10.36
+Response: CARD_DECLINED
+------------------------------------------------------------
+
+URL: https://happyspacec.myshopify.com/cdn/shop/files/7d438dd0-4395-4c08-8a52-f75382bd631c_1024x1024.jpg?v=1755687735
+Gateway: Normal
+Price: $12.66
+Response: CARD_DECLINED
+------------------------------------------------------------
+
+URL: https://the-yuppie-closet.myshopify.com/pages/shop-the-yuppie-way
+Gateway: Normal
+Price: $10.0
+Response: CARD_DECLINED
+------------------------------------------------------------
+
+URL: https://renee-rouleau-quiz.myshopify.com/collections/basic-skin-care-collections/products/the-basic-skin-care-collection-skin-type-4\
+Gateway: Normal
+Price: $10.94
+Response: CARD_DECLINED
+------------------------------------------------------------
+
+URL: https://saraswatimoon.myshopify.com
+Gateway: Normal
+Price: $11.0
+Response: CARD_DECLINED
+------------------------------------------------------------
+
+URL: https://feetures-online.myshopify.com
+Gateway: Normal
+Price: $10.0
+Response: CARD_DECLINED
+------------------------------------------------------------
+
+URL: https://morphe-inc.myshopify.com/products/jumbo-continuous-prep-set-mist?utm_source=klaviyo&utm_medium=email&utm_campaign=03072024_us_promo_festival_csm_all
+Gateway: Normal
+Price: $13.92
+Response: CARD_DECLINED
+------------------------------------------------------------
+
+URL: https://grand-wedding-exit.myshopify.com/blogs/wedding-sparkler-ideas/wedding-must-haves-and-must-nots
+Gateway: Normal
+Price: $10.75
+Response: CARD_DECLINED
+------------------------------------------------------------
+
+URL: https://deb-tuckers-studio-180-design.myshopify.com/products/starget
+Gateway: Normal
+Price: $12.24
+Response: CARD_DECLINED
+------------------------------------------------------------
+
+URL: https://http-www-laflorspices-com-myshopify-com.myshopify.com/products/adobo-with-pepper
+Gateway: Normal
+Price: $12.98
+Response: CARD_DECLINED
+------------------------------------------------------------
+
+URL: https://lue-by-jean-seo.myshopify.com
+Gateway: Normal
+Price: $11.0
+Response: CARD_DECLINED
+------------------------------------------------------------
+
