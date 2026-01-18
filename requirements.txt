@@ -7,3 +7,4 @@ beautifulsoup4==4.13.3
 flask
 nest_asyncio
 pytz
+reportlab
