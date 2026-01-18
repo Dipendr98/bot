@@ -133,16 +133,32 @@ async def handle_msho_command(client, message):
             async with httpx.AsyncClient(follow_redirects=True) as session:
                 raw_response = await create_shopify_charge(card, mes, ano, cvv, session)
 
+                # Handle ORDER_CONFIRMED (Charged)
                 if "ORDER_CONFIRMED" in raw_response:
                     status_flag = "Charged 💎"
                     charged_count += 1
-                elif any(x in raw_response for x in ["3DS", "MISMATCHED_BILLING", "MISMATCHED_PIN", "MISMATCHED_ZIP", "INSUFFICIENT_FUNDS", "INVALID_CVC ⚠️", "INCORRECT_CVC ⚠️", "3DS REQUIRED", "MISMATCHED_BILL🟢"]):
+                # Handle Approved cards (CVV matches, insufficient funds, 3DS, etc.)
+                elif any(x in raw_response for x in [
+                    "3DS", "MISMATCHED_BILLING", "MISMATCHED_PIN", "MISMATCHED_ZIP",
+                    "INSUFFICIENT_FUNDS", "INVALID_CVC", "INCORRECT_CVC",
+                    "3DS REQUIRED", "MISMATCHED_BILL", "INCORRECT_ADDRESS",
+                    "INCORRECT_ZIP", "INCORRECT_PIN", "AUTHENTICATION_FAILED"
+                ]):
                     status_flag = "Approved ✅"
                     approved_count += 1
-                elif any(x in raw_response for x in ["CAPTCHA", "RECAPTCHA", "CHALLENGE"]):
-                    status_flag = "Declined ❌"
+                # Handle Captcha detection (case-insensitive)
+                elif any(x in raw_response.upper() for x in ["CAPTCHA", "RECAPTCHA", "CHALLENGE"]):
+                    status_flag = "Captcha ⚠️"
                     declined_count += 1
                     captcha_count += 1
+                # Handle explicit declined responses
+                elif any(x in raw_response for x in [
+                    "CARD_DECLINED", "INCORRECT_NUMBER", "GENERIC_ERROR",
+                    "FRAUD_SUSPECTED", "ERROR:"
+                ]):
+                    status_flag = "Declined ❌"
+                    declined_count += 1
+                # Default to Declined for unknown responses
                 else:
                     status_flag = "Declined ❌"
                     declined_count += 1
