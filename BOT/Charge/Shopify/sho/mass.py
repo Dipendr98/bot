@@ -119,6 +119,14 @@ async def handle_msho_command(client, message):
         start_time = time()
         final_results = []
 
+        # Statistics counters
+        total_cc = len(all_cards)
+        approved_count = 0
+        declined_count = 0
+        charged_count = 0
+        captcha_count = 0
+        processed_count = 0
+
         for idx, fullcc in enumerate(all_cards, start=1):
             card, mes, ano, cvv = fullcc.split("|")
 
@@ -127,21 +135,31 @@ async def handle_msho_command(client, message):
 
                 if "ORDER_CONFIRMED" in raw_response:
                     status_flag = "Charged 💎"
+                    charged_count += 1
                 elif any(x in raw_response for x in ["3DS", "MISMATCHED_BILLING", "MISMATCHED_PIN", "MISMATCHED_ZIP", "INSUFFICIENT_FUNDS", "INVALID_CVC ⚠️", "INCORRECT_CVC ⚠️", "3DS REQUIRED", "MISMATCHED_BILL🟢"]):
                     status_flag = "Approved ✅"
+                    approved_count += 1
+                elif any(x in raw_response for x in ["CAPTCHA", "RECAPTCHA", "CHALLENGE"]):
+                    status_flag = "Declined ❌"
+                    declined_count += 1
+                    captcha_count += 1
                 else:
                     status_flag = "Declined ❌"
+                    declined_count += 1
+
+                processed_count += 1
 
                 final_results.append(f"""• <b>Card :</b> <code>{fullcc}</code>
 • <b>Status :</b> <code>{status_flag}</code>
 • <b>Result :</b> <code>{raw_response or "-"}</code>
 ━ ━ ━ ━ ━ ━━━ ━ ━ ━ ━ ━""")
 
-                # Update after each
-                ongoing_result = "\n".join(final_results)
+                # Update after each with progress
+                ongoing_result = "\n".join(final_results[-10:])  # Show last 10 cards
                 await loader_msg.edit(
                     f"""<pre>✦ Sync | {gateway}</pre>
 {ongoing_result}
+<b>💬 Progress :</b> <code>{processed_count}/{total_cc}</code>
 <b>[⚬] Checked By :</b> {checked_by} [<code>{plan} {badge}</code>]
 <b>[⚬] Dev :</b> <a href="https://t.me/syncblast">𝙁𝙪𝙧𝙠𝙖𝙣</a>
 """, disable_web_page_preview=True
@@ -154,17 +172,25 @@ async def handle_msho_command(client, message):
             loop = asyncio.get_event_loop()
             await loop.run_in_executor(None, deduct_credit_bulk, user_id, card_count)
 
-        final_result_text = "\n".join(final_results)
-        # proxy_text = proxy_status if proxy_status else "N/A"
+        # Final completion response with statistics
+        from datetime import datetime
+        current_time = datetime.now().strftime("%I:%M %p")
 
-        await loader_msg.edit(
-            f"""<pre>✦ Sync | {gateway}</pre>
-{final_result_text}
-<b>[⚬] T/t :</b> <code>{timetaken}s</code> <b>
-<b>[⚬] Checked By :</b> {checked_by} [<code>{plan} {badge}</code>]
-<b>[⚬] Dev :</b> <a href="https://t.me/syncblast">𝙁𝙪𝙧𝙠𝙖𝙣</a>
-""", disable_web_page_preview=True
-        )
+        completion_message = f"""<pre>✦ CC Check Completed</pre>
+━━━━━━━━━━━━━━━
+🟢 <b>Total CC</b>     : <code>{total_cc}</code>
+💬 <b>Progress</b>    : <code>{processed_count}/{total_cc}</code>
+✅ <b>Approved</b>    : <code>{approved_count}</code>
+💎 <b>Charged</b>     : <code>{charged_count}</code>
+❌ <b>Declined</b>    : <code>{declined_count}</code>
+⚠️ <b>CAPTCHA</b>     : <code>{captcha_count}</code>
+━━━━━━━━━━━━━━━
+⏱️ <b>Time Elapsed :</b> <code>{timetaken}s</code>
+👤 <b>Checked By :</b> {checked_by} [<code>{plan} {badge}</code>]
+🔧 <b>Dev</b>: <a href="https://t.me/Chr1shtopher">Chr1shtopher</a> <code>{current_time}</code>
+━━━━━━━━━━━━━━━"""
+
+        await loader_msg.edit(completion_message, disable_web_page_preview=True)
 
     except Exception as e:
         print(f"Error occurred: {str(e)}")

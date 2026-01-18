@@ -265,6 +265,14 @@ async def mslf_handler(client, message):
         batch_size = 10
         final_results = []
 
+        # Statistics counters
+        total_cc = len(all_cards)
+        approved_count = 0
+        declined_count = 0
+        charged_count = 0
+        captcha_count = 0
+        processed_count = 0
+
         for batch in chunk_cards(all_cards, batch_size):
             # Run check_card in parallel for current batch
             results = await asyncio.gather(*[
@@ -275,6 +283,20 @@ async def mslf_handler(client, message):
             for card, raw_response in zip(batch, results):
                 status_flag = get_status_flag((raw_response or "").upper())
 
+                # Count statistics
+                if "Charged 💎" in status_flag:
+                    charged_count += 1
+                elif "Approved ✅" in status_flag:
+                    approved_count += 1
+                else:
+                    declined_count += 1
+
+                # Count CAPTCHA
+                if any(x in (raw_response or "").upper() for x in ["CAPTCHA", "RECAPTCHA", "CHALLENGE"]):
+                    captcha_count += 1
+
+                processed_count += 1
+
                 final_results.append(
                     f"• <b>Card :</b> <code>{card}</code>\n"
                     f"• <b>Status :</b> <code>{status_flag}</code>\n"
@@ -282,10 +304,12 @@ async def mslf_handler(client, message):
                     "━ ━ ━ ━ ━ ━━━ ━ ━ ━ ━ ━"
                 )
 
-            # Edit after every batch
+            # Edit after every batch with progress
+            ongoing_result = "\n".join(final_results[-10:])  # Show last 10 cards
             await loader_msg.edit(
                 f"<pre>✦ [$mslf] | M-Self Shopify</pre>\n"
-                + "\n".join(final_results) + "\n"
+                f"{ongoing_result}\n"
+                f"<b>💬 Progress :</b> <code>{processed_count}/{total_cc}</code>\n"
                 f"<b>[⚬] Checked By :</b> {checked_by} [<code>{plan} {badge}</code>]\n"
                 f"<b>[⚬] Dev :</b> <a href='https://t.me/Chr1shtopher'>Chr1shtopher</a>",
                 disable_web_page_preview=True
@@ -299,16 +323,25 @@ async def mslf_handler(client, message):
             loop = asyncio.get_event_loop()
             await loop.run_in_executor(None, deduct_credit_bulk, user_id, len(all_cards))
 
-        # Final edit
-        final_result_text = "\n".join(final_results)
-        await loader_msg.edit(
-            f"<pre>✦ [$mslf] | M-Self Shopify</pre>\n"
-            f"{final_result_text}\n"
-            f"<b>[⚬] T/t :</b> <code>{timetaken}s</code>\n"
-            f"<b>[⚬] Checked By :</b> {checked_by} [<code>{plan} {badge}</code>]\n"
-            f"<b>[⚬] Dev :</b> <a href='https://t.me/Chr1shtopher'>Chr1shtopher</a>",
-            disable_web_page_preview=True
-        )
+        # Final completion response with statistics
+        from datetime import datetime
+        current_time = datetime.now().strftime("%I:%M %p")
+
+        completion_message = f"""<pre>✦ CC Check Completed</pre>
+━━━━━━━━━━━━━━━
+🟢 <b>Total CC</b>     : <code>{total_cc}</code>
+💬 <b>Progress</b>    : <code>{processed_count}/{total_cc}</code>
+✅ <b>Approved</b>    : <code>{approved_count}</code>
+💎 <b>Charged</b>     : <code>{charged_count}</code>
+❌ <b>Declined</b>    : <code>{declined_count}</code>
+⚠️ <b>CAPTCHA</b>     : <code>{captcha_count}</code>
+━━━━━━━━━━━━━━━
+⏱️ <b>Time Elapsed :</b> <code>{timetaken}s</code>
+👤 <b>Checked By :</b> {checked_by} [<code>{plan} {badge}</code>]
+🔧 <b>Dev</b>: <a href="https://t.me/Chr1shtopher">Chr1shtopher</a> <code>{current_time}</code>
+━━━━━━━━━━━━━━━"""
+
+        await loader_msg.edit(completion_message, disable_web_page_preview=True)
 
     except Exception as e:
         await message.reply(f"⚠️ Error: {e}", reply_to_message_id=message.id)
