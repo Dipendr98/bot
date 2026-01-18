@@ -63,17 +63,17 @@ async def mslf_handler(client, message):
                 reply_to_message_id=message.id
             )
 
-        allowed_groups = load_allowed_groups()
-
-        if message.chat.type in [ChatType.GROUP, ChatType.SUPERGROUP] and message.chat.id not in allowed_groups:
-            return await message.reply(
-                "<pre>Notification ❗️</pre>\n"
-                "<b>~ Message :</b> <code>This Group Is Not Approved ⚠️</code>\n"
-                "<b>~ Contact  →</b> <b>@Chr1shtopher</b>\n"
-                "━━━━━━━━━━━━━\n"
-                "<b>Contact Owner For Approving</b>",
-                reply_to_message_id=message.id
-            )
+        # Group approval check removed - all groups are now allowed
+        # allowed_groups = load_allowed_groups()
+        # if message.chat.type in [ChatType.GROUP, ChatType.SUPERGROUP] and message.chat.id not in allowed_groups:
+        #     return await message.reply(
+        #         "<pre>Notification ❗️</pre>\n"
+        #         "<b>~ Message :</b> <code>This Group Is Not Approved ⚠️</code>\n"
+        #         "<b>~ Contact  →</b> <b>@Chr1shtopher</b>\n"
+        #         "━━━━━━━━━━━━━\n"
+        #         "<b>Contact Owner For Approving</b>",
+        #         reply_to_message_id=message.id
+        #     )
 
         # if not await is_premium_user(message):
         #     return
