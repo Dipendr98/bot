@@ -111,7 +111,7 @@ def save_plan_requests(requests):
     with open(PLAN_REQUESTS_FILE, "w") as f:
         json.dump(requests, f, indent=4)
 
-@Client.on_message(filters.command("plans") & filters.private)
+@Client.on_message(filters.command("plans") & (filters.private | filters.group))
 async def show_plans(client: Client, message: Message):
     """Display all available subscription plans"""
 
@@ -160,7 +160,7 @@ Use <code>/requestplan [plan_name]</code> to request a plan.
 
     await message.reply(plans_text, reply_markup=keyboard)
 
-@Client.on_message(filters.command("requestplan") & filters.private)
+@Client.on_message(filters.command("requestplan") & (filters.private | filters.group))
 async def request_plan_command(client: Client, message: Message):
     """Handle plan request via command"""
     args = message.text.split(maxsplit=1)
@@ -265,7 +265,7 @@ Use buttons below to approve or deny.""",
         except Exception as e:
             print(f"Failed to notify owner: {e}")
 
-@Client.on_message(filters.command("myrequests") & filters.private)
+@Client.on_message(filters.command("myrequests") & (filters.private | filters.group))
 async def my_requests_command(client: Client, message: Message):
     """Show user's plan requests"""
     await show_my_requests(message.from_user.id, message)
@@ -317,7 +317,7 @@ async def show_my_requests(user_id: int, message: Message):
 
     await message.reply(text, reply_markup=keyboard)
 
-@Client.on_message(filters.command("cancelrequest") & filters.private)
+@Client.on_message(filters.command("cancelrequest") & (filters.private | filters.group))
 async def cancel_request(client: Client, message: Message):
     """Cancel user's pending plan request"""
     async with request_lock:
