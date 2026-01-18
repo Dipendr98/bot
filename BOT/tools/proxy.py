@@ -122,7 +122,6 @@ def normalize_proxy(proxy_raw: str) -> str:
 
 async def get_ip(proxy_url: str):
     try:
-        try:
         async with httpx.AsyncClient(
             proxies=proxy_url,     # ✅ works with httpx==0.27.2
             timeout=10,
