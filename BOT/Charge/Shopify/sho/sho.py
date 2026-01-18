@@ -108,6 +108,18 @@ async def create_shopify_charge(card, mes, ano, cvv, session):
               # print(stable_id)
               # print(paymentMethodIdentifier)
 
+              required_fields = {
+                  "session_token": x_checkout_one_session_token,
+                  "queue_token": queue_token,
+                  "stable_id": stable_id,
+                  "payment_method": paymentMethodIdentifier,
+                  "cart_token": token,
+              }
+              missing_fields = [name for name, value in required_fields.items() if not value]
+              if missing_fields:
+                  missing_list = ", ".join(missing_fields)
+                  return f"CHECKOUT_DATA_MISSING: {missing_list}"
+
               headers = {
                   'accept': 'application/json',
                   'accept-language': 'en-US,en;q=0.9,hi;q=0.8',
