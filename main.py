@@ -52,6 +52,7 @@ import json
 import asyncio
 import threading
 from pyrogram import Client, idle
+from pyrogram.types import BotCommand
 from flask import Flask
 from BOT.plans.plan1 import check_and_expire_plans as plan1_expiry
 from BOT.plans.plan2 import check_and_expire_plans as plan2_expiry
@@ -91,6 +92,42 @@ def run_flask():
 async def run_bot():
     await bot.start()
     print("✅ Bot is running...")
+
+    # Register bot commands for autocomplete
+    commands = [
+        BotCommand("start", "Start the bot"),
+        BotCommand("help", "Show help menu"),
+        BotCommand("ping", "Check bot latency"),
+        BotCommand("info", "Get user information"),
+        BotCommand("cmds", "View all commands"),
+        BotCommand("bin", "Check BIN information"),
+        BotCommand("mbin", "Mass BIN lookup"),
+        BotCommand("fake", "Generate fake identity"),
+        BotCommand("gen", "Generate card numbers"),
+        BotCommand("mod", "Modify card numbers"),
+        BotCommand("sg", "Shopify gateway charge"),
+        BotCommand("msg", "Mass Shopify gateway charge"),
+        BotCommand("sho", "Shopify checkout"),
+        BotCommand("msho", "Mass Shopify checkout"),
+        BotCommand("sh", "Shopify charge"),
+        BotCommand("msh", "Mass Shopify charge"),
+        BotCommand("tsh", "Test Shopify"),
+        BotCommand("tslf", "Test SLF"),
+        BotCommand("plans", "View available plans"),
+        BotCommand("requestplan", "Request a plan"),
+        BotCommand("myrequests", "View your plan requests"),
+        BotCommand("cancelrequest", "Cancel a plan request"),
+        BotCommand("redeem", "Redeem a plan key"),
+        BotCommand("setpx", "Set proxy"),
+        BotCommand("getpx", "Get current proxy"),
+        BotCommand("delpx", "Delete proxy"),
+        BotCommand("groupid", "Get group/chat ID"),
+        BotCommand("fl", "Apply filter (reply to message)"),
+        BotCommand("fback", "Send feedback (reply to message)"),
+    ]
+
+    await bot.set_bot_commands(commands)
+    print("✅ Bot commands registered for autocomplete")
 
     # Background plan expiry tasks
     asyncio.create_task(plan1_expiry(bot))
