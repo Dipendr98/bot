@@ -122,7 +122,8 @@ def normalize_proxy(proxy_raw: str) -> str:
 
 async def get_ip(proxy_url):
     try:
-        transport = httpx.AsyncHTTPTransport(proxy=proxy_url)
+        proxy = httpx.Proxy(proxy_url) if hasattr(httpx, "Proxy") else proxy_url
+        transport = httpx.AsyncHTTPTransport(proxy=proxy)
         async with httpx.AsyncClient(transport=transport, timeout=10) as client:
             res = await client.get("https://ipinfo.io/json")
             if res.status_code == 200:
