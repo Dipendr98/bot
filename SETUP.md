@@ -39,6 +39,12 @@ sudo apt-get update
 sudo apt-get install supervisor -y
 ```
 
+**Verify installation:**
+```bash
+which supervisorctl
+sudo supervisorctl version
+```
+
 #### For CentOS/RHEL:
 ```bash
 sudo yum install supervisor -y
@@ -46,11 +52,23 @@ sudo systemctl enable supervisord
 sudo systemctl start supervisord
 ```
 
+**Verify installation:**
+```bash
+which supervisorctl
+sudo supervisorctl version
+```
+
 #### For Fedora:
 ```bash
 sudo dnf install supervisor -y
 sudo systemctl enable supervisord
 sudo systemctl start supervisord
+```
+
+**Verify installation:**
+```bash
+which supervisorctl
+sudo supervisorctl version
 ```
 
 ### 4. Configure Supervisor for the Bot
@@ -108,7 +126,56 @@ sudo tail -f /var/log/telegram_bot.err.log
 
 ### Supervisor command not found
 
-If you get the error `sudo: supervisorctl: command not found`, it means Supervisor is not installed. Follow step 3 above to install it.
+If you get the error `supervisorctl: command not found` or `sudo: supervisorctl: command not found`, this means Supervisor is not installed or not in your PATH. Here's how to fix it:
+
+#### 1. Check if Supervisor is installed:
+```bash
+which supervisorctl
+```
+
+If this returns nothing, Supervisor is not installed.
+
+#### 2. Install Supervisor:
+Follow step 3 above to install Supervisor for your operating system.
+
+#### 3. Verify the installation:
+After installation, verify that supervisorctl is accessible:
+```bash
+sudo supervisorctl version
+```
+
+#### 4. Check if Supervisor service is running:
+```bash
+sudo systemctl status supervisor
+```
+or
+```bash
+sudo service supervisor status
+```
+
+If it's not running, start it:
+```bash
+sudo systemctl start supervisor
+```
+or
+```bash
+sudo service supervisor start
+```
+
+#### 5. PATH Issues (Advanced):
+If supervisorctl is installed but not found, check your PATH:
+```bash
+echo $PATH
+```
+
+Common locations for supervisorctl:
+- `/usr/bin/supervisorctl`
+- `/usr/local/bin/supervisorctl`
+
+You can also try using the full path:
+```bash
+sudo /usr/bin/supervisorctl status
+```
 
 ### Bot won't start
 
