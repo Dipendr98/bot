@@ -2,6 +2,7 @@ import httpx
 import random
 import asyncio
 from typing import Optional
+from BOT.Charge.Shopify.ash.url_manager import get_user_url
 
 # User agents for requests
 USER_AGENTS = [
@@ -18,6 +19,7 @@ AUTOSHOPIFY_BASE_URL = "https://autosh-production-b437.up.railway.app/process"
 # Mix of domain-only and full product URLs for better compatibility
 FALLBACK_PRODUCT_URLS = [
     "https://www.bountifulbaby.com",  # Domain-only format
+    "https://3duxdesign.myshopify.com",  # Domain-only Shopify
     "https://kettleandfire.myshopify.com/products/bone-broth",
     "https://kobo-us.myshopify.com/products/clara-2e",
     "https://habit-nest.myshopify.com/products/morning-sidekick-journal",
@@ -184,7 +186,7 @@ def _parse_response(response_data: dict) -> dict:
         }
 
 
-async def check_autoshopify(card_data: str, site: str = None, proxy: str = None) -> dict:
+async def check_autoshopify(card_data: str, site: str = None, proxy: str = None, user_id: str = None) -> dict:
     """
     Check a card using the autoshopify service with retry and fallback logic
 
@@ -192,6 +194,7 @@ async def check_autoshopify(card_data: str, site: str = None, proxy: str = None)
         card_data: Card in format cc|mm|yy|cvv
         site: Optional site URL with product (defaults to fallback URLs)
         proxy: Optional proxy string
+        user_id: Optional user ID to check for custom URL
 
     Returns:
         dict with status, message, and response data
@@ -210,9 +213,23 @@ async def check_autoshopify(card_data: str, site: str = None, proxy: str = None)
 
         # Prepare sites to try
         sites_to_try = []
+
+        # Check if user has custom URL set
+        user_custom_url = None
+        if user_id:
+            user_custom_url = get_user_url(user_id)
+
         if site:
-            # User provided a custom site - try it first
+            # User provided a custom site in command - try it first
             sites_to_try.append(site)
+            # Add user's saved custom URL if exists
+            if user_custom_url and user_custom_url != site:
+                sites_to_try.append(user_custom_url)
+            # Add fallback URLs as backup
+            sites_to_try.extend(FALLBACK_PRODUCT_URLS[:3])
+        elif user_custom_url:
+            # User has saved custom URL - use it first
+            sites_to_try.append(user_custom_url)
             # Add fallback URLs as backup
             sites_to_try.extend(FALLBACK_PRODUCT_URLS[:3])
         else:

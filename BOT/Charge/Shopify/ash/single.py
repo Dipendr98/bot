@@ -119,7 +119,7 @@ async def handle_autosh(client, message):
         )
 
         # Check card using autoshopify
-        result = await check_autoshopify(fullcc, site=site)
+        result = await check_autoshopify(fullcc, site=site, user_id=user_id)
 
         await loading_msg.edit(
             f"<pre>Processed ✔️</pre>\n"

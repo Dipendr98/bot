@@ -130,7 +130,7 @@ async def handle_mass_autosh(client, message):
 
         for batch in chunk_cards(cards, batch_size):
             # Create tasks for batch
-            tasks = [check_autoshopify(card) for card in batch]
+            tasks = [check_autoshopify(card, user_id=user_id) for card in batch]
 
             # Run batch concurrently
             batch_results = await asyncio.gather(*tasks)
