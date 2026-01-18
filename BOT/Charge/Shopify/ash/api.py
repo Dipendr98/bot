@@ -14,8 +14,10 @@ USER_AGENTS = [
 # Base autoshopify URL
 AUTOSHOPIFY_BASE_URL = "https://autosh-production-b437.up.railway.app/process"
 
-# Fallback product URLs - Multiple working Shopify stores
+# Fallback product URLs - Multiple working Shopify and other e-commerce stores
+# Mix of domain-only and full product URLs for better compatibility
 FALLBACK_PRODUCT_URLS = [
+    "https://www.bountifulbaby.com",  # Domain-only format
     "https://kettleandfire.myshopify.com/products/bone-broth",
     "https://kobo-us.myshopify.com/products/clara-2e",
     "https://habit-nest.myshopify.com/products/morning-sidekick-journal",
