@@ -161,7 +161,7 @@ async def handle_msho_command(client, message):
 {ongoing_result}
 <b>💬 Progress :</b> <code>{processed_count}/{total_cc}</code>
 <b>[⚬] Checked By :</b> {checked_by} [<code>{plan} {badge}</code>]
-<b>[⚬] Dev :</b> <a href="https://t.me/syncblast">𝙁𝙪𝙧𝙠𝙖𝙣</a>
+<b>[⚬] Dev :</b> <a href="https://t.me/Chr1shtopher">Christopher</a>
 """, disable_web_page_preview=True
                 )
 
