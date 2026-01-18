@@ -82,6 +82,7 @@ from pyrogram import Client, filters
 from pyrogram.types import Message
 from pyrogram.enums import ParseMode
 from BOT.Charge.Shopify.slf.api import autoshopify  # your actual API function
+from BOT.tools.site import normalize_site_url
 
 SITES_PATH = "DATA/sites.json"
 TEST_CARD = "4342562842964445|04|26|568"
@@ -91,7 +92,9 @@ async def add_site_api_based(client, message: Message):
     if len(message.command) < 2:
         return await message.reply("❌ Please provide a site URL.\n\nExample:\n`/slfurl https://example.com`")
 
-    site = message.command[1]
+    site = normalize_site_url(message.command[1])
+    if not site:
+        return await message.reply("❌ Invalid site URL.\n\nExample:\n`/slfurl https://example.com`")
     user_id = str(message.from_user.id)
 
     wait_msg = await message.reply("<pre>[🔍 Checking Site..! ]</pre>", reply_to_message_id=message.id)

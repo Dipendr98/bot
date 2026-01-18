@@ -2,6 +2,7 @@ from pyrogram import Client, filters
 from pyrogram.types import Message
 from pyrogram.enums import ParseMode
 from BOT.Charge.Shopify.self.api import autoshopify  # ✅ your API function
+from BOT.tools.site import normalize_site_url
 import httpx, os, json, time
 
 TXT_SITES_PATH = "DATA/txtsite.json"
@@ -32,16 +33,19 @@ async def txturl_handler(client, message: Message):
 
     async with httpx.AsyncClient(timeout=30) as session:
         for site in args:
-            if site in existing_sites:
+            normalized_site = normalize_site_url(site)
+            if not normalized_site:
+                continue
+            if normalized_site in existing_sites:
                 continue  # Skip duplicates
 
             try:
-                result = await autoshopify(site, TEST_CARD, session)
+                result = await autoshopify(normalized_site, TEST_CARD, session)
                 if result and result.get("cc"):
                     gateway = result.get("Gateway", "Unknown")
                     price = result.get("Price", "N/A")
                     gate_name = f"{gateway} {price}$"
-                    supported_sites.append({"site": site, "gate": gate_name})
+                    supported_sites.append({"site": normalized_site, "gate": gate_name})
             except Exception:
                 continue
 
@@ -134,4 +138,3 @@ async def rurl_handler(client, message: Message):
         return await message.reply(f"<b>✅ Removed:</b>\n<code>{', '.join(removed)}</code>", parse_mode=ParseMode.HTML)
     else:
         return await message.reply("<pre>❌ No matching site(s) found to remove.</pre>", parse_mode=ParseMode.HTML)
-
