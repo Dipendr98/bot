@@ -3,6 +3,7 @@ import json
 import random
 import base64
 import httpx
+import uuid
 from typing import Optional
 from urllib.parse import urlparse, parse_qs
 
@@ -158,7 +159,7 @@ async def check_braintree(card: str, exp: str, exy: str, cvc: str, proxy: Option
             "clientSdkMetadata": {
                 "source": "client",
                 "integration": "dropin2",
-                "sessionId": "90ec9e6b-9389-45c9-9542-ba6271ad49c6"
+                "sessionId": str(uuid.uuid4())
             },
             "query": "mutation TokenizeCreditCard($input: TokenizeCreditCardInput!) {   tokenizeCreditCard(input: $input) {     token     creditCard {       bin       brandCode       last4       cardholderName       expirationMonth      expirationYear      binData {         prepaid         healthcare         debit         durbinRegulated         commercial         payroll         issuingBank         countryOfIssuance         productId       }     }   } }",
             "variables": {
@@ -231,7 +232,7 @@ async def check_braintree(card: str, exp: str, exy: str, cvc: str, proxy: Option
         payload = {
             "subscriptionTypeId": 26,
             "nonce": token,
-            "deviceData": '{"device_session_id":"1828806e70140be76f80b47aa269ef20","fraud_merchant_id":null,"correlation_id":"8adec9342087be4c33374c6ab459cb56"}',
+            "deviceData": f'{{"device_session_id":"{uuid.uuid4().hex}","fraud_merchant_id":null,"correlation_id":"{uuid.uuid4().hex}"}}',
             "promoCode": None,
             "captchaToken": captcha_token
         }
