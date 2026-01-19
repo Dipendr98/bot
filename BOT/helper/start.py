@@ -444,17 +444,22 @@ async def handle_callbacks(client, callback_query):
         )
 
     elif data in ["braintree"]:
-        working_text = "<pre>Currently Working...!</pre>"
+        braintree_text = """<pre>#Braintree 〔Charge〕</pre>
+━ ━ ━ ━ ━━━ ━ ━ ━ ━
+⟐ <b>Name</b>: <code>Braintree 1$</code>
+⟐ <b>Command</b>: <code>/br cc|mes|ano|cvv</code>
+⟐ <b>Status: Active ✅</b>
+"""
 
-        working_buttons = InlineKeyboardMarkup([
+        braintree_buttons = InlineKeyboardMarkup([
             [
                 InlineKeyboardButton("Back", callback_data="charge"),
                 InlineKeyboardButton("Close", callback_data="exit")
             ]
         ])
         await callback_query.message.edit_text(
-            working_text,
-            reply_markup=working_buttons
+            braintree_text,
+            reply_markup=braintree_buttons
         )
 
     elif data == "tools":
