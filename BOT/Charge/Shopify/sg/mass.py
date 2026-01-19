@@ -135,7 +135,7 @@ async def handle_msg_command(client, message):
                     f"""<pre>✦ Sync | {gateway}</pre>
 {ongoing_result}
 <b>[⚬] Checked By :</b> {checked_by} [<code>{plan} {badge}</code>]
-<b>[⚬] Dev :</b> <a href="https://t.me/Chr1shtopher">𝙁𝙪𝙧𝙠𝙖𝙣</a>
+<b>[⚬] Dev :</b> <a href="https://t.me/Chr1shtopher"></a>
 """, disable_web_page_preview=True
                 )
 
