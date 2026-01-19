@@ -29,21 +29,7 @@ def get_user_site(user_id):
 @Client.on_message(filters.command("sh") | filters.regex(r"^\.slf(\s|$)"))
 async def handle_slf(client, message):
     try:
-        # If chat is not in allowed list
-        allowed_groups = load_allowed_groups()
-
-        # print("Chat Type:", message.chat.type)
-        # print("Chat ID:", message.chat.id)
-        # print("Allowed Groups:", allowed_groups)
-        # if message.chat.id not in allowed_groups:
-        if message.chat.type in [ChatType.GROUP, ChatType.SUPERGROUP] and message.chat.id not in allowed_groups:
-            return await message.reply(
-                "<pre>Notification ❗️</pre>\n"
-                "<b>~ Message :</b> <code>This Group Is Not Approved ⚠️</code>\n"
-                "<b>~ Contact  →</b> <b>@itzspoooky</b>\n"
-                "━━━━━━━━━━━━━\n"
-                "<b>Contact Owner For Approving</b>"
-            )
+        # Group restriction removed - all groups can use this command
 
         users = load_users()
         user_id = str(message.from_user.id)
