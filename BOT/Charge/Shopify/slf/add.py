@@ -89,7 +89,7 @@ TEST_CARD = "4342562842964445|04|26|568"
 @Client.on_message(filters.command("addurl") & filters.private)
 async def add_site_api_based(client, message: Message):
     if len(message.command) < 2:
-        return await message.reply("❌ Please provide a site URL.\n\nExample:\n`/slfurl https://example.com`")
+        return await message.reply("❌ Please provide a site URL.\n\nExample:\n`/addurl https://example.com`")
 
     site = message.command[1]
     user_id = str(message.from_user.id)

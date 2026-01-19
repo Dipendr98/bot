@@ -68,7 +68,7 @@ async def handle_slf(client, message):
         user_site_info = get_user_site(user_id)
         if not user_site_info:
             return await message.reply(
-                "<pre>Site Not Found ⚠️</pre>\nError : <code>Please Set Site First</code>\n~ <code>Using /slfurl in Bot's Private</code>",
+                "<pre>Site Not Found ⚠️</pre>\nError : <code>Please Set Site First</code>\n~ <code>Using /addurl in Bot's Private</code>",
                 reply_to_message_id=message.id
             )
 
