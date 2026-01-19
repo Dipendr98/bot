@@ -8,3 +8,6 @@ flask
 nest_asyncio
 pytz
 reportlab
+cloudscraper
+fake-useragent
+faker
