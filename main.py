@@ -115,6 +115,7 @@ async def run_bot():
         BotCommand("tslf", "Test SLF"),
         BotCommand("autosh", "AutoShopify charge"),
         BotCommand("mautosh", "Mass AutoShopify charge"),
+        BotCommand("br", "Braintree checker"),
         BotCommand("au", "Stripe Auth single check"),
         BotCommand("mau", "Stripe Auth mass check"),
         BotCommand("plans", "View available plans"),
