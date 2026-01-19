@@ -281,9 +281,10 @@ async def mslf_handler(client, message):
             await loop.run_in_executor(None, deduct_credit_bulk, user_id, len(all_cards))
 
         # Final edit
+        final_results_text = '\n'.join(final_results)
         await loader_msg.edit(
             f"<pre>✦ [$mslf] | M-Self Shopify</pre>\n"
-            f"{'\n'.join(final_results)}\n"
+            f"{final_results_text}\n"
             f"<b>[⚬] T/t :</b> <code>{timetaken}s</code>\n"
             f"<b>[⚬] Checked By :</b> {checked_by} [<code>{plan} {badge}</code>]\n"
             f"<b>[⚬] Dev :</b> <a href='https://t.me/Chr1shtopher'>Christopher</a>",
