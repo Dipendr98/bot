@@ -2,6 +2,7 @@ import json
 import os
 from pyrogram import Client, filters
 from pyrogram.types import Message, InlineKeyboardMarkup, InlineKeyboardButton, CallbackQuery
+from pyrogram.errors import MessageNotModified
 from datetime import datetime
 import asyncio
 import html
@@ -119,7 +120,10 @@ async def start_command(client: Client, message: Message):
     ])
 
     await asyncio.sleep(0.5)
-    await sent.edit_text(final_text.strip(), reply_markup=keyboard, disable_web_page_preview=True)
+    try:
+        await sent.edit_text(final_text.strip(), reply_markup=keyboard, disable_web_page_preview=True)
+    except MessageNotModified:
+        pass
 
 # Handle the register callback (button press)
 @Client.on_callback_query(filters.regex("register"))
@@ -166,13 +170,16 @@ async def register_callback(client, callback_query):
          InlineKeyboardButton("Exit", callback_data="exit")]
     ])
 
-    await callback_query.message.edit_text(f"""<pre>Registration Successfull ✔</pre>
+    try:
+        await callback_query.message.edit_text(f"""<pre>Registration Successfull ✔</pre>
 ╭━━━━━━━━━━
 │● <b>Name</b> : <code>{first_name} [{user_data['plan']['badge']}]</code>
 │● <b>UserID</b> : <code>{user_id}</code>
 │● <b>Credits</b> : <code>{user_data['plan']['credits']}</code>
 │● <b>Role</b> : <code>{user_data['role']}</code>
 ╰━━━━━━━━━━""", reply_markup=buttons)
+    except MessageNotModified:
+        pass
 
 
 # Handle the /register command
@@ -277,7 +284,10 @@ async def handle_callbacks(client, callback_query):
     data = callback_query.data
 
     if data == "exit":
-        await callback_query.message.edit_text("<pre>Thanks For Using #Sync</pre>")
+        try:
+            await callback_query.message.edit_text("<pre>Thanks For Using #Sync</pre>")
+        except MessageNotModified:
+            pass
 
     elif data == "home":
         # Home text jab home button click kare
@@ -298,11 +308,14 @@ async def handle_callbacks(client, callback_query):
             ]
         ])
 
-        await callback_query.message.edit_text(
-            home_text,
-            reply_markup=home_buttons,
-            disable_web_page_preview=True
-        )
+        try:
+            await callback_query.message.edit_text(
+                home_text,
+                reply_markup=home_buttons,
+                disable_web_page_preview=True
+            )
+        except MessageNotModified:
+            pass
 
     elif data == "gates":
         # Gates ke andar jaake buttons dikhao
@@ -318,10 +331,13 @@ async def handle_callbacks(client, callback_query):
 
         gates_text = "<pre>Choose Gate Type:</pre>"
 
-        await callback_query.message.edit_text(
-            gates_text,
-            reply_markup=gates_buttons
-        )
+        try:
+            await callback_query.message.edit_text(
+                gates_text,
+                reply_markup=gates_buttons
+            )
+        except MessageNotModified:
+            pass
 
     elif data == "auth":
         auth_text = """<pre>#Sync 〔AUTH GATES〕</pre>
@@ -344,10 +360,13 @@ async def handle_callbacks(client, callback_query):
                 InlineKeyboardButton("Close", callback_data="exit")
             ]
         ])
-        await callback_query.message.edit_text(
-            auth_text,
-            reply_markup=auth_buttons
-        )
+        try:
+            await callback_query.message.edit_text(
+                auth_text,
+                reply_markup=auth_buttons
+            )
+        except MessageNotModified:
+            pass
 
     elif data == "charge":
         charge_buttons = InlineKeyboardMarkup([
@@ -367,10 +386,13 @@ async def handle_callbacks(client, callback_query):
 
         charge_text = "<pre>#Sync 〔 Charge 〕</pre>"
 
-        await callback_query.message.edit_text(
-            charge_text,
-            reply_markup=charge_buttons
-        )
+        try:
+            await callback_query.message.edit_text(
+                charge_text,
+                reply_markup=charge_buttons
+            )
+        except MessageNotModified:
+            pass
 
     elif data == "shopify":
         shopify_text = """<pre>#Shopify 〔Charge〕</pre>
@@ -391,10 +413,13 @@ async def handle_callbacks(client, callback_query):
                 InlineKeyboardButton("Close", callback_data="exit")
             ]
         ])
-        await callback_query.message.edit_text(
-            shopify_text,
-            reply_markup=shopify_buttons
-        )
+        try:
+            await callback_query.message.edit_text(
+                shopify_text,
+                reply_markup=shopify_buttons
+            )
+        except MessageNotModified:
+            pass
 
     elif data == "auto":
         auto_text = """<pre>#SelfShopify 〔Charge〕</pre>
@@ -416,10 +441,13 @@ async def handle_callbacks(client, callback_query):
                 InlineKeyboardButton("Close", callback_data="exit")
             ]
         ])
-        await callback_query.message.edit_text(
-            auto_text,
-            reply_markup=auto_buttons
-        )
+        try:
+            await callback_query.message.edit_text(
+                auto_text,
+                reply_markup=auto_buttons
+            )
+        except MessageNotModified:
+            pass
 
     elif data == "stripe":
         stripe_text = """<pre>#Stripe 〔Charge〕</pre>
@@ -438,10 +466,13 @@ async def handle_callbacks(client, callback_query):
                 InlineKeyboardButton("Close", callback_data="exit")
             ]
         ])
-        await callback_query.message.edit_text(
-            stripe_text,
-            reply_markup=stripe_buttons
-        )
+        try:
+            await callback_query.message.edit_text(
+                stripe_text,
+                reply_markup=stripe_buttons
+            )
+        except MessageNotModified:
+            pass
 
     elif data in ["braintree"]:
         braintree_text = """<pre>#Braintree 〔Charge〕</pre>
@@ -457,10 +488,13 @@ async def handle_callbacks(client, callback_query):
                 InlineKeyboardButton("Close", callback_data="exit")
             ]
         ])
-        await callback_query.message.edit_text(
-            braintree_text,
-            reply_markup=braintree_buttons
-        )
+        try:
+            await callback_query.message.edit_text(
+                braintree_text,
+                reply_markup=braintree_buttons
+            )
+        except MessageNotModified:
+            pass
 
     elif data == "tools":
         await callback_query.answer("Tools Coming Soon!", show_alert=True)
