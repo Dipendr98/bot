@@ -330,12 +330,12 @@ async def handle_callbacks(client, callback_query):
 ⟐ <b>Command</b>: <code>$b3 cc|mes|ano|cvv</code>
 ⟐ <b>Status</b>: <code>Active ✅</code>
 ═══════════════════
-⟐ <b>Name</b>: <code>Stripe Auth</code>
+⟐ <b>Name</b>: <code>Stripe Auth [EcologyJobs]</code>
 ⟐ <b>Command</b>: <code>$au cc|mes|ano|cvv</code>
 ⟐ <b>Status</b>: <code>Active ✅</code>
 ━ ━ ━ ━ ━━━ ━ ━ ━ ━
 ⟐ <b>Mass Cmd</b>: <code>$mau cc|mes|ano|cvv</code>
-⟐ <b>Limit</b>: <code>Unlimited</code>
+⟐ <b>Limit</b>: <code>Plan Based</code>
 ⟐ <b>Status: Active ✅</b>
 """
         auth_buttons = InlineKeyboardMarkup([
