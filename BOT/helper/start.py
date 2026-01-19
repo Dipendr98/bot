@@ -377,13 +377,13 @@ async def handle_callbacks(client, callback_query):
 ━ ━ ━ ━ ━━━ ━ ━ ━ ━
 ⟐ <b>Name</b>: <code>Shopify 1$</code>
 ⟐ <b>Command</b>: <code>$sho cc|mes|ano|cvv</code>
-⟐ <b>Status: Dead ❌</b>
+⟐ <b>Status: Active ✅</b>
 
 <pre>#Shopify 〔Charge〕</pre>
 ━ ━ ━ ━ ━━━ ━ ━ ━ ━
 ⟐ <b>Name</b>: <code>Shopify 1$</code>
 ⟐ <b>Command</b>: <code>$sg cc|mes|ano|cvv</code>
-⟐ <b>Status: Dead ❌</b>
+⟐ <b>Status: Active ✅</b>
 """
         shopify_buttons = InlineKeyboardMarkup([
             [
@@ -408,7 +408,7 @@ async def handle_callbacks(client, callback_query):
 ⟐ <b>Status: Active ✅</b>
 ━ ━ ━ ━ ━━━ ━ ━ ━ ━
 ⟐ <b>Mass Cmd</b>: <code>$tsh cc|mes|ano|cvv</code>
-⟐ <b>Status: Dead ❌</b>
+⟐ <b>Status: Active ✅</b>
 """
         auto_buttons = InlineKeyboardMarkup([
             [
