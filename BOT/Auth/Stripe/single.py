@@ -2,7 +2,7 @@ import re
 from pyrogram import Client, filters
 from time import time
 import asyncio
-from BOT.Auth.Stripe.st import async_stripe_auth
+from BOT.Auth.Stripe.fixme import async_stripe_auth_fixme
 from BOT.Auth.Stripe.response import format_stripe_response
 from BOT.helper.start import load_users
 from BOT.helper.permissions import check_private_access, is_premium_user
@@ -116,7 +116,7 @@ async def handle_au_command(client, message):
 
         # Process auth
         start_time = time()
-        result = await async_stripe_auth(card, mes, ano, cvv)
+        result = await async_stripe_auth_fixme(card, mes, ano, cvv)
         end_time = time()
         timetaken = round(end_time - start_time, 2)
 
