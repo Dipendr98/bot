@@ -119,7 +119,7 @@ async def handle_sho_command(client, message):
 
         buttons = InlineKeyboardMarkup([
             [
-                InlineKeyboardButton("Support", url="https://t.me/SyncUI"),
+                InlineKeyboardButton("Support", url="https://t.me/Chr1shtopher"),
                 InlineKeyboardButton("Plans", callback_data="plans_info")
             ]
         ])
