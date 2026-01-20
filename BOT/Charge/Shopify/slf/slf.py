@@ -65,9 +65,9 @@ async def check_card(user_id, cc, site=None):
 
     proxy = get_proxy(user_id)
     if proxy:
-        url = f"https://autosh-production-b437.up.railway.app/process?cc={cc}&site={site}&proxy= {proxy}"
+        url = f"https://autosh-production-b437.up.railway.app/process?cc={cc}&site={site}&proxy={proxy}"
     else:
-        url = f"https://autosh-production-b437.up.railway.app/process?cc={cc}&site={site}&proxy= {proxy}"
+        url = f"https://autosh-production-b437.up.railway.app/process?cc={cc}&site={site}&proxy={proxy}"
 
     retries = 0
     while retries < 3:
