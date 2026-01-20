@@ -142,7 +142,7 @@ async def add_site_handler(bot: Client, message: Message):
             clickableFname = f"<a href='tg://user?id={message.from_user.id}'>{message.from_user.first_name}</a>"
 
             return await wait_msg.edit_text(
-                f"""<pre>Site Added ✅~ 𝐃𝐞𝐤𝐮𝐂𝐇𝐊 ✦</pre>
+                f"""<pre>Site Added ✅~ Chr1shtopher✦</pre>
 [⌯] <b>Site:</b> <code>{site}</code> 
 [⌯] <b>Gateway:</b> <code>{gate_name}</code> 
 [⌯] <b>Response:</b> <code>{resp}</code> 
@@ -150,7 +150,7 @@ async def add_site_handler(bot: Client, message: Message):
 [⌯] <b>Time Taken:</b> <code>{time_taken} sec</code> 
 ━━━━━━━━━━━━━
 [⌯] <b>Req By:</b> {clickableFname}
-[⌯] <b>Dev:</b> <a href="tg://resolve?domain=SyncUI">𝙁𝙪𝙧𝙠𝙖𝙣</a>""",
+[⌯] <b>Dev:</b> <a href="tg://resolve?domain=Chr1shtopher">Christopher</a>""",
                 parse_mode=ParseMode.HTML
             )
         else:
