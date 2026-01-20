@@ -144,6 +144,57 @@ import httpx, os, json, time
 
 TXT_SITES_PATH = "DATA/txtsite.json"
 TEST_CARD = "4342562842964445|04|26|568"
+MAX_MESSAGE_LENGTH = 4000  # Telegram limit is 4096, using 4000 for safety
+
+async def send_long_message(message_obj, text: str, parse_mode=ParseMode.HTML, edit=True):
+    """
+    Split and send long messages to avoid Telegram's 4096 character limit.
+    Splits at newlines to avoid breaking HTML tags.
+
+    Args:
+        message_obj: Message object to edit or reply to
+        text: Text to send
+        parse_mode: Parse mode for the message
+        edit: If True, edits the message; if False, sends as reply
+    """
+    if len(text) <= MAX_MESSAGE_LENGTH:
+        if edit:
+            await message_obj.edit_text(text, parse_mode=parse_mode)
+        else:
+            await message_obj.reply(text, parse_mode=parse_mode)
+        return
+
+    # Split by lines to avoid breaking HTML tags
+    lines = text.split('\n')
+    chunks = []
+    current_chunk = ""
+
+    for line in lines:
+        # If adding this line exceeds limit, save current chunk and start new one
+        if len(current_chunk) + len(line) + 1 > MAX_MESSAGE_LENGTH:
+            if current_chunk:
+                chunks.append(current_chunk)
+            current_chunk = line
+        else:
+            if current_chunk:
+                current_chunk += "\n" + line
+            else:
+                current_chunk = line
+
+    # Add the last chunk
+    if current_chunk:
+        chunks.append(current_chunk)
+
+    # Send first chunk
+    if chunks:
+        if edit:
+            await message_obj.edit_text(chunks[0], parse_mode=parse_mode)
+        else:
+            await message_obj.reply(chunks[0], parse_mode=parse_mode)
+
+        # Send remaining chunks as new messages
+        for chunk in chunks[1:]:
+            await message_obj.reply(chunk, parse_mode=parse_mode)
 
 def normalize_url(site: str) -> str:
     """Normalize site URL by adding https:// if missing and cleaning up."""
@@ -249,7 +300,7 @@ async def txturl_handler(client, message: Message):
     result_lines.append("━━━━━━━━━━━━━")
     result_lines.append(f"[⌯] <b>Req By:</b> {clickableFname}")
 
-    await wait_msg.edit_text("\n".join(result_lines), parse_mode=ParseMode.HTML)
+    await send_long_message(wait_msg, "\n".join(result_lines))
 
 
 TXT_SITES_PATH = "DATA/txtsite.json"
@@ -282,7 +333,7 @@ async def txtls_handler(client, message: Message):
     lines.append("━━━━━━━━━━━━━")
     lines.append(f"[⌯] <b>Req By:</b> {clickableFname}")
 
-    await message.reply("\n".join(lines), parse_mode=ParseMode.HTML)
+    await send_long_message(message, "\n".join(lines), edit=False)
 
 @Client.on_message(filters.command("rurl") & filters.private)
 async def rurl_handler(client, message: Message):
