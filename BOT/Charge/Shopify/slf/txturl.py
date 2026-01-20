@@ -145,12 +145,22 @@ import httpx, os, json, time
 TXT_SITES_PATH = "DATA/txtsite.json"
 TEST_CARD = "4342562842964445|04|26|568"
 
+def normalize_url(site: str) -> str:
+    """Normalize site URL by adding https:// if missing and cleaning up."""
+    site = site.strip()
+    # Remove trailing slashes
+    site = site.rstrip('/')
+    # Add https:// if no protocol specified
+    if not site.startswith(('http://', 'https://')):
+        site = f'https://{site}'
+    return site
+
 @Client.on_message(filters.command("txturl") & filters.private)
 async def txturl_handler(client, message: Message):
     args = message.command[1:]
 
     if len(args) < 1:
-        return await message.reply("<b>❌ Please provide at least 1 site URL.</b>\nExample: <code>/txturl site1 site2</code>")
+        return await message.reply("<b>❌ Please provide at least 1 site URL.</b>\nExample: <code>/txturl site1.com site2.com</code>")
 
     user_id = str(message.from_user.id)
     clickableFname = f"<a href='tg://user?id={user_id}'>{message.from_user.first_name}</a>"
@@ -167,39 +177,73 @@ async def txturl_handler(client, message: Message):
     user_sites = all_sites.get(user_id, [])
     existing_sites = {entry["site"]: entry for entry in user_sites}
     supported_sites = []
+    failed_sites = []
 
     async with httpx.AsyncClient(timeout=30) as session:
-        for site in args:
-            if site in existing_sites:
-                continue  # Skip duplicates
+        for i, site in enumerate(args, 1):
+            # Normalize URL
+            try:
+                normalized_site = normalize_url(site)
+            except Exception as e:
+                failed_sites.append({"site": site, "reason": f"Invalid URL format: {str(e)}"})
+                continue
+
+            if normalized_site in existing_sites:
+                failed_sites.append({"site": site, "reason": "Already exists"})
+                continue
+
+            # Update progress
+            await wait_msg.edit_text(f"<pre>[🔍 Checking Sites... {i}/{len(args)}]</pre>", parse_mode=ParseMode.HTML)
 
             try:
-                result = await autoshopify(site, TEST_CARD, session)
+                result = await autoshopify(normalized_site, TEST_CARD, session)
                 if result and result.get("cc"):
                     gateway = result.get("Gateway", "Unknown")
                     price = result.get("Price", "N/A")
                     gate_name = f"{gateway} {price}$"
-                    supported_sites.append({"site": site, "gate": gate_name})
-            except Exception:
-                continue
+                    supported_sites.append({"site": normalized_site, "gate": gate_name})
+                else:
+                    # Site didn't return valid card info
+                    reason = result.get("Response", "Not supported") if result else "No response"
+                    # Shorten common DNS errors
+                    if "Name or service not known" in reason:
+                        reason = "Invalid domain (DNS error)"
+                    elif "RECEIPT EMPTY" in reason:
+                        reason = "Gateway not supported"
+                    failed_sites.append({"site": site, "reason": reason})
+            except Exception as e:
+                error_msg = str(e)
+                if "Name or service not known" in error_msg:
+                    error_msg = "Invalid domain (DNS error)"
+                failed_sites.append({"site": site, "reason": error_msg})
 
-    if not supported_sites:
-        return await wait_msg.edit_text("<pre>No Supported Sites Found!</pre>", parse_mode=ParseMode.HTML)
-
-    # Save updated site list
-    user_sites.extend(supported_sites)
-    all_sites[user_id] = user_sites
-
-    with open(TXT_SITES_PATH, "w", encoding="utf-8") as f:
-        json.dump(all_sites, f, indent=4)
+    # Save supported sites
+    if supported_sites:
+        user_sites.extend(supported_sites)
+        all_sites[user_id] = user_sites
+        with open(TXT_SITES_PATH, "w", encoding="utf-8") as f:
+            json.dump(all_sites, f, indent=4)
 
     # Prepare UI
-    result_lines = ["<pre>Urls Added For Txt ~ Sync ✦</pre>"]
-    for site_entry in supported_sites:
-        result_lines.append(f"[⌯] <b>Site:</b> <code>{site_entry['site']}</code>")
-        result_lines.append(f"[⌯] <b>Gateway:</b> <code>{site_entry['gate']}</code>\n")
+    result_lines = []
+
+    if supported_sites:
+        result_lines.append("<pre>✅ Urls Added For Txt ~ Sync ✦</pre>")
+        for site_entry in supported_sites:
+            result_lines.append(f"[⌯] <b>Site:</b> <code>{site_entry['site']}</code>")
+            result_lines.append(f"[⌯] <b>Gateway:</b> <code>{site_entry['gate']}</code>\n")
+
+    if failed_sites:
+        result_lines.append("<pre>❌ Failed Sites</pre>")
+        for failed in failed_sites:
+            result_lines.append(f"[✗] <b>Site:</b> <code>{failed['site']}</code>")
+            result_lines.append(f"[✗] <b>Reason:</b> <code>{failed['reason']}</code>\n")
+
+    if not supported_sites and not failed_sites:
+        return await wait_msg.edit_text("<pre>No Sites Processed!</pre>", parse_mode=ParseMode.HTML)
 
     end_time = time.time()
+    result_lines.append(f"[⌯] <b>Success:</b> <code>{len(supported_sites)}</code> | <b>Failed:</b> <code>{len(failed_sites)}</code>")
     result_lines.append(f"[⌯] <b>Cmd:</b> <code>$tslf</code>")
     result_lines.append(f"[⌯] <b>Time Taken:</b> <code>{round(end_time - start_time, 2)} sec</code>")
     result_lines.append("━━━━━━━━━━━━━")
