@@ -402,12 +402,74 @@ async def create_shopify_charge(card, mes, ano, cvv, session):
                   headers=headers,
                   json=json_data,
               )
-              
+
               # print(request.text)
-    
+
               if "CAPTCHA_METADATA_MISSING" in request.text:
                   return "Captcha Detected ! ⚠️"
-              bill=request.json()['data']['submitForCompletion']['receipt']['id']
+
+              # Parse JSON response safely
+              try:
+                  submit_response = request.json()
+              except:
+                  return "Gateway Error: Invalid Response"
+
+              # Check for errors in submitForCompletion
+              if 'errors' in submit_response:
+                  error_msg = submit_response.get('errors', [{}])[0].get('message', 'Unknown Error')
+                  return f"API Error: {error_msg}"
+
+              # Safely extract receipt ID with retries
+              bill = None
+              max_retries = 3
+              for attempt in range(max_retries):
+                  data = submit_response.get('data', {})
+                  submit_completion = data.get('submitForCompletion', {})
+
+                  # Check if receipt exists
+                  if 'receipt' in submit_completion and submit_completion['receipt']:
+                      bill = submit_completion['receipt'].get('id')
+                      if bill:
+                          break
+
+                  # Check for errors in the response
+                  if 'errors' in submit_completion:
+                      error_msg = str(submit_completion.get('errors', 'Payment Failed'))
+                      return f"Payment Error: {error_msg}"
+
+                  # Check for payment errors or failures
+                  if 'userErrors' in submit_completion:
+                      errors = submit_completion.get('userErrors', [])
+                      if errors:
+                          return f"CARD_DECLINED - {errors[0].get('message', 'Unknown')}"
+
+                  # If no receipt yet and not last attempt, wait and retry
+                  if attempt < max_retries - 1:
+                      await asyncio.sleep(2)
+                      # Re-fetch to check if receipt is ready
+                      request = await session.post(
+                          'https://coatesforkids.org/checkouts/unstable/graphql',
+                          params=params,
+                          headers=headers,
+                          json=json_data,
+                      )
+                      try:
+                          submit_response = request.json()
+                      except:
+                          continue
+
+              # If still no receipt after retries, check response for decline reasons
+              if not bill:
+                  response_text = str(submit_response)
+                  if "CARD_DECLINED" in response_text or "declined" in response_text.lower():
+                      return "CARD_DECLINED"
+                  elif "INVALID_CARD" in response_text:
+                      return "INVALID_CARD"
+                  elif "EXPIRED_CARD" in response_text:
+                      return "EXPIRED_CARD"
+                  else:
+                      return "Gateway Error: No Receipt Generated"
+
               # print(bill)
 
 
