@@ -116,7 +116,10 @@ async def handle_msho_command(client, message):
             async with httpx.AsyncClient(follow_redirects=True) as session:
                 raw_response = await create_shopify_charge(card, mes, ano, cvv, session)
 
-                if "ORDER_CONFIRMED" in raw_response:
+                # Check for product/gateway errors first
+                if any(x in raw_response for x in ["MERCHANDISE_PRODUCT_NOT_PUBLISHED", "DELIVERY_NO_DELIVERY_STRATEGY", "REQUIRED_ARTIFACTS_UNAVAILABLE"]):
+                    status_flag = "Gateway Error ⚠️"
+                elif "ORDER_CONFIRMED" in raw_response:
                     status_flag = "Charged 💎"
                 elif any(x in raw_response for x in ["3DS", "MISMATCHED_BILLING", "MISMATCHED_PIN", "MISMATCHED_ZIP", "INSUFFICIENT_FUNDS", "INVALID_CVC ⚠️", "INCORRECT_CVC ⚠️", "3DS REQUIRED", "MISMATCHED_BILL🟢"]):
                     status_flag = "Approved ✅"

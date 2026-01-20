@@ -3,7 +3,7 @@ from BOT.helper.start import load_users  # Load user database
 
 def format_shopify_response(cc, mes, ano, cvv, raw_response, timet, profile):
     fullcc = f"{cc}|{mes}|{ano}|{cvv}"
-    gateway = "Shopify Normal 1£"
+    gateway = "Shopify Normal 1.5$"
 
     if raw_response is None:
         raw_response = "-"
