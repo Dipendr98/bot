@@ -26,7 +26,7 @@ def get_user_site(user_id):
     except Exception:
         return None
 
-@Client.on_message(filters.command("slf") | filters.regex(r"^\.slf(\s|$)"))
+@Client.on_message(filters.command("ash") | filters.regex(r"^\.ash(\s|$)"))
 async def handle_slf(client, message):
     try:
         # If chat is not in allowed list
