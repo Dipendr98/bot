@@ -157,5 +157,5 @@ async def handle_slf(client, message):
             print("Credit deduction failed.")
 
     except Exception as e:
-        print(f"Error in /slf: {e}")
+        print(f"Error in /sho: {e}")
         await message.reply("<code>Internal Error Occurred. Try again later.</code>", reply_to_message_id=message.id)
