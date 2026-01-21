@@ -26,10 +26,24 @@ def get_user_site(user_id):
     except Exception:
         return None
 
-@Client.on_message(filters.command("sh") | filters.regex(r"^\.slf(\s|$)"))
+@Client.on_message(filters.command("slf") | filters.regex(r"^\.slf(\s|$)"))
 async def handle_slf(client, message):
     try:
-        # Group restriction removed - all groups can use this command
+        # If chat is not in allowed list
+        allowed_groups = load_allowed_groups()
+
+        # print("Chat Type:", message.chat.type)
+        # print("Chat ID:", message.chat.id)
+        # print("Allowed Groups:", allowed_groups)
+        # if message.chat.id not in allowed_groups:
+        if message.chat.type in [ChatType.GROUP, ChatType.SUPERGROUP] and message.chat.id not in allowed_groups:
+            return await message.reply(
+                "<pre>Notification ❗️</pre>\n"
+                "<b>~ Message :</b> <code>This Group Is Not Approved ⚠️</code>\n"
+                "<b>~ Contact  →</b> <b>@Chr1stopherr_bot</b>\n"
+                "━━━━━━━━━━━━━\n"
+                "<b>Contact Owner For Approving</b>"
+            )
 
         users = load_users()
         user_id = str(message.from_user.id)
@@ -54,7 +68,7 @@ async def handle_slf(client, message):
         user_site_info = get_user_site(user_id)
         if not user_site_info:
             return await message.reply(
-                "<pre>Site Not Found ⚠️</pre>\nError : <code>Please Set Site First</code>\n~ <code>Using /addurl in Bot's Private</code>",
+                "<pre>Site Not Found ⚠️</pre>\nError : <code>Please Set Site First</code>\n~ <code>Using /slfurl in Bot's Private</code>",
                 reply_to_message_id=message.id
             )
 
