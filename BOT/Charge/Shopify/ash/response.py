@@ -1,111 +1,76 @@
-import time
+import json
+from TOOLS.getbin import get_bin_details
+from BOT.helper.start import load_users
 
-def format_response(card_data: str, result: dict, start_time: float, user_info: dict = None) -> str:
-    """
-    Format the autoshopify check response for Telegram
+def format_shopify_response(cc, mes, ano, cvv, raw_response, timet, profile):
+    fullcc = f"{cc}|{mes}|{ano}|{cvv}"
 
-    Args:
-        card_data: Card in format cc|mm|yy|cvv
-        result: Result dict from api.check_autoshopify
-        start_time: Request start time
-        user_info: Optional user information
+    # Extract user_id
+    try:
+        user_id = profile.split("id=")[-1].split("'")[0]
+    except Exception:
+        user_id = None
 
-    Returns:
-        Formatted HTML message
-    """
-    elapsed = round(time.time() - start_time, 2)
+    # Load gateway from DATA/sites.json
+    try:
+        with open("DATA/sites.json", "r") as f:
+            sites = json.load(f)
+        gateway = sites.get(user_id, {}).get("gate", "Shopify Self Site 💷")
+    except Exception:
+        gateway = "Shopify Self Site 💷"
 
-    # Parse card for display
-    parts = card_data.split("|")
-    if len(parts) == 4:
-        cc, mm, yy, cvv = parts
-        card_display = f"{cc}|{mm}|{yy}|{cvv}"
+    # Clean response
+    raw_response = str(raw_response) if raw_response else "-"
+
+    # Determine status
+    if "ORDER_PLACED" in raw_response or "Thank You" in raw_response:
+        status_flag = "Charged 💎"
+    elif any(keyword in raw_response for keyword in [
+        "3D CC", "MISMATCHED_BILLING", "MISMATCHED_PIN", "MISMATCHED_ZIP", "insufficient funds", "INVALID_CVC", "INCORRECT_CVC", "3DS_REQUIRED", "MISMATCHED_BILL", "3D_AUTHENTICATION", "INCORRECT_ZIP", "INCORRECT_ADDRESS"
+    ]):
+        status_flag = "Approved ❎"
     else:
-        card_display = card_data
+        status_flag = "Declined ❌"
 
-    # Status emoji
-    status_emoji = {
-        "APPROVED": "✅",
-        "DECLINED": "❌",
-        "CCN": "⚠️",
-        "ERROR": "🚫",
-        "UNKNOWN": "❓"
+    # BIN lookup
+    bin_data = get_bin_details(cc[:6]) or {}
+    bin_info = {
+        "bin": bin_data.get("bin", cc[:6]),
+        "country": bin_data.get("country", "Unknown"),
+        "flag": bin_data.get("flag", "🏳️"),
+        "vendor": bin_data.get("vendor", "Unknown"),
+        "type": bin_data.get("type", "Unknown"),
+        "level": bin_data.get("level", "Unknown"),
+        "bank": bin_data.get("bank", "Unknown")
     }
 
-    status = result.get("status", "UNKNOWN")
-    emoji = status_emoji.get(status, "❓")
-    message = result.get("message", "No message")
+    # User Plan
+    try:
+        users = load_users()
+        user_data = users.get(user_id, {})
+        plan = user_data.get("plan", {}).get("plan", "Free")
+        badge = user_data.get("plan", {}).get("badge", "🎟️")
+    except Exception:
+        plan = "Unknown"
+        badge = "❔"
 
-    # Build response
-    response_text = f"""<b>AutoShopify Card Check</b>
-
-{emoji} <b>Status:</b> {status}
-
-<b>Card:</b> <code>{card_display}</code>
-
-<b>Response:</b>
-<pre>{message}</pre>
-
-<b>Gateway:</b> AutoShopify
-<b>Time:</b> {elapsed}s
+    # Final formatted message
+    result = f"""
+<b>[#AutoShopify] | Chr1shtopher</b> ✦
+━━━━━━━━━━━━━━━
+<b>[•] Card</b>- <code>{fullcc}</code>
+<b>[•] Gateway</b> - <b>{gateway}</b>
+<b>[•] Status</b>- <code>{status_flag}</code>
+<b>[•] Response</b>- <code>{raw_response}</code>
+━ ━ ━ ━ ━ ━ ━ ━ ━ ━ ━ ━ ━
+<b>[+] Bin</b>: <code>{bin_info['bin']}</code>  
+<b>[+] Info</b>: <code>{bin_info['vendor']} - {bin_info['type']} - {bin_info['level']}</code> 
+<b>[+] Bank</b>: <code>{bin_info['bank']}</code> 🏦
+<b>[+] Country</b>: <code>{bin_info['country']} - [{bin_info['flag']}]</code>
+━ ━ ━ ━ ━ ━ ━ ━ ━ ━ ━ ━ ━
+<b>[ﾒ] Checked By</b>: {profile} [<code>{plan} {badge}</code>]
+<b>[ϟ] Dev</b> ➺ <a href="https://t.me/Chr1shtopher">Christopher</a>
+━━━━━━━━━━━━━━━
+<b>[ﾒ] T/t</b>: <code>[{timet} 𝐬]</code> <b>|P/x:</b> [<code>Live ⚡️</code>]
 """
-
-    if user_info:
-        response_text += f"\n<b>Checked by:</b> {user_info.get('name', 'Unknown')} [{user_info.get('id', 'N/A')}]"
-
-    return response_text
-
-
-def format_mass_response(results: list, total_time: float, user_info: dict = None) -> str:
-    """
-    Format mass check results
-
-    Args:
-        results: List of (card_data, result) tuples
-        total_time: Total execution time
-        user_info: Optional user information
-
-    Returns:
-        Formatted HTML message
-    """
-    approved = sum(1 for _, r in results if r.get("status") == "APPROVED")
-    declined = sum(1 for _, r in results if r.get("status") == "DECLINED")
-    ccn = sum(1 for _, r in results if r.get("status") == "CCN")
-    errors = sum(1 for _, r in results if r.get("status") == "ERROR")
-    unknown = sum(1 for _, r in results if r.get("status") == "UNKNOWN")
-
-    response_text = f"""<b>AutoShopify Mass Check Results</b>
-
-<b>Total Cards:</b> {len(results)}
-✅ <b>Approved:</b> {approved}
-❌ <b>Declined:</b> {declined}
-⚠️ <b>CCN:</b> {ccn}
-🚫 <b>Errors:</b> {errors}
-❓ <b>Unknown:</b> {unknown}
-
-<b>Time:</b> {round(total_time, 2)}s
-<b>Avg:</b> {round(total_time / len(results), 2)}s per card
-
-<b>Detailed Results:</b>
-"""
-
-    for card_data, result in results:
-        status = result.get("status", "UNKNOWN")
-        emoji = {
-            "APPROVED": "✅",
-            "DECLINED": "❌",
-            "CCN": "⚠️",
-            "ERROR": "🚫",
-            "UNKNOWN": "❓"
-        }.get(status, "❓")
-
-        # Truncate card for display
-        card_short = card_data[:19] + "..." if len(card_data) > 22 else card_data
-        msg = result.get("message", "No message")[:50]
-
-        response_text += f"\n{emoji} <code>{card_short}</code> - {status}"
-
-    if user_info:
-        response_text += f"\n\n<b>Checked by:</b> {user_info.get('name', 'Unknown')} [{user_info.get('id', 'N/A')}]"
-
-    return response_text
+    return status_flag, result
