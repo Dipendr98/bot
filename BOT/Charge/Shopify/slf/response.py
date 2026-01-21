@@ -26,7 +26,7 @@ def format_shopify_response(cc, mes, ano, cvv, raw_response, timet, profile):
     if "ORDER_PLACED" in raw_response or "Thank You" in raw_response:
         status_flag = "Charged 💎"
     elif any(keyword in raw_response for keyword in [
-        "3D CC", "MISMATCHED_BILLING", "MISMATCHED_PIN", "MISMATCHED_ZIP", "INSUFFICIENT_FUNDS", "INVALID_CVC", "INCORRECT_CVC", "3DS_REQUIRED", "MISMATCHED_BILL", "3D_AUTHENTICATION", "INCORRECT_ZIP", "INCORRECT_ADDRESS"
+        "3D CC", "MISMATCHED_BILLING", "MISMATCHED_PIN", "MISMATCHED_ZIP", "insufficient funds", "INVALID_CVC", "INCORRECT_CVC", "3DS_REQUIRED", "MISMATCHED_BILL", "3D_AUTHENTICATION", "INCORRECT_ZIP", "INCORRECT_ADDRESS"
     ]):
         status_flag = "Approved ❎"
     else:
@@ -56,7 +56,7 @@ def format_shopify_response(cc, mes, ano, cvv, raw_response, timet, profile):
 
     # Final formatted message
     result = f"""
-<b>[#AutoShopify] | Sync</b> ✦
+<b>[#AutoShopify] | Chr1shtopher</b> ✦
 ━━━━━━━━━━━━━━━
 <b>[•] Card</b>- <code>{fullcc}</code>
 <b>[•] Gateway</b> - <b>{gateway}</b>
