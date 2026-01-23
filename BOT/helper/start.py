@@ -83,7 +83,7 @@ async def start_command(client: Client, message: Message):
         await message.reply("This command can only be used by users, not channels or anonymous admins.")
         return
 
-    animated_texts = ["〔", "〔S", "〔Sy", "〔Syn", "〔Sync〕"]
+    animated_texts = ["〔", "〔C", "〔Ch", "〔Chr", "〔Chri", "〔Chris", "〔Christ〕"]
 
     sent = await message.reply("<pre>〔</pre>", quote=True)
 
@@ -98,7 +98,7 @@ async def start_command(client: Client, message: Message):
     profile = f"<a href='tg://user?id={message.from_user.id}'>{name}</a>"
 
     final_text = f"""
-[<a href='https://t.me/xyz'>⛯</a>] <b>Sync | Version - 1.0</b>
+[<a href='https://t.me/xyz'>⛯</a>] <b>Christ | Version - 1.0</b>
 <pre>Constantly Upgrading...</pre>
 ━━━━━━━━━━━━━
 <b>Hello,</b> {profile}
@@ -285,7 +285,7 @@ async def handle_callbacks(client, callback_query):
 
     if data == "exit":
         try:
-            await callback_query.message.edit_text("<pre>Thanks For Using #Sync</pre>")
+            await callback_query.message.edit_text("<pre>Thanks For Using #Christ</pre>")
         except MessageNotModified:
             pass
 
@@ -340,7 +340,7 @@ async def handle_callbacks(client, callback_query):
             pass
 
     elif data == "auth":
-        auth_text = """<pre>#Sync 〔AUTH GATES〕</pre>
+        auth_text = """<pre>#Christ 〔AUTH GATES〕</pre>
 ━ ━ ━ ━ ━━━ ━ ━ ━ ━
 ⟐ <b>Name</b>: <code>Braintree Auth HQ</code>
 ⟐ <b>Command</b>: <code>$b3 cc|mes|ano|cvv</code>
@@ -384,7 +384,7 @@ async def handle_callbacks(client, callback_query):
             ]
         ])
 
-        charge_text = "<pre>#Sync 〔 Charge 〕</pre>"
+        charge_text = "<pre>#Christ 〔 Charge 〕</pre>"
 
         try:
             await callback_query.message.edit_text(
@@ -497,7 +497,7 @@ async def handle_callbacks(client, callback_query):
             pass
 
     elif data == "tools":
-        tools_text = """<pre>#Sync 〔TOOLS〕</pre>
+        tools_text = """<pre>#Christ 〔TOOLS〕</pre>
 ━ ━ ━ ━ ━━━ ━ ━ ━ ━
 ⟐ <b>Name</b>: <code>BIN Lookup</code>
 ⟐ <b>Command</b>: <code>/bin xxxxxx</code>
