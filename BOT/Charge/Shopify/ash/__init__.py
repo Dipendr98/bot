@@ -1,1 +1,0 @@
-# AutoShopify module
