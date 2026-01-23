@@ -88,6 +88,13 @@ async def run_bot():
         BotCommand("groupid", "Get group/chat ID"),
         BotCommand("fl", "Apply filter (reply to message)"),
         BotCommand("fback", "Send feedback (reply to message)"),
+        BotCommand("addurl", "Add Shopify site for checking"),
+        BotCommand("slfurl", "Add Shopify site (alias)"),
+        BotCommand("mysite", "View your current site"),
+        BotCommand("delsite", "Remove your saved site"),
+        BotCommand("txturl", "Add multiple sites for TXT"),
+        BotCommand("txtls", "List your TXT sites"),
+        BotCommand("rurl", "Remove TXT sites"),
     ]
 
     await bot.set_bot_commands(commands)
