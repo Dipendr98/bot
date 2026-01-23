@@ -1,10 +1,12 @@
 """
 Professional Shopify Single Card Checker
 Handles /sh and /slf commands for checking cards on user's saved site.
+Uses the complete autoshopify checkout flow for real results.
 """
 
 import re
 import json
+import os
 from time import time
 
 from pyrogram import Client, filters
@@ -15,7 +17,7 @@ from BOT.helper.start import load_users
 from BOT.helper.antispam import can_run_command
 from BOT.helper.permissions import check_private_access
 from BOT.gc.credit import has_credits, deduct_credit
-from BOT.Charge.Shopify.slf.checkout import shopify_checkout
+from BOT.Charge.Shopify.slf.api import autoshopify
 from BOT.Charge.Shopify.tls_session import TLSAsyncSession
 
 # Try to import BIN lookup
@@ -24,6 +26,9 @@ try:
 except ImportError:
     def get_bin_details(bin_number):
         return None
+
+SITES_PATH = "DATA/sites.json"
+TXT_SITES_PATH = "DATA/txtsite.json"
 
 
 def extract_card(text: str):
@@ -38,16 +43,16 @@ def get_user_site(user_id: str):
     """Get user's saved site from sites.json or txtsite.json."""
     try:
         # First check sites.json
-        with open("DATA/sites.json", "r", encoding="utf-8") as f:
-            sites = json.load(f)
-        site_info = sites.get(str(user_id))
-        
-        if site_info:
-            return site_info
+        if os.path.exists(SITES_PATH):
+            with open(SITES_PATH, "r", encoding="utf-8") as f:
+                sites = json.load(f)
+            site_info = sites.get(str(user_id))
+            if site_info:
+                return site_info
         
         # Fallback to txtsite.json
-        try:
-            with open("DATA/txtsite.json", "r", encoding="utf-8") as f:
+        if os.path.exists(TXT_SITES_PATH):
+            with open(TXT_SITES_PATH, "r", encoding="utf-8") as f:
                 txt_sites = json.load(f)
             user_txt_sites = txt_sites.get(str(user_id), [])
             if user_txt_sites and len(user_txt_sites) > 0:
@@ -56,81 +61,99 @@ def get_user_site(user_id: str):
                     "site": first_site.get("site"),
                     "gate": first_site.get("gate", "Shopify")
                 }
-        except Exception:
-            pass
         
         return None
     except Exception:
         return None
 
 
-def format_response(card: str, result: dict, user_info: dict) -> str:
+def determine_status(response: str) -> tuple:
+    """
+    Determine status category from response.
+    Returns (status_text, emoji, is_live)
+    """
+    response_upper = str(response).upper()
+    
+    # Charged/Success
+    if any(x in response_upper for x in ["ORDER_PLACED", "ORDER_CONFIRMED", "THANK_YOU", "SUCCESS"]):
+        return "Charged 💎", "💎", True
+    
+    # CCN/Live (CVV/Address issues but card is valid)
+    if any(x in response_upper for x in [
+        "3DS", "AUTHENTICATION", "INCORRECT_CVC", "INVALID_CVC", 
+        "MISMATCHED", "INCORRECT_ADDRESS", "INCORRECT_ZIP", "INCORRECT_PIN",
+        "FRAUD", "INSUFFICIENT_FUNDS"
+    ]):
+        return "Approved ✅", "✅", True
+    
+    # Declined
+    if any(x in response_upper for x in [
+        "DECLINED", "CARD_DECLINED", "GENERIC_ERROR", "INCORRECT_NUMBER",
+        "INVALID_NUMBER", "EXPIRED", "NOT_SUPPORTED"
+    ]):
+        return "Declined ❌", "❌", False
+    
+    # Errors
+    if any(x in response_upper for x in ["ERROR", "TIMEOUT", "CAPTCHA", "EMPTY", "DEAD"]):
+        return "Error ⚠️", "⚠️", False
+    
+    return "Unknown ❓", "❓", False
+
+
+def format_response(fullcc: str, result: dict, user_info: dict, time_taken: float) -> str:
     """Format the checkout response professionally."""
-    cc, mm, yy, cvv = card.split("|")
-    fullcc = f"{cc}|{mm}|{yy}|{cvv}"
+    parts = fullcc.split("|")
+    cc = parts[0] if len(parts) > 0 else "Unknown"
     
-    status = result.get("status", "UNKNOWN")
-    response = result.get("response", "UNKNOWN")
-    gateway = result.get("gateway", "Unknown")
-    price = result.get("price", "0.00")
-    time_taken = result.get("time_taken", 0)
-    emoji = result.get("emoji", "❓")
-    is_ccn = result.get("is_ccn", False)
+    response = result.get("Response", "UNKNOWN")
+    gateway = result.get("Gateway", "Unknown")
+    price = result.get("Price", "0.00")
     
-    # Determine status display
-    if status == "CHARGED":
-        status_display = f"Charged {emoji}"
+    status_text, emoji, is_live = determine_status(response)
+    
+    # Determine header
+    if "Charged" in status_text:
         header = "CHARGED"
-    elif status == "CCN" or is_ccn:
-        status_display = f"Approved {emoji}"
+    elif "Approved" in status_text:
         header = "CCN LIVE"
-    elif status == "DECLINED":
-        status_display = f"Declined {emoji}"
+    elif "Declined" in status_text:
         header = "DECLINED"
     else:
-        status_display = f"Error {emoji}"
-        header = "ERROR"
+        header = "RESULT"
     
     # BIN lookup
-    bin_info = get_bin_details(cc[:6]) if get_bin_details else None
-    if bin_info:
-        bin_data = f"""<b>[+] BIN:</b> <code>{bin_info.get('bin', cc[:6])}</code>
-<b>[+] Info:</b> <code>{bin_info.get('vendor', 'N/A')} - {bin_info.get('type', 'N/A')} - {bin_info.get('level', 'N/A')}</code>
-<b>[+] Bank:</b> <code>{bin_info.get('bank', 'N/A')}</code> 🏦
-<b>[+] Country:</b> <code>{bin_info.get('country', 'N/A')}</code> {bin_info.get('flag', '🏳️')}"""
+    bin_data = get_bin_details(cc[:6]) if get_bin_details else None
+    if bin_data:
+        bin_section = f"""<b>[+] BIN:</b> <code>{bin_data.get('bin', cc[:6])}</code>
+<b>[+] Info:</b> <code>{bin_data.get('vendor', 'N/A')} - {bin_data.get('type', 'N/A')} - {bin_data.get('level', 'N/A')}</code>
+<b>[+] Bank:</b> <code>{bin_data.get('bank', 'N/A')}</code> 🏦
+<b>[+] Country:</b> <code>{bin_data.get('country', 'N/A')}</code> {bin_data.get('flag', '🏳️')}"""
     else:
-        bin_data = f"<b>[+] BIN:</b> <code>{cc[:6]}</code>"
+        bin_section = f"<b>[+] BIN:</b> <code>{cc[:6]}</code>"
     
     # Build message
-    message = f"""<b>[#Shopify] | {header}</b> ✦
+    return f"""<b>[#Shopify] | {header}</b> ✦
 ━━━━━━━━━━━━━━━
 <b>[•] Card:</b> <code>{fullcc}</code>
 <b>[•] Gateway:</b> <code>Shopify {gateway} ${price}</code>
-<b>[•] Status:</b> <code>{status_display}</code>
+<b>[•] Status:</b> <code>{status_text}</code>
 <b>[•] Response:</b> <code>{response}</code>
 ━ ━ ━ ━ ━ ━ ━ ━ ━ ━ ━ ━ ━
-{bin_data}
+{bin_section}
 ━ ━ ━ ━ ━ ━ ━ ━ ━ ━ ━ ━ ━
 <b>[ﾒ] Checked By:</b> {user_info['profile']} [<code>{user_info['plan']} {user_info['badge']}</code>]
 <b>[ϟ] Dev:</b> <a href="https://t.me/Chr1shtopher">Chr1shtopher</a>
 ━━━━━━━━━━━━━━━
 <b>[ﾒ] Time:</b> <code>{time_taken}s</code> | <b>Proxy:</b> <code>Live ⚡️</code>"""
-    
-    return message
 
 
 @Client.on_message(filters.command(["sh", "slf"]) | filters.regex(r"^\.sh(\s|$)") | filters.regex(r"^\.slf(\s|$)"))
 async def handle_sh_command(client: Client, message: Message):
     """
     Handle /sh and /slf commands for Shopify card checking.
-    
-    Usage:
-        /sh cc|mm|yy|cvv
-        /slf cc|mm|yy|cvv
-        Reply to a message containing a card with /sh or /slf
+    Uses the complete autoshopify checkout flow.
     """
     try:
-        # Check if message has a user
         if not message.from_user:
             return
         
@@ -161,7 +184,7 @@ async def handle_sh_command(client: Client, message: Message):
                 parse_mode=ParseMode.HTML
             )
         
-        # Check if user has a site set
+        # Get user's site
         user_site_info = get_user_site(user_id)
         if not user_site_info:
             return await message.reply(
@@ -173,7 +196,7 @@ Use <code>/addurl https://store.com</code> to add a Shopify site.""",
                 parse_mode=ParseMode.HTML
             )
         
-        # Extract card from command or replied message
+        # Extract card
         target_text = None
         if message.reply_to_message and message.reply_to_message.text:
             target_text = message.reply_to_message.text
@@ -214,23 +237,21 @@ Use <code>/addurl https://store.com</code> to add a Shopify site.""",
                 parse_mode=ParseMode.HTML
             )
         
-        # Prepare card and site info
+        # Prepare card and site
         card_num, mm, yy, cvv = extracted
         fullcc = f"{card_num}|{mm}|{yy}|{cvv}"
         site = user_site_info['site']
         gate = user_site_info.get('gate', 'Shopify')
         
-        # Get user info for response
+        # Get user info
         user_data = users.get(user_id, {})
         plan = user_data.get("plan", {}).get("plan", "Free")
         badge = user_data.get("plan", {}).get("badge", "🎟️")
         profile = f"<a href='tg://user?id={user_id}'>{message.from_user.first_name}</a>"
         
-        user_info = {
-            "profile": profile,
-            "plan": plan,
-            "badge": badge
-        }
+        user_info = {"profile": profile, "plan": plan, "badge": badge}
+        
+        start_time = time()
         
         # Show processing message
         loading_msg = await message.reply(
@@ -243,23 +264,23 @@ Use <code>/addurl https://store.com</code> to add a Shopify site.""",
             parse_mode=ParseMode.HTML
         )
         
-        # Perform checkout
+        # Perform checkout using autoshopify
         try:
-            async with TLSAsyncSession(timeout_seconds=90) as session:
-                result = await shopify_checkout(site, fullcc, session)
+            async with TLSAsyncSession(timeout_seconds=120) as session:
+                result = await autoshopify(site, fullcc, session)
         except Exception as e:
             result = {
-                "status": "ERROR",
-                "response": str(e)[:80],
-                "gateway": "Unknown",
-                "price": "0.00",
-                "time_taken": 0,
-                "emoji": "⚠️",
-                "is_ccn": False
+                "Response": f"ERROR: {str(e)[:60]}",
+                "Status": False,
+                "Gateway": "Unknown",
+                "Price": "0.00",
+                "cc": fullcc
             }
         
-        # Format and send response
-        final_message = format_response(fullcc, result, user_info)
+        time_taken = round(time() - start_time, 2)
+        
+        # Format response
+        final_message = format_response(fullcc, result, user_info, time_taken)
         
         buttons = InlineKeyboardMarkup([
             [
