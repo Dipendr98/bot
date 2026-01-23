@@ -119,6 +119,8 @@ async def run_bot():
         BotCommand("st", "Stripe $20 charge"),
         BotCommand("au", "Stripe Auth $0 check"),
         BotCommand("mau", "Stripe Auth mass check"),
+        BotCommand("swc", "Stripe WooCommerce Auth check"),
+        BotCommand("mswc", "Mass Stripe WooCommerce Auth check"),
         BotCommand("vbv", "VBV verification check"),
         BotCommand("mvbv", "Mass VBV verification check"),
         BotCommand("mbv", "MBV SecureCode verification check"),
