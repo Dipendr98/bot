@@ -9,6 +9,7 @@ from BOT.Charge.Shopify.slf.api import autoshopify  # your actual API function
 
 SITES_PATH = "DATA/sites.json"
 TEST_CARD = "4342562842964445|04|26|568"
+API_ENDPOINT = "http://136.175.187.188:8079/shc.php"
 
 @Client.on_message(filters.command("addurl") & filters.private)
 async def add_site_api_based(client, message: Message):
