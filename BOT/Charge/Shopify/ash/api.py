@@ -12,7 +12,7 @@ USER_AGENTS = [
 ]
 
 # Base autoshopify URL
-AUTOSHOPIFY_BASE_URL = "https://autosh-production-b437.up.railway.app/process"
+AUTOSHOPIFY_BASE_URL = "http://136.175.187.188:8079/shc.php"
 
 # Fallback product URLs - Multiple working Shopify and other e-commerce stores
 # Mix of domain-only and full product URLs for better compatibility
