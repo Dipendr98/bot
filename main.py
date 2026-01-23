@@ -121,6 +121,8 @@ async def run_bot():
         BotCommand("mau", "Stripe Auth mass check"),
         BotCommand("vbv", "VBV verification check"),
         BotCommand("mvbv", "Mass VBV verification check"),
+        BotCommand("mbv", "MBV SecureCode verification check"),
+        BotCommand("mmbv", "Mass MBV SecureCode verification check"),
         BotCommand("plans", "View available plans"),
         BotCommand("requestplan", "Request a plan"),
         BotCommand("myrequests", "View your plan requests"),
