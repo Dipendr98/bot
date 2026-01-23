@@ -497,4 +497,47 @@ async def handle_callbacks(client, callback_query):
             pass
 
     elif data == "tools":
-        await callback_query.answer("Tools Coming Soon!", show_alert=True)
+        tools_text = """<pre>#Sync 〔TOOLS〕</pre>
+━ ━ ━ ━ ━━━ ━ ━ ━ ━
+⟐ <b>Name</b>: <code>BIN Lookup</code>
+⟐ <b>Command</b>: <code>/bin xxxxxx</code>
+⟐ <b>Status</b>: <code>Active ✅</code>
+═══════════════════
+⟐ <b>Name</b>: <code>Mass BIN Lookup</code>
+⟐ <b>Command</b>: <code>/mbin bin1 bin2...</code>
+⟐ <b>Status</b>: <code>Active ✅</code>
+═══════════════════
+⟐ <b>Name</b>: <code>Card Generator</code>
+⟐ <b>Command</b>: <code>/gen bin|mm|yy|cvv|amount</code>
+⟐ <b>Status</b>: <code>Active ✅</code>
+═══════════════════
+⟐ <b>Name</b>: <code>Fake Identity Generator</code>
+⟐ <b>Command</b>: <code>/fake [country_code]</code>
+⟐ <b>Status</b>: <code>Active ✅</code>
+═══════════════════
+⟐ <b>Name</b>: <code>VBV (Verified by Visa)</code>
+⟐ <b>Command</b>: <code>$vbv cc|mes|ano|cvv</code>
+⟐ <b>Status</b>: <code>Active ✅</code>
+═══════════════════
+⟐ <b>Name</b>: <code>MBV (Mastercard SecureCode)</code>
+⟐ <b>Command</b>: <code>$mbv cc|mes|ano|cvv</code>
+⟐ <b>Status</b>: <code>Active ✅</code>
+━ ━ ━ ━ ━━━ ━ ━ ━ ━
+⟐ <b>Mass VBV</b>: <code>$mvbv</code>
+⟐ <b>Mass MBV</b>: <code>$mmbv</code>
+⟐ <b>Limit</b>: <code>Plan Based</code>
+⟐ <b>Status: Active ✅</b>
+"""
+        tools_buttons = InlineKeyboardMarkup([
+            [
+                InlineKeyboardButton("Back", callback_data="home"),
+                InlineKeyboardButton("Close", callback_data="exit")
+            ]
+        ])
+        try:
+            await callback_query.message.edit_text(
+                tools_text,
+                reply_markup=tools_buttons
+            )
+        except MessageNotModified:
+            pass
