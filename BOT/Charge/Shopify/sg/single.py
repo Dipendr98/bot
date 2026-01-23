@@ -9,7 +9,7 @@ from BOT.helper.antispam import can_run_command
 from BOT.helper.permissions import check_private_access, load_allowed_groups
 from pyrogram.types import InlineKeyboardMarkup, InlineKeyboardButton
 from pyrogram.enums import ChatType
-import httpx
+from BOT.Charge.Shopify.tls_session import TLSAsyncSession
 
 # ALLOWED_GROUPS = [-1002058346930]
 
@@ -108,7 +108,7 @@ async def handle_sho_command(client, message):
 • <b>Gate</b> - <code>{gateway}</code>"""
         )
 
-        async with httpx.AsyncClient() as session:
+        async with TLSAsyncSession() as session:
           raw_response = await create_shopify_charge(card, mes, ano, cvv, session)
 
         await loader_msg.edit(

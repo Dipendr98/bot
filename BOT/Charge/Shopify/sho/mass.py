@@ -9,7 +9,7 @@ from BOT.helper.permissions import check_private_access, load_allowed_groups, is
 from BOT.gc.credit import deduct_credit_bulk
 # from BOT.Auth.Stripe.st import load_proxies
 from pyrogram.enums import ChatType
-import httpx
+from BOT.Charge.Shopify.tls_session import TLSAsyncSession
 
 user_locks = {}
 
@@ -130,7 +130,7 @@ async def handle_msho_command(client, message):
         for idx, fullcc in enumerate(all_cards, start=1):
             card, mes, ano, cvv = fullcc.split("|")
 
-            async with httpx.AsyncClient(follow_redirects=True) as session:
+            async with TLSAsyncSession(follow_redirects=True) as session:
                 raw_response = await create_shopify_charge(card, mes, ano, cvv, session)
 
                 # Handle ORDER_CONFIRMED (Charged)

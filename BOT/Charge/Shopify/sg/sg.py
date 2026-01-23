@@ -1,6 +1,4 @@
 import asyncio
-import httpx
-import requests
 import re
 import json
 import csv

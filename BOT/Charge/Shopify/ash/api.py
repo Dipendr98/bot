@@ -1,7 +1,8 @@
-import httpx
 import random
 import asyncio
 from typing import Optional
+from BOT.Charge.Shopify.api_endpoints import AUTOSHOPIFY_BASE_URL
+from BOT.Charge.Shopify.tls_session import TLSAsyncSession
 
 # User agents for requests
 USER_AGENTS = [
@@ -10,9 +11,6 @@ USER_AGENTS = [
     "Mozilla/5.0 (Macintosh; Intel Mac OS X 10_15_7) AppleWebKit/537.36 (KHTML, like Gecko) Chrome/120.0.0.0 Safari/537.36",
     "Mozilla/5.0 (X11; Linux x86_64) AppleWebKit/537.36 (KHTML, like Gecko) Chrome/120.0.0.0 Safari/537.36"
 ]
-
-# Base autoshopify URL
-AUTOSHOPIFY_BASE_URL = "http://136.175.187.188:8079/shc.php"
 
 # Fallback product URLs - Multiple working Shopify and other e-commerce stores
 # Mix of domain-only and full product URLs for better compatibility
@@ -47,11 +45,11 @@ async def _make_request(card_data: str, site: str, proxy: Optional[str], headers
     if proxy:
         params["proxy"] = proxy
 
-    async with httpx.AsyncClient(timeout=90.0, follow_redirects=True) as client:
+    async with TLSAsyncSession(timeout_seconds=90, follow_redirects=True) as client:
         response = await client.get(
             AUTOSHOPIFY_BASE_URL,
             params=params,
-            headers=headers
+            headers=headers,
         )
 
         response_text = response.text
@@ -235,30 +233,6 @@ async def check_autoshopify(card_data: str, site: str = None, proxy: str = None)
                     # Should retry with next site
                     last_error = result
                     break  # Break retry loop, try next site
-
-                except httpx.TimeoutException:
-                    if attempt < MAX_RETRIES - 1:
-                        await asyncio.sleep(RETRY_DELAYS[attempt])
-                        continue
-                    else:
-                        last_error = {
-                            "status": "ERROR",
-                            "message": f"Request timeout after 90 seconds (tried {attempt + 1} times)",
-                            "response": None
-                        }
-                        break  # Try next site
-
-                except httpx.ConnectError as e:
-                    if attempt < MAX_RETRIES - 1:
-                        await asyncio.sleep(RETRY_DELAYS[attempt])
-                        continue
-                    else:
-                        last_error = {
-                            "status": "ERROR",
-                            "message": f"Connection error: Cannot reach backend service",
-                            "response": str(e)
-                        }
-                        break
 
                 except Exception as e:
                     if attempt < MAX_RETRIES - 1:
