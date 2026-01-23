@@ -522,9 +522,14 @@ async def handle_callbacks(client, callback_query):
 ⟐ <b>Name</b>: <code>MBV (Mastercard SecureCode)</code>
 ⟐ <b>Command</b>: <code>$mbv cc|mes|ano|cvv</code>
 ⟐ <b>Status</b>: <code>Active ✅</code>
+═══════════════════
+⟐ <b>Name</b>: <code>Braintree CVV Auth</code>
+⟐ <b>Command</b>: <code>$btcvv cc|mes|ano|cvv</code>
+⟐ <b>Status</b>: <code>Active ✅</code>
 ━ ━ ━ ━ ━━━ ━ ━ ━ ━
 ⟐ <b>Mass VBV</b>: <code>$mvbv</code>
 ⟐ <b>Mass MBV</b>: <code>$mmbv</code>
+⟐ <b>Mass Braintree CVV</b>: <code>$mbtcvv</code>
 ⟐ <b>Limit</b>: <code>Plan Based</code>
 ⟐ <b>Status: Active ✅</b>
 """
