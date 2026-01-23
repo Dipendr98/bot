@@ -1,6 +1,4 @@
 import asyncio
-import httpx
-import requests
 import re
 import json
 import csv
@@ -45,8 +43,6 @@ async def create_shopify_charge(card, mes, ano, cvv, session):
                 'section-id': 'template--16314355777706__main',
             }
 
-              response = requests.post('https://shedknives.com/cart/add.js', headers=headers, data=data)
-              
               request = await session.post('https://shedknives.com/cart/add.js', headers=headers, data=data)
 
               headers = {

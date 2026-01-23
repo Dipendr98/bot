@@ -1,10 +1,11 @@
 import os
 import json
 import time
-import httpx
 from pyrogram import Client, filters
 from pyrogram.types import Message
 from pyrogram.enums import ParseMode
+from BOT.Charge.Shopify.api_endpoints import AUTOSHOPIFY_BASE_URL
+from BOT.Charge.Shopify.tls_session import TLSAsyncSession
 # from BOT.Charge.Shopify.slf.api import autoshopify  # your actual API function
 
 SITES_PATH = "DATA/sites.json"
@@ -22,14 +23,14 @@ async def add_site_api_based(client, message: Message):
     start_time = time.time()
 
     try:
-        url = "http://136.175.187.188:8079/shc.php"
+        url = AUTOSHOPIFY_BASE_URL
         payload = {
             'cc': TEST_CARD,
             'site': site,
             'proxy': "http://tickets:proxyon145@107.150.71.30:12345"
         }
         
-        async with httpx.AsyncClient(timeout=90.0) as session:
+        async with TLSAsyncSession(timeout_seconds=90) as session:
             response = await session.post(url, data=payload)
             try:
                 data = response.json()

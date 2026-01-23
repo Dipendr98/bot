@@ -3,7 +3,11 @@ from pyrogram.types import Message
 from pyrogram.enums import ParseMode
 from BOT.Charge.Shopify.slf.api import autoshopify  # ✅ your API function
 from BOT.tools.proxy import get_proxy
-import httpx, os, json, time, asyncio
+from BOT.Charge.Shopify.api_endpoints import SLF_CHECK_BASE_URL
+from BOT.Charge.Shopify.tls_session import TLSAsyncSession
+import os
+import json
+import time
 
 TXT_SITES_PATH = "DATA/txtsite.json"
 TEST_CARD = "4342562842964445|04|26|568"
@@ -22,14 +26,14 @@ async def check_card(user_id, cc, site=None):
 
     proxy = get_proxy(user_id)
     if proxy:
-        url = f"http://69.62.117.8:8000/check?card={cc}&site={site}&proxy={proxy}"
+        url = f"{SLF_CHECK_BASE_URL}?card={cc}&site={site}&proxy={proxy}"
     else:
-        url = f"http://69.62.117.8:8000/check?card={cc}&site={site}"
+        url = f"{SLF_CHECK_BASE_URL}?card={cc}&site={site}"
 
     retries = 0
     while retries < 3:
         try:
-            async with httpx.AsyncClient(timeout=100.0) as client:
+            async with TLSAsyncSession(timeout_seconds=100) as client:
                 response = await client.get(url)
                 data = response.json()
 
@@ -96,7 +100,7 @@ async def txturl_handler(client, message: Message):
     existing_sites = {entry["site"]: entry for entry in user_sites}
     supported_sites = []
 
-    async with httpx.AsyncClient(timeout=30) as session:
+    async with TLSAsyncSession(timeout_seconds=30) as session:
         for site in args:
             if site in existing_sites:
                 continue  # Skip duplicates
@@ -200,4 +204,3 @@ async def rurl_handler(client, message: Message):
         return await message.reply(f"<b>✅ Removed:</b>\n<code>{', '.join(removed)}</code>", parse_mode=ParseMode.HTML)
     else:
         return await message.reply("<pre>❌ No matching site(s) found to remove.</pre>", parse_mode=ParseMode.HTML)
-
