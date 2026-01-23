@@ -47,19 +47,16 @@ def format_response(card_data: str, result: dict, start_time: float, user_info: 
     # Current time
     current_time = datetime.now().strftime("%I:%M %p")
 
-    # Format response
-    response = f"""<pre>✦ Braintree Checker</pre>
-━━━━━━━━━━━━━━━
+    # Format response with improved styling
+    response = f"""<pre>━━━ Braintree Charge ━━━</pre>
 <b>Card:</b> <code>{card_data}</code>
 <b>Status:</b> <code>{status_text} {status_emoji}</code>
 <b>Response:</b> <code>{message}</code>
 ━━━━━━━━━━━━━━━
 <b>BIN:</b> <code>{bin_number}xxxxxx{last4}</code>
-<b>Gateway:</b> <code>Braintree - Pixorize</code>
-<b>Time:</b> <code>{time_taken}s</code>
-━━━━━━━━━━━━━━━
+<b>⏱️ Time:</b> <code>{time_taken}s</code>
+<b>Gateway:</b> <code>Braintree Charge [Pixorize $29.99]</code>
 <b>Checked By:</b> {checked_by} [<code>{plan} {badge}</code>]
-<b>Dev:</b> <a href="https://t.me/Chr1shtopher">Chr1shtopher</a> <code>{current_time}</code>
-━━━━━━━━━━━━━━━"""
+<b>Dev:</b> <a href="https://t.me/Chr1shtopher">Chr1shtopher</a> <code>{current_time}</code>"""
 
     return response
