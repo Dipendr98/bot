@@ -119,6 +119,8 @@ async def run_bot():
         BotCommand("st", "Stripe $20 charge"),
         BotCommand("au", "Stripe Auth $0 check"),
         BotCommand("mau", "Stripe Auth mass check"),
+        BotCommand("vbv", "VBV verification check"),
+        BotCommand("mvbv", "Mass VBV verification check"),
         BotCommand("plans", "View available plans"),
         BotCommand("requestplan", "Request a plan"),
         BotCommand("myrequests", "View your plan requests"),
