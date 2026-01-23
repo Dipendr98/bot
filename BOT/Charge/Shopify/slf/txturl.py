@@ -1,206 +1,292 @@
-from pyrogram import Client, filters
-from pyrogram.types import Message
-from pyrogram.enums import ParseMode
-from BOT.Charge.Shopify.slf.api import autoshopify  # ✅ your API function
-from BOT.tools.proxy import get_proxy
-from BOT.Charge.Shopify.api_endpoints import SLF_CHECK_BASE_URL
-from BOT.Charge.Shopify.tls_session import TLSAsyncSession
+"""
+TXT URL Handler
+Handles multiple site management for card checking.
+"""
+
 import os
 import json
 import time
+from typing import List, Dict
+
+from pyrogram import Client, filters
+from pyrogram.types import Message
+from pyrogram.enums import ParseMode
+
+from BOT.Charge.Shopify.slf.checkout import shopify_checkout
+from BOT.Charge.Shopify.tls_session import TLSAsyncSession
 
 TXT_SITES_PATH = "DATA/txtsite.json"
 TEST_CARD = "4342562842964445|04|26|568"
 
-# API functions from slf.py
-def get_site(user_id):
-    with open("DATA/sites.json", "r") as f:
-        sites = json.load(f)
-    return sites.get(str(user_id), {}).get("site")
 
-async def check_card(user_id, cc, site=None):
-    if not site:
-        site = get_site(user_id)
-    if not site:
-        return "Site Not Found"
-
-    proxy = get_proxy(user_id)
-    if proxy:
-        url = f"{SLF_CHECK_BASE_URL}?card={cc}&site={site}&proxy={proxy}"
-    else:
-        url = f"{SLF_CHECK_BASE_URL}?card={cc}&site={site}"
-
-    retries = 0
-    while retries < 3:
-        try:
-            async with TLSAsyncSession(timeout_seconds=100) as client:
-                response = await client.get(url)
-                data = response.json()
-
-            if not any(x in data for x in ("CARD_DECLINED", "3DS_REQUIRED")):
-                print(data)
-
-
-            response_text = data.get("Response", "").upper()
-
-            if (
-                "SERVER DISCONNECTED WITHOUT SENDING A RESPONSE" in response_text
-                or "PEER CLOSED CONNECTION WITHOUT SENDING COMPLETE MESSAGE BODY (INCOMPLETE CHUNKED READ)" in response_text
-                or "552 CONNECTION ERROR" in response_text
-            ):
-                retries += 1
-                continue  # try again
-            break  # if no disconnect error, break
-
-        except Exception:
-            return "Connection Failed"
-
-    if retries == 3:
-        return "Connection Failed"
-
-    # Response parsing below
-    price = data.get("Price", "")
-    cc_field = data.get("cc")
-
-    if price and "ORDER_PLACED" in response_text:
-        return "ORDER_PLACED"
-    elif "3DS_REQUIRED" in response_text:
-        return "3DS_REQUIRED"
-    elif "CARD_DECLINED" in response_text:
-        return "CARD_DECLINED"
-    elif "HEADER VALUE MUST BE STR OR BYTES, NOT" in response_text:
-        return "Product ID ⚠️"
-    elif "EXPECTING VALUE: LINE 1 COLUMN 1 (CHAR 0)" in response_text:
-        return "IP Rate Limit"
-    elif "DECLINED" in response_text:
-        return "Site | Card Error"
-    else:
-        return response_text
-
-@Client.on_message(filters.command("txturl") & filters.private)
-async def txturl_handler(client, message: Message):
-    args = message.command[1:]
-
-    if len(args) < 1:
-        return await message.reply("<b>❌ Please provide at least 1 site URL.</b>\nExample: <code>/txturl site1 site2</code>")
-
-    user_id = str(message.from_user.id)
-    clickableFname = f"<a href='tg://user?id={user_id}'>{message.from_user.first_name}</a>"
-    start_time = time.time()
-    wait_msg = await message.reply("<pre>[🔍 Checking Sites... ]</pre>", reply_to_message_id=message.id)
-
+def ensure_txt_sites_file():
+    """Ensure txtsite.json exists."""
     if not os.path.exists(TXT_SITES_PATH):
-        with open(TXT_SITES_PATH, "w") as f:
+        os.makedirs(os.path.dirname(TXT_SITES_PATH), exist_ok=True)
+        with open(TXT_SITES_PATH, "w", encoding="utf-8") as f:
             json.dump({}, f)
 
-    with open(TXT_SITES_PATH, "r", encoding="utf-8") as f:
-        all_sites = json.load(f)
 
+def load_txt_sites() -> dict:
+    """Load txt sites from file."""
+    ensure_txt_sites_file()
+    try:
+        with open(TXT_SITES_PATH, "r", encoding="utf-8") as f:
+            return json.load(f)
+    except:
+        return {}
+
+
+def save_txt_sites(data: dict):
+    """Save txt sites to file."""
+    ensure_txt_sites_file()
+    with open(TXT_SITES_PATH, "w", encoding="utf-8") as f:
+        json.dump(data, f, indent=4)
+
+
+async def validate_shopify_site(site_url: str, session: TLSAsyncSession) -> Dict:
+    """
+    Validate if a site is a working Shopify store.
+    
+    Returns dict with: valid, site, gateway, price
+    """
+    result = {
+        "valid": False,
+        "site": site_url,
+        "gateway": "Unknown",
+        "price": "N/A"
+    }
+    
+    try:
+        # Normalize URL
+        if not site_url.startswith(("http://", "https://")):
+            site_url = f"https://{site_url}"
+        
+        # Check products.json
+        response = await session.get(
+            f"{site_url}/products.json",
+            follow_redirects=True,
+            timeout=20
+        )
+        
+        data = response.json()
+        products = data.get("products", [])
+        
+        if not products:
+            return result
+        
+        # Find available product with price
+        for product in products:
+            for variant in product.get("variants", []):
+                if variant.get("available") and float(variant.get("price", 0)) > 0.10:
+                    price = float(variant.get("price", 0))
+                    result["price"] = f"{price:.2f}"
+                    break
+            if result["price"] != "N/A":
+                break
+        
+        # Try to detect gateway
+        home_response = await session.get(site_url, follow_redirects=True, timeout=15)
+        
+        # Extract gateway name
+        text = home_response.text
+        if '"extensibilityDisplayName":"' in text:
+            start = text.index('"extensibilityDisplayName":"') + len('"extensibilityDisplayName":"')
+            end = text.index('"', start)
+            gateway = text[start:end]
+            if gateway == "Shopify Payments":
+                gateway = "Normal"
+            result["gateway"] = gateway
+        else:
+            result["gateway"] = "Normal"
+        
+        result["valid"] = True
+        result["site"] = site_url
+        return result
+        
+    except Exception:
+        return result
+
+
+@Client.on_message(filters.command("txturl") & filters.private)
+async def txturl_handler(client: Client, message: Message):
+    """Add multiple sites for TXT checking."""
+    args = message.command[1:]
+    
+    if not args:
+        return await message.reply(
+            """<pre>Usage Guide 📖</pre>
+<b>Add multiple Shopify sites:</b>
+
+<code>/txturl site1.com site2.com site3.com</code>
+
+<b>Other Commands:</b>
+• <code>/txtls</code> - List your TXT sites
+• <code>/rurl site.com</code> - Remove a site""",
+            parse_mode=ParseMode.HTML
+        )
+    
+    user_id = str(message.from_user.id)
+    clickable_name = f"<a href='tg://user?id={user_id}'>{message.from_user.first_name}</a>"
+    start_time = time.time()
+    
+    wait_msg = await message.reply(
+        f"<pre>🔍 Validating {len(args)} site(s)...</pre>",
+        reply_to_message_id=message.id,
+        parse_mode=ParseMode.HTML
+    )
+    
+    # Load existing sites
+    all_sites = load_txt_sites()
     user_sites = all_sites.get(user_id, [])
-    existing_sites = {entry["site"]: entry for entry in user_sites}
+    existing_urls = {entry["site"] for entry in user_sites}
+    
     supported_sites = []
-
+    
     async with TLSAsyncSession(timeout_seconds=30) as session:
-        for site in args:
-            if site in existing_sites:
+        for site in args[:10]:  # Limit to 10 sites
+            if site in existing_urls:
                 continue  # Skip duplicates
-
+            
             try:
-                result = await autoshopify(site, TEST_CARD, session)
-                if result and result.get("cc"):
-                    gateway = result.get("Gateway", "Unknown")
-                    price = result.get("Price", "N/A")
-                    gate_name = f"{gateway} {price}$"
-                    supported_sites.append({"site": site, "gate": gate_name})
+                result = await validate_shopify_site(site, session)
+                if result["valid"]:
+                    gateway = result.get("gateway", "Unknown")
+                    price = result.get("price", "N/A")
+                    gate_name = f"Shopify {gateway} ${price}"
+                    supported_sites.append({
+                        "site": result["site"],
+                        "gate": gate_name
+                    })
             except Exception:
                 continue
-
+    
     if not supported_sites:
-        return await wait_msg.edit_text("<pre>No Supported Sites Found!</pre>", parse_mode=ParseMode.HTML)
-
-    # Save updated site list
+        return await wait_msg.edit_text(
+            "<pre>No Valid Sites Found ❌</pre>\n<b>Ensure the sites are Shopify stores with available products.</b>",
+            parse_mode=ParseMode.HTML
+        )
+    
+    # Save sites
     user_sites.extend(supported_sites)
     all_sites[user_id] = user_sites
-
-    with open(TXT_SITES_PATH, "w", encoding="utf-8") as f:
-        json.dump(all_sites, f, indent=4)
-
-    # Prepare UI
-    result_lines = ["<pre>Urls Added For Txt ~ Sync ✦</pre>"]
+    save_txt_sites(all_sites)
+    
+    # Build response
+    result_lines = ["<pre>Sites Added ✅</pre>", "━━━━━━━━━━━━━"]
+    
     for site_entry in supported_sites:
         result_lines.append(f"[⌯] <b>Site:</b> <code>{site_entry['site']}</code>")
-        result_lines.append(f"[⌯] <b>Gateway:</b> <code>{site_entry['gate']}</code>\n")
-
+        result_lines.append(f"[⌯] <b>Gateway:</b> <code>{site_entry['gate']}</code>")
+        result_lines.append("")
+    
     end_time = time.time()
-    result_lines.append(f"[⌯] <b>Cmd:</b> <code>$tslf</code>")
-    result_lines.append(f"[⌯] <b>Time Taken:</b> <code>{round(end_time - start_time, 2)} sec</code>")
+    result_lines.append(f"[⌯] <b>Total Added:</b> <code>{len(supported_sites)}</code>")
+    result_lines.append(f"[⌯] <b>Time:</b> <code>{round(end_time - start_time, 2)}s</code>")
     result_lines.append("━━━━━━━━━━━━━")
-    result_lines.append(f"[⌯] <b>Req By:</b> {clickableFname}")
-
+    result_lines.append(f"[⌯] <b>User:</b> {clickable_name}")
+    
     await wait_msg.edit_text("\n".join(result_lines), parse_mode=ParseMode.HTML)
 
 
-TXT_SITES_PATH = "DATA/txtsite.json"
-
 @Client.on_message(filters.command("txtls") & filters.private)
-async def txtls_handler(client, message: Message):
+async def txtls_handler(client: Client, message: Message):
+    """List user's TXT sites."""
     user_id = str(message.from_user.id)
-    clickableFname = f"<a href='tg://user?id={user_id}'>{message.from_user.first_name}</a>"
-
-    # Check if data file exists
-    if not os.path.exists(TXT_SITES_PATH):
-        return await message.reply("<pre>No sites found.</pre>", parse_mode=ParseMode.HTML)
-
-    # Load JSON
-    with open(TXT_SITES_PATH, "r", encoding="utf-8") as f:
-        all_sites = json.load(f)
-
+    clickable_name = f"<a href='tg://user?id={user_id}'>{message.from_user.first_name}</a>"
+    
+    all_sites = load_txt_sites()
     user_sites = all_sites.get(user_id, [])
-
+    
     if not user_sites:
-        return await message.reply("<pre>No sites found for you.</pre>", parse_mode=ParseMode.HTML)
-
-    # UI message
-    lines = [f"<pre>Txt Sites Linked ~ Sync ✦</pre>"]
-    for site_entry in user_sites:
-        lines.append(f"[⌯] <b>Site:</b> <code>{site_entry['site']}</code>")
-        lines.append(f"[⌯] <b>Gateway:</b> <code>{site_entry['gate']}</code>\n")
-
-    lines.append(f"[⌯] <b>Total Sites:</b> <code>{len(user_sites)}</code>")
+        return await message.reply(
+            "<pre>No Sites Found ℹ️</pre>\n<b>Use <code>/txturl site.com</code> to add sites.</b>",
+            parse_mode=ParseMode.HTML
+        )
+    
+    lines = ["<pre>Your TXT Sites 📋</pre>", "━━━━━━━━━━━━━"]
+    
+    for i, site_entry in enumerate(user_sites[:20], 1):  # Show max 20
+        lines.append(f"<b>{i}.</b> <code>{site_entry['site']}</code>")
+        lines.append(f"   <i>{site_entry.get('gate', 'Unknown')}</i>")
+    
+    if len(user_sites) > 20:
+        lines.append(f"\n<i>... and {len(user_sites) - 20} more</i>")
+    
     lines.append("━━━━━━━━━━━━━")
-    lines.append(f"[⌯] <b>Req By:</b> {clickableFname}")
-
+    lines.append(f"<b>Total:</b> <code>{len(user_sites)}</code> site(s)")
+    lines.append(f"<b>User:</b> {clickable_name}")
+    
     await message.reply("\n".join(lines), parse_mode=ParseMode.HTML)
 
+
 @Client.on_message(filters.command("rurl") & filters.private)
-async def rurl_handler(client, message: Message):
+async def rurl_handler(client: Client, message: Message):
+    """Remove sites from TXT list."""
     args = message.command[1:]
     user_id = str(message.from_user.id)
-
+    
     if not args:
-        return await message.reply("<b>❌ Please provide site URL(s) to remove.</b>\nExample: <code>/rurl site1 site2</code>")
-
-    if not os.path.exists(TXT_SITES_PATH):
-        return await message.reply("<pre>No sites saved yet.</pre>", parse_mode=ParseMode.HTML)
-
-    with open(TXT_SITES_PATH, "r", encoding="utf-8") as f:
-        all_sites = json.load(f)
-
+        return await message.reply(
+            "<b>Usage:</b> <code>/rurl site1.com site2.com</code>",
+            parse_mode=ParseMode.HTML
+        )
+    
+    all_sites = load_txt_sites()
     user_sites = all_sites.get(user_id, [])
-
+    
     if not user_sites:
-        return await message.reply("<pre>No sites found to remove.</pre>", parse_mode=ParseMode.HTML)
-
-    initial_count = len(user_sites)
+        return await message.reply(
+            "<pre>No Sites Found ℹ️</pre>",
+            parse_mode=ParseMode.HTML
+        )
+    
+    # Track removed sites
     removed = []
-
-    user_sites = [entry for entry in user_sites if entry["site"] not in args or removed.append(entry["site"])]
-
-    all_sites[user_id] = user_sites
-    with open(TXT_SITES_PATH, "w", encoding="utf-8") as f:
-        json.dump(all_sites, f, indent=4)
-
+    args_lower = [a.lower() for a in args]
+    
+    new_sites = []
+    for entry in user_sites:
+        site_lower = entry["site"].lower().replace("https://", "").replace("http://", "")
+        if any(arg in site_lower or site_lower in arg for arg in args_lower):
+            removed.append(entry["site"])
+        else:
+            new_sites.append(entry)
+    
+    all_sites[user_id] = new_sites
+    save_txt_sites(all_sites)
+    
     if removed:
-        return await message.reply(f"<b>✅ Removed:</b>\n<code>{', '.join(removed)}</code>", parse_mode=ParseMode.HTML)
+        removed_list = "\n".join([f"• <code>{s}</code>" for s in removed[:5]])
+        await message.reply(
+            f"<pre>Sites Removed ✅</pre>\n{removed_list}",
+            parse_mode=ParseMode.HTML
+        )
     else:
-        return await message.reply("<pre>❌ No matching site(s) found to remove.</pre>", parse_mode=ParseMode.HTML)
+        await message.reply(
+            "<pre>No Matching Sites Found ❌</pre>",
+            parse_mode=ParseMode.HTML
+        )
+
+
+@Client.on_message(filters.command("clearurl") & filters.private)
+async def clearurl_handler(client: Client, message: Message):
+    """Clear all TXT sites for user."""
+    user_id = str(message.from_user.id)
+    
+    all_sites = load_txt_sites()
+    
+    if user_id in all_sites:
+        count = len(all_sites[user_id])
+        del all_sites[user_id]
+        save_txt_sites(all_sites)
+        
+        await message.reply(
+            f"<pre>All Sites Cleared ✅</pre>\n<b>Removed:</b> <code>{count}</code> site(s)",
+            parse_mode=ParseMode.HTML
+        )
+    else:
+        await message.reply(
+            "<pre>No Sites Found ℹ️</pre>",
+            parse_mode=ParseMode.HTML
+        )

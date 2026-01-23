@@ -1,67 +1,92 @@
+"""
+Shopify SLF Module
+Provides card checking functionality using local checkout.
+"""
+
 import json
-from BOT.tools.proxy import get_proxy
-from BOT.Charge.Shopify.api_endpoints import SLF_CHECK_BASE_URL
+from typing import Optional, Dict, Any
+
+from BOT.Charge.Shopify.slf.checkout import shopify_checkout
 from BOT.Charge.Shopify.tls_session import TLSAsyncSession
 
-def get_site(user_id):
-    with open("DATA/sites.json", "r") as f:
-        sites = json.load(f)
-    return sites.get(str(user_id), {}).get("site")
-async def check_card(user_id, cc, site=None):
+
+def get_site(user_id: str) -> Optional[str]:
+    """Get user's saved site from sites.json."""
+    try:
+        with open("DATA/sites.json", "r", encoding="utf-8") as f:
+            sites = json.load(f)
+        return sites.get(str(user_id), {}).get("site")
+    except Exception:
+        return None
+
+
+async def check_card(user_id: str, cc: str, site: Optional[str] = None) -> str:
+    """
+    Check a card on user's saved Shopify site.
+    
+    Args:
+        user_id: User ID to look up site
+        cc: Card in format cc|mm|yy|cvv
+        site: Optional site URL (uses user's saved site if not provided)
+    
+    Returns:
+        Response string (e.g., "ORDER_PLACED", "CARD_DECLINED", "3DS_REQUIRED")
+    """
+    # Get site if not provided
     if not site:
         site = get_site(user_id)
+    
     if not site:
         return "Site Not Found"
-
-    proxy = get_proxy(user_id)
-    if proxy:
-        url = f"{SLF_CHECK_BASE_URL}?card={cc}&site={site}&proxy={proxy}"
-    else:
-        url = f"{SLF_CHECK_BASE_URL}?card={cc}&site={site}"
-
-    retries = 0
-    while retries < 3:
-        try:
-            async with TLSAsyncSession(timeout_seconds=100) as client:
-                response = await client.get(url)
-                data = response.json()
-
-            if not any(x in data for x in ("CARD_DECLINED", "3DS_REQUIRED")):
-                print(data)
+    
+    try:
+        async with TLSAsyncSession(timeout_seconds=90) as session:
+            result = await shopify_checkout(site, cc, session)
+        
+        # Return the response string
+        return result.get("response", "UNKNOWN_ERROR")
+        
+    except Exception as e:
+        return f"Error: {str(e)[:50]}"
 
 
-            response_text = data.get("Response", "").upper()
-
-            if (
-                "SERVER DISCONNECTED WITHOUT SENDING A RESPONSE" in response_text
-                or "PEER CLOSED CONNECTION WITHOUT SENDING COMPLETE MESSAGE BODY (INCOMPLETE CHUNKED READ)" in response_text
-                or "552 CONNECTION ERROR" in response_text
-            ):
-                retries += 1
-                continue  # try again
-            break  # if no disconnect error, break
-
-        except Exception:
-            return "Connection Failed"
-
-    if retries == 3:
-        return "Connection Failed"
-
-    # Response parsing below
-    price = data.get("Price", "")
-    cc_field = data.get("cc")
-
-    if price and "ORDER_PLACED" in response_text:
-        return "ORDER_PLACED"
-    elif "3DS_REQUIRED" in response_text:
-        return "3DS_REQUIRED"
-    elif "CARD_DECLINED" in response_text:
-        return "CARD_DECLINED"
-    elif "HEADER VALUE MUST BE STR OR BYTES, NOT" in response_text:
-        return "Product ID ⚠️"
-    elif "EXPECTING VALUE: LINE 1 COLUMN 1 (CHAR 0)" in response_text:
-        return "IP Rate Limit"
-    elif "DECLINED" in response_text:
-        return "Site | Card Error"
-    else:
-        return response_text
+async def check_card_full(user_id: str, cc: str, site: Optional[str] = None) -> Dict[str, Any]:
+    """
+    Check a card and return full result dictionary.
+    
+    Args:
+        user_id: User ID to look up site
+        cc: Card in format cc|mm|yy|cvv
+        site: Optional site URL
+    
+    Returns:
+        Full result dictionary with status, response, gateway, price, etc.
+    """
+    # Get site if not provided
+    if not site:
+        site = get_site(user_id)
+    
+    if not site:
+        return {
+            "status": "ERROR",
+            "response": "Site Not Found",
+            "gateway": "Unknown",
+            "price": "0.00",
+            "time_taken": 0,
+            "emoji": "⚠️",
+            "is_ccn": False
+        }
+    
+    try:
+        async with TLSAsyncSession(timeout_seconds=90) as session:
+            return await shopify_checkout(site, cc, session)
+    except Exception as e:
+        return {
+            "status": "ERROR",
+            "response": str(e)[:80],
+            "gateway": "Unknown",
+            "price": "0.00",
+            "time_taken": 0,
+            "emoji": "⚠️",
+            "is_ccn": False
+        }
