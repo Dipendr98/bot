@@ -12,7 +12,6 @@ from pyrogram import Client, filters
 from pyrogram.types import Message
 from pyrogram.enums import ParseMode
 
-from BOT.Charge.Shopify.slf.checkout import shopify_checkout
 from BOT.Charge.Shopify.tls_session import TLSAsyncSession
 
 TXT_SITES_PATH = "DATA/txtsite.json"
