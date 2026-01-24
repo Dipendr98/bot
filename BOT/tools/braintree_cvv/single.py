@@ -110,7 +110,7 @@ async def handle_bt_command(client, message):
                     reply_to_message_id=message.id
                 )
 
-        gateway = "Braintree CVV Auth [chk.vkrm.site]"
+        gateway = "Braintree CVV Auth [Iditarod]"
         checked_by = f"<a href='tg://user?id={message.from_user.id}'>{message.from_user.first_name}</a>"
 
         # Send loading message

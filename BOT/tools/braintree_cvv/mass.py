@@ -111,7 +111,7 @@ async def handle_mbt_command(client, message):
                     reply_to_message_id=message.id
                 )
 
-        gateway = "M-Braintree CVV Auth"
+        gateway = "M-Braintree CVV Auth [Iditarod]"
         checked_by = f"<a href='tg://user?id={message.from_user.id}'>{message.from_user.first_name}</a>"
 
         # Send loading message
