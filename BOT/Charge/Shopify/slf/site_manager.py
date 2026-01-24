@@ -1,18 +1,22 @@
 """
 Unified Site Manager for Shopify Checkers
 Manages all user sites in a single storage and provides site rotation for retry logic.
+Bulletproof JSON load/save: atomic writes, retries, robust parsing.
 """
 
 import os
 import json
 import random
-from typing import List, Dict, Optional, Tuple
+import tempfile
+import shutil
+from typing import List, Dict, Optional, Tuple, Any
 from dataclasses import dataclass
 
 # Storage paths
 UNIFIED_SITES_PATH = "DATA/user_sites.json"
 LEGACY_SITES_PATH = "DATA/sites.json"
 LEGACY_TXT_SITES_PATH = "DATA/txtsite.json"
+LOAD_SAVE_RETRIES = 3
 
 
 @dataclass
@@ -30,122 +34,130 @@ def ensure_data_directory():
     os.makedirs("DATA", exist_ok=True)
 
 
+def _robust_json_load(path: str) -> Optional[Dict[str, Any]]:
+    """Load JSON with retries, BOM stripping, and graceful decode errors."""
+    raw = None
+    for _ in range(LOAD_SAVE_RETRIES):
+        try:
+            with open(path, "r", encoding="utf-8-sig") as f:
+                raw = f.read()
+            if not raw or not raw.strip():
+                return {}
+            text = raw.strip()
+            if text.startswith("\ufeff"):
+                text = text[1:]
+            data = json.loads(text)
+            return data if isinstance(data, dict) else {}
+        except (json.JSONDecodeError, IOError, OSError):
+            continue
+    return None
+
+
 def load_unified_sites() -> Dict[str, List[Dict]]:
     """
     Load all sites from unified storage.
-    If unified storage doesn't exist, migrate from legacy storage.
+    If unified storage doesn't exist or is corrupt, migrate from legacy storage.
+    Robust against JSON parse errors and partial writes.
     """
     ensure_data_directory()
-    
-    # Try to load from unified storage first
+
     if os.path.exists(UNIFIED_SITES_PATH):
-        try:
-            with open(UNIFIED_SITES_PATH, "r", encoding="utf-8") as f:
-                data = json.load(f)
-                if data:  # Only return if there's actual data
-                    return data
-        except (json.JSONDecodeError, IOError):
-            pass
-    
-    # Migrate from legacy storages
-    unified_data = {}
-    
-    # Migrate from sites.json (addurl) first
+        data = _robust_json_load(UNIFIED_SITES_PATH)
+        if data is not None and isinstance(data, dict):
+            return data
+
+    unified_data: Dict[str, List[Dict]] = {}
+
     if os.path.exists(LEGACY_SITES_PATH):
-        try:
-            with open(LEGACY_SITES_PATH, "r", encoding="utf-8") as f:
-                legacy_sites = json.load(f)
-            
-            for user_id, site_info in legacy_sites.items():
+        leg = _robust_json_load(LEGACY_SITES_PATH)
+        if isinstance(leg, dict):
+            for user_id, site_info in leg.items():
                 if isinstance(site_info, dict) and site_info.get("site"):
                     if user_id not in unified_data:
                         unified_data[user_id] = []
-                    
-                    site_entry = {
+                    unified_data[user_id].insert(0, {
                         "url": site_info.get("site", ""),
                         "gateway": site_info.get("gate", "Unknown"),
                         "price": "N/A",
                         "active": True,
                         "fail_count": 0,
-                        "is_primary": True
-                    }
-                    unified_data[user_id].insert(0, site_entry)
-        except (json.JSONDecodeError, IOError):
-            pass
-    
-    # Migrate from txtsite.json
+                        "is_primary": True,
+                    })
+
     if os.path.exists(LEGACY_TXT_SITES_PATH):
-        try:
-            with open(LEGACY_TXT_SITES_PATH, "r", encoding="utf-8") as f:
-                legacy_txt = json.load(f)
-            
-            for user_id, sites_list in legacy_txt.items():
+        leg = _robust_json_load(LEGACY_TXT_SITES_PATH)
+        if isinstance(leg, dict):
+            for user_id, sites_list in leg.items():
                 if not isinstance(sites_list, list):
                     continue
-                    
                 if user_id not in unified_data:
                     unified_data[user_id] = []
-                
-                existing_urls = {s.get("url", "").lower().rstrip("/") for s in unified_data[user_id]}
-                
+                existing = {s.get("url", "").lower().rstrip("/") for s in unified_data[user_id]}
                 for site_info in sites_list:
                     if not isinstance(site_info, dict):
                         continue
                     site_url = site_info.get("site", "")
-                    if site_url and site_url.lower().rstrip("/") not in existing_urls:
+                    if site_url and site_url.lower().rstrip("/") not in existing:
                         is_first = len(unified_data[user_id]) == 0
-                        site_entry = {
+                        unified_data[user_id].append({
                             "url": site_url,
                             "gateway": site_info.get("gate", "Unknown"),
                             "price": "N/A",
                             "active": True,
                             "fail_count": 0,
-                            "is_primary": is_first
-                        }
-                        unified_data[user_id].append(site_entry)
-                        existing_urls.add(site_url.lower().rstrip("/"))
-        except (json.JSONDecodeError, IOError):
-            pass
-    
-    # Save migrated data if we found any
+                            "is_primary": is_first,
+                        })
+                        existing.add(site_url.lower().rstrip("/"))
+
     if unified_data:
         save_unified_sites(unified_data)
-    
     return unified_data
 
 
-def save_unified_sites(data: Dict[str, List[Dict]]):
-    """Save all sites to unified storage and update legacy files."""
+def save_unified_sites(data: Dict[str, List[Dict]]) -> None:
+    """Save all sites to unified storage and legacy files. Atomic write + retries."""
     ensure_data_directory()
-    
-    # Save to unified storage
-    with open(UNIFIED_SITES_PATH, "w", encoding="utf-8") as f:
-        json.dump(data, f, indent=4)
-    
-    # Also maintain legacy files for compatibility
-    legacy_sites = {}
-    legacy_txt = {}
-    
+    if not isinstance(data, dict):
+        return
+
+    legacy_sites: Dict[str, Dict[str, str]] = {}
+    legacy_txt: Dict[str, List[Dict[str, str]]] = {}
     for user_id, sites in data.items():
         if sites:
-            # Primary site goes to sites.json
             primary = next((s for s in sites if s.get("is_primary")), sites[0])
-            legacy_sites[user_id] = {
-                "site": primary["url"],
-                "gate": primary["gateway"]
-            }
-            
-            # All sites go to txtsite.json
-            legacy_txt[user_id] = [
-                {"site": s["url"], "gate": s["gateway"]}
-                for s in sites
-            ]
-    
-    with open(LEGACY_SITES_PATH, "w", encoding="utf-8") as f:
-        json.dump(legacy_sites, f, indent=4)
-    
-    with open(LEGACY_TXT_SITES_PATH, "w", encoding="utf-8") as f:
-        json.dump(legacy_txt, f, indent=4)
+            legacy_sites[user_id] = {"site": primary["url"], "gate": primary["gateway"]}
+            legacy_txt[user_id] = [{"site": s["url"], "gate": s["gateway"]} for s in sites]
+
+    def _dump(obj: Any) -> str:
+        return json.dumps(obj, indent=4, ensure_ascii=False)
+
+    def _atomic_write(path: str, content: str) -> bool:
+        d = os.path.dirname(path)
+        fd, tmp = tempfile.mkstemp(dir=d or ".", prefix=".site_tmp_", suffix=".json")
+        try:
+            os.write(fd, content.encode("utf-8"))
+            os.close(fd)
+            shutil.move(tmp, path)
+            return True
+        except Exception:
+            try:
+                os.close(fd)
+            except Exception:
+                pass
+            try:
+                os.remove(tmp)
+            except Exception:
+                pass
+            return False
+
+    for _ in range(LOAD_SAVE_RETRIES):
+        try:
+            if _atomic_write(UNIFIED_SITES_PATH, _dump(data)):
+                _atomic_write(LEGACY_SITES_PATH, _dump(legacy_sites))
+                _atomic_write(LEGACY_TXT_SITES_PATH, _dump(legacy_txt))
+                return
+        except Exception:
+            continue
 
 
 def get_user_sites(user_id: str) -> List[Dict]:
@@ -190,10 +202,14 @@ def add_site_for_user(user_id: str, url: str, gateway: str, price: str = "N/A", 
         # Check for duplicate
         existing_urls = {s.get("url", "").lower().rstrip("/") for s in data[user_id]}
         url_normalized = url.lower().rstrip("/")
-        
+
         if url_normalized in existing_urls:
+            if set_primary:
+                for s in data[user_id]:
+                    s["is_primary"] = (s.get("url", "").lower().rstrip("/") == url_normalized)
+                save_unified_sites(data)
             return True  # Already exists
-        
+
         # Create new site entry
         is_first = len(data[user_id]) == 0
         site_entry = {

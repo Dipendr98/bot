@@ -29,22 +29,26 @@ from BOT.Charge.Shopify.tls_session import TLSAsyncSession
 from BOT.tools.proxy import get_proxy
 from BOT.helper.start import load_users
 
+try:
+    import cloudscraper
+    HAS_CLOUDSCRAPER = True
+except ImportError:
+    HAS_CLOUDSCRAPER = False
+
 # Import unified site manager
 from BOT.Charge.Shopify.slf.site_manager import (
     add_site_for_user,
     add_sites_batch,
     get_primary_site,
     get_user_sites,
+    clear_user_sites,
 )
 
-# Paths
-SITES_PATH = "DATA/sites.json"
-TXT_SITES_PATH = "DATA/txtsite.json"
-
 # Timeout configurations
-FAST_TIMEOUT = 15
-STANDARD_TIMEOUT = 30
-MAX_RETRIES = 2
+FAST_TIMEOUT = 18
+STANDARD_TIMEOUT = 35
+MAX_RETRIES = 3
+FETCH_RETRIES = 2
 
 # Currency symbols mapping
 CURRENCY_SYMBOLS = {
@@ -127,7 +131,50 @@ def get_random_headers() -> Dict[str, str]:
         "Accept-Encoding": "gzip, deflate, br",
         "Connection": "keep-alive",
         "Cache-Control": "no-cache",
+        "sec-ch-ua": '"Chromium";v="120", "Not/A)Brand";v="24"',
+        "sec-ch-ua-mobile": "?0",
+        "sec-ch-ua-platform": '"Windows"',
     }
+
+
+def _parse_products_json(raw: str) -> List[Dict]:
+    """Robust JSON parse for products.json. Handles BOM, malformed edges."""
+    if not raw or not raw.strip():
+        return []
+    text = raw.strip()
+    if text.startswith("\ufeff"):
+        text = text[1:]
+    if text.lstrip().startswith("<"):
+        return []
+    try:
+        data = json.loads(text)
+    except json.JSONDecodeError:
+        return []
+    products = data.get("products") if isinstance(data, dict) else None
+    return products if isinstance(products, list) else []
+
+
+def _fetch_products_cloudscraper_sync(base_url: str, proxy: Optional[str] = None) -> List[Dict]:
+    """Sync fetch via cloudscraper (captcha bypass). Fallback when TLS fails."""
+    if not HAS_CLOUDSCRAPER:
+        return []
+    url = f"{base_url.rstrip('/')}/products.json?limit=100"
+    try:
+        scraper = cloudscraper.create_scraper(
+            browser={"browser": "chrome", "platform": "windows", "mobile": False}
+        )
+        if proxy and str(proxy).strip():
+            px = str(proxy).strip()
+            if not px.startswith(("http://", "https://")):
+                px = f"http://{px}"
+            scraper.proxies = {"http": px, "https": px}
+        r = scraper.get(url, timeout=FAST_TIMEOUT)
+        if r.status_code != 200:
+            return []
+        raw = r.text
+        return _parse_products_json(raw)
+    except Exception:
+        return []
 
 
 def extract_between(text: str, start_marker: str, end_marker: str) -> Optional[str]:
@@ -163,36 +210,50 @@ def get_currency_symbol(code: str) -> str:
     return CURRENCY_SYMBOLS.get(code.upper(), f"{code} ")
 
 
-async def fetch_products_json(session: TLSAsyncSession, base_url: str) -> List[Dict]:
-    """Fetch products from Shopify /products.json endpoint - robust version."""
-    products_url = f"{base_url}/products.json?limit=100"
-    
-    try:
-        response = await asyncio.wait_for(
-            session.get(products_url, headers=get_random_headers(), follow_redirects=True),
-            timeout=FAST_TIMEOUT
-        )
-        
-        if response.status_code != 200:
-            return []
-        
-        raw = response.content.decode("utf-8", errors="ignore")
-        
-        # Check for HTML response (not JSON)
-        if raw.lstrip().startswith("<"):
-            return []
-        
-        data = json.loads(raw)
-        products = data.get("products", [])
-        
-        return products if isinstance(products, list) else []
-        
-    except asyncio.TimeoutError:
-        return []
-    except json.JSONDecodeError:
-        return []
-    except Exception:
-        return []
+async def fetch_products_json(
+    session: TLSAsyncSession,
+    base_url: str,
+    proxy: Optional[str] = None,
+) -> List[Dict]:
+    """Fetch products from Shopify /products.json. TLS first, then cloudscraper fallback. Robust JSON parse."""
+    products_url = f"{base_url.rstrip('/')}/products.json?limit=100"
+    products: List[Dict] = []
+
+    for attempt in range(FETCH_RETRIES):
+        try:
+            resp = await asyncio.wait_for(
+                session.get(
+                    products_url,
+                    headers=get_random_headers(),
+                    follow_redirects=True,
+                ),
+                timeout=FAST_TIMEOUT,
+            )
+            if resp.status_code != 200:
+                break
+            raw = getattr(resp, "content", None)
+            if isinstance(raw, bytes):
+                raw = raw.decode("utf-8", errors="ignore")
+            elif hasattr(resp, "text"):
+                raw = getattr(resp, "text", "") or ""
+            else:
+                raw = ""
+            products = _parse_products_json(raw)
+            if products:
+                return products
+        except (asyncio.TimeoutError, json.JSONDecodeError, Exception):
+            pass
+
+    if HAS_CLOUDSCRAPER and not products:
+        try:
+            products = await asyncio.to_thread(
+                _fetch_products_cloudscraper_sync,
+                base_url,
+                proxy,
+            )
+        except Exception:
+            pass
+    return products if isinstance(products, list) else []
 
 
 def find_lowest_variant_from_products(products: List[Dict]) -> Optional[Dict]:
@@ -233,13 +294,14 @@ def find_lowest_variant_from_products(products: List[Dict]) -> Optional[Dict]:
     return None
 
 
-async def validate_and_parse_site(url: str, session: TLSAsyncSession) -> Dict[str, Any]:
+async def validate_and_parse_site(
+    url: str,
+    session: TLSAsyncSession,
+    proxy: Optional[str] = None,
+) -> Dict[str, Any]:
     """
     Validate if a URL is a working Shopify store and parse lowest product.
-    Uses robust validation logic.
-    
-    Returns:
-        Dict with validation result and product info
+    Uses robust validation logic and optional cloudscraper fallback.
     """
     result = {
         "valid": False,
@@ -257,8 +319,7 @@ async def validate_and_parse_site(url: str, session: TLSAsyncSession) -> Dict[st
         normalized_url = normalize_url(url)
         result["url"] = normalized_url
         
-        # Fetch products using robust method
-        products = await fetch_products_json(session, normalized_url)
+        products = await fetch_products_json(session, normalized_url, proxy)
         
         if not products:
             result["error"] = "No products or not Shopify"
@@ -286,15 +347,18 @@ async def validate_and_parse_site(url: str, session: TLSAsyncSession) -> Dict[st
 
 
 async def validate_sites_batch(urls: List[str], user_proxy: Optional[str] = None) -> List[Dict[str, Any]]:
-    """Validate multiple Shopify sites concurrently with robust logic."""
+    """Validate multiple Shopify sites concurrently. Uses TLS + optional proxy; cloudscraper fallback."""
     results = []
+    proxy_url = None
+    if user_proxy and str(user_proxy).strip():
+        px = str(user_proxy).strip()
+        proxy_url = px if px.startswith(("http://", "https://")) else f"http://{px}"
     
-    async with TLSAsyncSession(timeout_seconds=STANDARD_TIMEOUT) as session:
+    async with TLSAsyncSession(timeout_seconds=STANDARD_TIMEOUT, proxy=proxy_url) as session:
         batch_size = 5
-        
         for i in range(0, len(urls), batch_size):
             batch = urls[i:i + batch_size]
-            tasks = [validate_and_parse_site(url, session) for url in batch]
+            tasks = [validate_and_parse_site(url, session, proxy_url) for url in batch]
             batch_results = await asyncio.gather(*tasks, return_exceptions=True)
             
             for url, result in zip(batch, batch_results):
@@ -562,35 +626,24 @@ Use <code>/addurl https://store.com</code> to add a Shopify site.""",
 
 @Client.on_message(filters.command(["delsite", "removesite", "clearsite", "remurl"]))
 async def delete_site_handler(client: Client, message: Message):
-    """Delete user's saved site."""
+    """Delete all of user's saved sites (unified storage). Idempotent; safe to run repeatedly."""
     user_id = str(message.from_user.id)
-    
     try:
-        if os.path.exists(SITES_PATH):
-            with open(SITES_PATH, "r", encoding="utf-8") as f:
-                all_sites = json.load(f)
-            
-            if user_id in all_sites:
-                del all_sites[user_id]
-                
-                with open(SITES_PATH, "w", encoding="utf-8") as f:
-                    json.dump(all_sites, f, indent=4)
-                
-                return await message.reply(
-                    "<pre>Site Removed ✅</pre>\n<b>Your primary site has been deleted.</b>",
-                    reply_to_message_id=message.id,
-                    parse_mode=ParseMode.HTML
-                )
-        
+        count = clear_user_sites(user_id)
+        if count > 0:
+            return await message.reply(
+                f"<pre>Sites Removed ✅</pre>\n<b>Cleared {count} site(s).</b> You can add again with <code>/addurl</code>.",
+                reply_to_message_id=message.id,
+                parse_mode=ParseMode.HTML
+            )
         await message.reply(
             "<pre>No Site Found ℹ️</pre>\n<b>You don't have any site saved.</b>",
             reply_to_message_id=message.id,
             parse_mode=ParseMode.HTML
         )
-        
     except Exception as e:
         await message.reply(
-            f"<pre>Error ⚠️</pre>\n<code>{str(e)}</code>",
+            f"<pre>Error ⚠️</pre>\n<code>{str(e)[:80]}</code>",
             reply_to_message_id=message.id,
             parse_mode=ParseMode.HTML
         )

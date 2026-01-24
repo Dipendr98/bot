@@ -24,6 +24,13 @@ from pyrogram.enums import ParseMode
 
 from BOT.Charge.Shopify.tls_session import TLSAsyncSession
 from BOT.helper.start import load_users
+from BOT.tools.proxy import get_proxy
+
+try:
+    import cloudscraper
+    HAS_CLOUDSCRAPER = True
+except ImportError:
+    HAS_CLOUDSCRAPER = False
 
 # Import unified site manager
 from BOT.Charge.Shopify.slf.site_manager import (
@@ -38,8 +45,9 @@ from BOT.Charge.Shopify.slf.site_manager import (
 TXT_SITES_PATH = "DATA/txtsite.json"
 
 # Timeouts
-FAST_TIMEOUT = 25
-STANDARD_TIMEOUT = 45
+FAST_TIMEOUT = 20
+STANDARD_TIMEOUT = 40
+FETCH_RETRIES = 2
 
 # Currency symbols
 CURRENCY_SYMBOLS = {
@@ -134,36 +142,85 @@ def extract_urls_from_text(text: str) -> List[str]:
     return unique_urls
 
 
-async def fetch_products_json(session: TLSAsyncSession, base_url: str) -> List[Dict]:
-    """Fetch products from Shopify /products.json endpoint."""
-    products_url = f"{base_url}/products.json?limit=100"
-    
-    try:
-        response = await asyncio.wait_for(
-            session.get(products_url, follow_redirects=True),
-            timeout=FAST_TIMEOUT
-        )
-        
-        if response.status_code != 200:
-            return []
-        
-        raw = response.content.decode("utf-8", errors="ignore")
-        
-        # Check for HTML response (not JSON)
-        if raw.lstrip().startswith("<"):
-            return []
-        
-        data = json.loads(raw)
-        products = data.get("products", [])
-        
-        return products if isinstance(products, list) else []
-        
-    except asyncio.TimeoutError:
+def _parse_products_json_txt(raw: str) -> List[Dict]:
+    """Robust JSON parse for products.json. Handles BOM, malformed edges."""
+    if not raw or not raw.strip():
         return []
+    text = raw.strip()
+    if text.startswith("\ufeff"):
+        text = text[1:]
+    if text.lstrip().startswith("<"):
+        return []
+    try:
+        data = json.loads(text)
     except json.JSONDecodeError:
         return []
+    products = data.get("products") if isinstance(data, dict) else None
+    return products if isinstance(products, list) else []
+
+
+def _fetch_products_cloudscraper_txt_sync(base_url: str, proxy: Optional[str] = None) -> List[Dict]:
+    """Sync fetch via cloudscraper (captcha bypass). Fallback when TLS fails."""
+    if not HAS_CLOUDSCRAPER:
+        return []
+    url = f"{base_url.rstrip('/')}/products.json?limit=100"
+    try:
+        scraper = cloudscraper.create_scraper(
+            browser={"browser": "chrome", "platform": "windows", "mobile": False}
+        )
+        if proxy and str(proxy).strip():
+            px = str(proxy).strip()
+            if not px.startswith(("http://", "https://")):
+                px = f"http://{px}"
+            scraper.proxies = {"http": px, "https": px}
+        r = scraper.get(url, timeout=FAST_TIMEOUT)
+        if r.status_code != 200:
+            return []
+        return _parse_products_json_txt(r.text or "")
     except Exception:
         return []
+
+
+async def fetch_products_json(
+    session: TLSAsyncSession,
+    base_url: str,
+    proxy: Optional[str] = None,
+) -> List[Dict]:
+    """Fetch products from Shopify /products.json. TLS first, cloudscraper fallback. Robust JSON."""
+    products_url = f"{base_url.rstrip('/')}/products.json?limit=100"
+    products: List[Dict] = []
+
+    for _ in range(FETCH_RETRIES):
+        try:
+            resp = await asyncio.wait_for(
+                session.get(products_url, follow_redirects=True),
+                timeout=FAST_TIMEOUT,
+            )
+            if resp.status_code != 200:
+                break
+            raw = getattr(resp, "content", None)
+            if isinstance(raw, bytes):
+                raw = raw.decode("utf-8", errors="ignore")
+            elif hasattr(resp, "text"):
+                raw = getattr(resp, "text", "") or ""
+            else:
+                raw = ""
+            products = _parse_products_json_txt(raw)
+            if products:
+                return products
+        except (asyncio.TimeoutError, json.JSONDecodeError, Exception):
+            pass
+
+    if HAS_CLOUDSCRAPER and not products:
+        try:
+            products = await asyncio.to_thread(
+                _fetch_products_cloudscraper_txt_sync,
+                base_url,
+                proxy,
+            )
+        except Exception:
+            pass
+    return products if isinstance(products, list) else []
 
 
 def find_lowest_variant(products: List[Dict]) -> Optional[Dict]:
@@ -204,10 +261,14 @@ def find_lowest_variant(products: List[Dict]) -> Optional[Dict]:
     return None
 
 
-async def validate_site_robust(url: str, session: TLSAsyncSession) -> Dict[str, Any]:
+async def validate_site_robust(
+    url: str,
+    session: TLSAsyncSession,
+    proxy: Optional[str] = None,
+) -> Dict[str, Any]:
     """
     Validate a single site and find lowest product.
-    Uses the proven robust logic.
+    Uses robust fetch with optional cloudscraper fallback.
     """
     result = {
         "valid": False,
@@ -219,15 +280,10 @@ async def validate_site_robust(url: str, session: TLSAsyncSession) -> Dict[str, 
         "formatted_price": None,
         "error": None,
     }
-    
     try:
-        # Normalize URL
         normalized = normalize_url(url)
         result["url"] = normalized
-        
-        # Fetch products
-        products = await fetch_products_json(session, normalized)
-        
+        products = await fetch_products_json(session, normalized, proxy)
         if not products:
             result["error"] = "No products or not Shopify"
             return result
@@ -256,22 +312,25 @@ async def validate_site_robust(url: str, session: TLSAsyncSession) -> Dict[str, 
 async def validate_sites_batch(
     urls: List[str],
     progress_callback=None,
-    batch_size: int = 5
+    batch_size: int = 5,
+    user_proxy: Optional[str] = None,
 ) -> List[Dict]:
     """
     Validate multiple sites with progress reporting.
-    Uses robust validation logic.
+    Uses robust validation; optional proxy and cloudscraper fallback.
     """
     results = []
     total = len(urls)
     processed = 0
-    
-    async with TLSAsyncSession(timeout_seconds=STANDARD_TIMEOUT) as session:
+    proxy_url = None
+    if user_proxy and str(user_proxy).strip():
+        px = str(user_proxy).strip()
+        proxy_url = px if px.startswith(("http://", "https://")) else f"http://{px}"
+
+    async with TLSAsyncSession(timeout_seconds=STANDARD_TIMEOUT, proxy=proxy_url) as session:
         for i in range(0, len(urls), batch_size):
             batch = urls[i:i + batch_size]
-            
-            # Process batch concurrently
-            tasks = [validate_site_robust(url, session) for url in batch]
+            tasks = [validate_site_robust(url, session, proxy_url) for url in batch]
             batch_results = await asyncio.gather(*tasks, return_exceptions=True)
             
             for url, result in zip(batch, batch_results):
@@ -437,11 +496,16 @@ Use <code>/txtls</code> to view your sites.""",
                 pass
     
     try:
-        # Validate all sites with progress updates
+        user_proxy = None
+        try:
+            user_proxy = get_proxy(int(user_id))
+        except Exception:
+            pass
         results = await validate_sites_batch(
             new_urls,
             progress_callback=update_progress if len(new_urls) > 3 else None,
-            batch_size=5
+            batch_size=5,
+            user_proxy=user_proxy,
         )
         
         # Separate valid and invalid sites
@@ -487,20 +551,8 @@ Use <code>/txtls</code> to view your sites.""",
                 "price": price
             })
         
-        # Save to unified storage
         added_count = add_sites_batch(user_id, sites_to_add)
-        
-        # Also save to legacy storage for compatibility
-        all_sites = load_txt_sites()
-        user_sites = all_sites.get(user_id, [])
-        for site in valid_sites:
-            user_sites.append({
-                "site": site["url"],
-                "gate": f"Shopify {site.get('gateway', 'Normal')} ${site.get('price', 'N/A')}"
-            })
-        all_sites[user_id] = user_sites
-        save_txt_sites(all_sites)
-        
+
         # Build response
         result_lines = [
             "<pre>Sites Added Successfully ✅</pre>",
@@ -644,10 +696,9 @@ async def rurl_handler(client: Client, message: Message):
             parse_mode=ParseMode.HTML
         )
     
-    # Track removed sites
     removed = []
     args_lower = [a.lower().replace("https://", "").replace("http://", "").rstrip("/") for a in args]
-    
+
     for arg in args_lower:
         for site in unified_sites:
             site_url = site.get("url", "").lower().replace("https://", "").replace("http://", "").rstrip("/")
@@ -655,18 +706,7 @@ async def rurl_handler(client: Client, message: Message):
                 if remove_site_for_user(user_id, site.get("url", "")):
                     removed.append(site.get("url", ""))
                 break
-    
-    # Also update legacy storage
-    all_sites = load_txt_sites()
-    user_sites = all_sites.get(user_id, [])
-    new_sites = []
-    for entry in user_sites:
-        site_lower = entry.get("site", "").lower().replace("https://", "").replace("http://", "")
-        if not any(arg in site_lower or site_lower in arg for arg in args_lower):
-            new_sites.append(entry)
-    all_sites[user_id] = new_sites
-    save_txt_sites(all_sites)
-    
+
     if removed:
         removed_list = "\n".join([f"• <code>{s.replace('https://', '')[:35]}</code>" for s in removed[:5]])
         if len(removed) > 5:
@@ -691,20 +731,9 @@ async def rurl_handler(client: Client, message: Message):
 
 @Client.on_message(filters.command("clearurl"))
 async def clearurl_handler(client: Client, message: Message):
-    """Clear all sites for user."""
+    """Clear all sites for user (unified storage). Idempotent."""
     user_id = str(message.from_user.id)
-    
-    # Clear from unified storage
     count = clear_user_sites(user_id)
-    
-    # Also clear from legacy storage
-    all_sites = load_txt_sites()
-    if user_id in all_sites:
-        legacy_count = len(all_sites[user_id])
-        del all_sites[user_id]
-        save_txt_sites(all_sites)
-        count = max(count, legacy_count)
-    
     if count > 0:
         await message.reply(
             f"""<pre>All Sites Cleared ✅</pre>

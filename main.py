@@ -75,6 +75,7 @@ async def run_bot():
         BotCommand("mvbv", "Mass VBV verification check"),
         BotCommand("mbv", "MBV SecureCode verification check"),
         BotCommand("mmbv", "Mass MBV SecureCode verification check"),
+        BotCommand("bt", "Braintree CVV check"),
         BotCommand("btcvv", "Braintree CVV Auth check"),
         BotCommand("mbtcvv", "Mass Braintree CVV Auth check"),
         BotCommand("plans", "View available plans"),
