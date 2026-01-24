@@ -401,20 +401,33 @@ def check_stripe_charge(card, mes, ano, cvv, proxy=None):
                 message = error.get('message', 'Card declined')
                 code = error.get('code', 'generic_decline')
 
-                # Approved codes (CVV, insufficient funds, etc.)
-                approved_codes = ['incorrect_cvc', 'insufficient_funds', 'incorrect_zip', 'card_decline_rate_limit_exceeded']
+                # CCN codes - Card is valid but CVV/address issue
+                ccn_codes = ['incorrect_cvc', 'insufficient_funds', 'incorrect_zip', 
+                            'incorrect_address', 'incorrect_pin', 'authentication_required']
+                
+                # Decline codes - Card is dead/blocked
+                decline_codes = ['card_declined', 'generic_decline', 'do_not_honor', 
+                                'lost_card', 'stolen_card', 'expired_card', 'invalid_card',
+                                'fraudulent', 'pickup_card', 'restricted_card']
+                
+                # Rate limit is an error, not a card issue
+                if 'rate_limit' in code.lower():
+                    return {"status": "error", "response": "RATE_LIMITED"}
 
-                if code in approved_codes:
+                if code in ccn_codes:
                     return {"status": "approved", "response": message.upper().replace(' ', '_')}
+                elif code in decline_codes:
+                    return {"status": "declined", "response": message.upper().replace(' ', '_')}
                 else:
                     return {"status": "declined", "response": message.upper().replace(' ', '_')}
 
             # Check status
             elif data.get('status') == 'requires_action':
-                return {"status": "declined", "response": "3DS_VERIFICATION_REQUIRED"}
+                # 3DS required means card is valid/live - it's CCN
+                return {"status": "approved", "response": "3DS_REQUIRED_CCN_LIVE"}
 
             elif data.get('status') == 'succeeded':
-                return {"status": "approved", "response": "PAYMENT_SUCCESSFUL_$20_✅"}
+                return {"status": "charged", "response": "PAYMENT_SUCCESSFUL_$20_✅"}
 
             else:
                 status = data.get('status', 'unknown')

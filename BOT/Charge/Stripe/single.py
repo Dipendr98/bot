@@ -149,13 +149,12 @@ async def handle_stripe_charge(client, message):
         status = result.get("status", "error")
         response_msg = result.get("response", "UNKNOWN_ERROR")
 
-        if status == "approved":
-            if "PAYMENT_SUCCESSFUL" in response_msg or "CHARGED" in response_msg:
-                status_text = "Charged 💎"
-                header = "CHARGED"
-            else:
-                status_text = "Approved ✅"
-                header = "CCN LIVE"
+        if status == "charged":
+            status_text = "Charged 💎"
+            header = "CHARGED"
+        elif status == "approved":
+            status_text = "Approved ✅"
+            header = "CCN LIVE"
         elif status == "declined":
             status_text = "Declined ❌"
             header = "DECLINED"

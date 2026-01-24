@@ -39,13 +39,12 @@ def format_stripe_charge_response(card_data: str, result: dict, start_time: floa
     status = result.get("status", "error")
     message = result.get("response", "UNKNOWN_ERROR")
 
-    if status == "approved":
-        if "PAYMENT_SUCCESSFUL" in message or "CHARGED" in message:
-            status_text = "Charged 💎"
-            header = "CHARGED"
-        else:
-            status_text = "Approved ✅"
-            header = "CCN LIVE"
+    if status == "charged":
+        status_text = "Charged 💎"
+        header = "CHARGED"
+    elif status == "approved":
+        status_text = "Approved ✅"
+        header = "CCN LIVE"
     elif status == "declined":
         status_text = "Declined ❌"
         header = "DECLINED"
