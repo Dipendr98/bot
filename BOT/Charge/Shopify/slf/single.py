@@ -18,7 +18,7 @@ from pyrogram.enums import ParseMode, ChatType
 from BOT.helper.start import load_users
 from BOT.helper.antispam import can_run_command
 from BOT.gc.credit import has_credits, deduct_credit
-from BOT.Charge.Shopify.slf.api import autoshopify
+from BOT.Charge.Shopify.slf.api import autoshopify, autoshopify_with_captcha_retry
 from BOT.Charge.Shopify.tls_session import TLSAsyncSession
 from BOT.Charge.Shopify.slf.site_manager import SiteRotator, get_user_sites, get_primary_site
 
@@ -310,14 +310,37 @@ Use <code>/txturl site1.com site2.com</code> for multiple sites.""",
         
         start_time = time()
         
-        # Get user's proxy
+        # Get user's proxy - REQUIRED for Shopify checks
         try:
             from BOT.tools.proxy import get_proxy
             user_proxy = get_proxy(int(user_id))
         except:
             user_proxy = None
         
-        has_proxy = user_proxy is not None
+        # Check if proxy is configured - REQUIRED
+        if not user_proxy:
+            return await message.reply(
+                """<pre>Proxy Required 🔐</pre>
+━━━━━━━━━━━━━━━
+<b>You haven't configured a proxy yet.</b>
+
+<b>Proxy is required for:</b>
+• Avoiding rate limits
+• Better success rates
+• Secure checking
+
+<b>How to set up:</b>
+<code>/setpx ip:port:user:pass</code>
+
+<b>Example:</b>
+<code>/setpx 192.168.1.1:8080:user:pass</code>
+━━━━━━━━━━━━━━━
+<i>Set your proxy in private chat first!</i>""",
+                reply_to_message_id=message.id,
+                parse_mode=ParseMode.HTML
+            )
+        
+        has_proxy = True
         
         # Loading animation frames
         loading_frames = ["◐", "◓", "◑", "◒"]
@@ -375,7 +398,8 @@ Use <code>/txturl site1.com site2.com</code> for multiple sites.""",
                     pass
                 
                 async with TLSAsyncSession(timeout_seconds=120, proxy=user_proxy) as session:
-                    result = await autoshopify(site_url, fullcc, session)
+                    # Use captcha-aware wrapper with 3 internal retries per site
+                    result = await autoshopify_with_captcha_retry(site_url, fullcc, session, max_captcha_retries=3)
                 
                 response = str(result.get("Response", ""))
                 

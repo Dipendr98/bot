@@ -6,7 +6,7 @@ Handles /tsh command with intelligent site rotation on captcha/errors.
 from pyrogram import Client, filters
 from pyrogram.types import Message
 from pyrogram.enums import ParseMode
-from BOT.Charge.Shopify.slf.api import autoshopify
+from BOT.Charge.Shopify.slf.api import autoshopify, autoshopify_with_captcha_retry
 from BOT.Charge.Shopify.tls_session import TLSAsyncSession
 from BOT.Charge.Shopify.slf.site_manager import SiteRotator, get_user_sites
 from BOT.helper.permissions import check_private_access
@@ -130,7 +130,8 @@ async def check_card_with_rotation(user_id: str, card: str, proxy: str = None) -
         
         try:
             async with TLSAsyncSession(timeout_seconds=90, proxy=proxy) as session:
-                result = await autoshopify(site_url, card, session)
+                # Use captcha-aware wrapper with 3 internal retries
+                result = await autoshopify_with_captcha_retry(site_url, card, session, max_captcha_retries=3)
             
             response = str(result.get("Response", "UNKNOWN"))
             last_response = response
