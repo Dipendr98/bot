@@ -57,16 +57,16 @@ async def help_callback(client: Client, callback_query: CallbackQuery):
 • <code>/txturl</code> - Add multiple sites
 
 <b>⚡ Group Commands:</b>
-• <code>/sg</code> - Shopify charge
+• <code>/sh</code> - Shopify charge
 • <code>/st</code> - Stripe charge
 • <code>/br</code> - Braintree check
+• <code>/bt</code> - Braintree CVV
 • <code>/bin</code> - BIN lookup
 
 <b>🔧 Tool Commands:</b>
 • <code>/fake</code> - Generate fake info
 • <code>/gen</code> - Generate cards
 • <code>/vbv</code> - VBV check
-• <code>/btcvv</code> - Braintree CVV
 
 <b>💎 Plan Commands:</b>
 • <code>/plans</code> - View plans
@@ -208,24 +208,22 @@ async def help_callback(client: Client, callback_query: CallbackQuery):
 
 <b>═══ Shopify Gates ═══</b>
 
-<b>/sg</b> - <i>Shopify gateway charge</i>
-<code>Usage: /sg cc|mes|ano|cvv</code>
-
-<b>/sho</b> - <i>Shopify $1 charge gate</i>
-<code>Usage: /sho cc|mes|ano|cvv</code>
-
-<b>/msho</b> - <i>Mass Shopify charge (multiple cards)</i>
-<code>Usage: /msho [cards]</code>
-
-<b>/sh</b> - <i>Self-hosted Shopify charge (free in groups)</i>
+<b>/sh</b> - <i>Shopify charge (your sites)</i>
 <code>Usage: /sh cc|mes|ano|cvv</code>
 
-<b>/msh</b> - <i>Mass self-hosted Shopify</i>
+<b>/msh</b> - <i>Mass Shopify charge</i>
 <code>Limit: 9 cards/site/15min</code>
 
 <b>/tsh</b> - <i>Test Shopify gate</i>
 
 <b>/tslf</b> - <i>Test SLF gate</i>
+
+<b>═══ Braintree ═══</b>
+
+<b>/bt</b> - <i>Braintree CVV check</i>
+<code>Usage: /bt cc|mes|ano|cvv</code>
+
+<b>/mbt</b> - <i>Mass Braintree CVV</i>
 
 <b>═══ URL Management ═══</b>
 

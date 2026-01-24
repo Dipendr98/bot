@@ -221,7 +221,7 @@ async def handle_mbt_command(client, message):
         await loader_msg.edit(completion_message, disable_web_page_preview=True)
 
     except Exception as e:
-        print(f"Error in $mbtcvv command: {str(e)}")
+        print(f"Error in /mbt command: {str(e)}")
         try:
             await message.reply(
                 f"<b>⚠️ An error occurred:</b>\n<code>{str(e)}</code>",

@@ -398,8 +398,11 @@ Use <code>/txturl site1.com site2.com</code> for multiple sites.""",
                     pass
                 
                 async with TLSAsyncSession(timeout_seconds=120, proxy=user_proxy) as session:
-                    # Use captcha-aware wrapper with 3 internal retries per site
-                    result = await autoshopify_with_captcha_retry(site_url, fullcc, session, max_captcha_retries=3)
+                    result = await autoshopify_with_captcha_retry(
+                        site_url, fullcc, session,
+                        max_captcha_retries=5,
+                        proxy=user_proxy,
+                    )
                 
                 response = str(result.get("Response", ""))
                 

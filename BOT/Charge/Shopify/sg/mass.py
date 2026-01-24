@@ -13,7 +13,7 @@ from BOT.Charge.Shopify.tls_session import TLSAsyncSession
 
 user_locks = {}
 
-@Client.on_message(filters.command("msg") | filters.regex(r"^\.msg(\s|$)"))
+@Client.on_message(filters.command("msg_disabled") | filters.regex(r"^\.msg_disabled(\s|$)"))
 async def handle_msg_command(client, message):
 
     user_id = str(message.from_user.id)

@@ -24,7 +24,7 @@ def extract_site(text):
         return match.group(1)
     return None
 
-@Client.on_message(filters.command(["autosh", "ash"]))
+@Client.on_message(filters.command(["autosh_disabled", "ash_disabled"]))
 async def handle_autosh(client, message):
     """
     Handle /autosh command for AutoShopify card checking

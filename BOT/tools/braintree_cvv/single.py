@@ -202,7 +202,7 @@ async def handle_bt_command(client, message):
         await loader_msg.edit(final_message, disable_web_page_preview=True)
 
     except Exception as e:
-        print(f"Error in $btcvv command: {str(e)}")
+        print(f"Error in /bt command: {str(e)}")
         await message.reply(
             f"<b>⚠️ An error occurred:</b>\n<code>{str(e)}</code>",
             reply_to_message_id=message.id

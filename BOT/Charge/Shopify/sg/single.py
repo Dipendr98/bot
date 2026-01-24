@@ -13,7 +13,7 @@ from BOT.Charge.Shopify.tls_session import TLSAsyncSession
 
 # ALLOWED_GROUPS = [-1002058346930]
 
-@Client.on_message(filters.command("sg") | filters.regex(r"^\.sg(\s|$)"))
+@Client.on_message(filters.command("sg_disabled") | filters.regex(r"^\.sg_disabled(\s|$)"))
 async def handle_sho_command(client, message):
     try:
 

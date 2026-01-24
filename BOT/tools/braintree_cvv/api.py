@@ -218,6 +218,10 @@ def check_braintree_cvv_sync(card: str, mes: str, ano: str, cvv: str, proxy: Opt
                     bank = (bd.get("issuingBank") or "Unknown")[:20]
                     country = bd.get("countryOfIssuance") or "Unknown"
                     brand = cc.get("brandCode") or "Unknown"
+                    # Don't report "CVV VALID" for obvious test CVVs (gate may be sandbox)
+                    cvv_clean = (cvv or "").strip()
+                    if cvv_clean in ("000", "111", "123", "999", "1234"):
+                        return {"status": "ccn", "response": "CCN LIVE - Re-verify CVV (test CVV used)"}
                     return {"status": "approved", "response": f"CVV VALID ✓ | {brand} | Bank: {bank}"}
                 return {"status": "declined", "response": "Tokenization Failed - No Token"}
             last_error = {"status": "declined", "response": "Unknown Response"}

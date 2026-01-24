@@ -21,7 +21,7 @@ def chunk_cards(cards, size):
     for i in range(0, len(cards), size):
         yield cards[i:i + size]
 
-@Client.on_message(filters.command(["mautosh", "mash"]))
+@Client.on_message(filters.command(["mautosh_disabled", "mash_disabled"]))
 async def handle_mass_autosh(client, message):
     """
     Handle /mautosh command for mass AutoShopify card checking

@@ -3,13 +3,15 @@ import asyncio
 import re
 import base64
 import json
-# import html
 import time
 from urllib.parse import urlparse
-import random, html
+import random
+import html
 from datetime import datetime, timezone, timedelta
 import uuid
 import logging
+from typing import Optional
+
 from BOT.Charge.Shopify.tls_session import TLSAsyncSession
 
 # Import captcha solver
@@ -23,6 +25,12 @@ try:
     CAPTCHA_SOLVER_AVAILABLE = True
 except ImportError:
     CAPTCHA_SOLVER_AVAILABLE = False
+
+try:
+    import cloudscraper
+    HAS_CLOUDSCRAPER = True
+except ImportError:
+    HAS_CLOUDSCRAPER = False
 
 # Configure logging
 logger = logging.getLogger(__name__)
@@ -93,41 +101,26 @@ def capture(data, first, last):
   except ValueError:
       return
 
-def get_product_id(response):
-    """
-    Extract the lowest priced available product from /products.json response.
-    Returns (product_id, price) tuple or raises ValueError with descriptive message.
-    """
-    # Check if response is empty
-    if not response or not response.text:
+def _products_from_json_text(text: str):
+    """Parse products from raw /products.json text. Returns (product_id, price) or raises ValueError."""
+    if not text or not text.strip():
         raise ValueError("SITE_EMPTY_RESPONSE")
-    
-    # Check for HTML response (not JSON)
-    text = response.text.strip()
-    if text.startswith("<!") or text.startswith("<html") or text.startswith("<HTML"):
-        # Check for captcha/bot detection
-        if any(x in text.lower() for x in ["captcha", "hcaptcha", "recaptcha", "challenge", "verify"]):
+    t = text.strip()
+    if t.startswith("<!") or t.startswith("<html") or t.startswith("<HTML"):
+        if any(x in t.lower() for x in ["captcha", "hcaptcha", "recaptcha", "challenge", "verify"]):
             raise ValueError("SITE_CAPTCHA_BLOCK")
         raise ValueError("SITE_HTML_ERROR")
-    
-    # Try to parse JSON
     try:
-        response_data = response.json()
+        response_data = json.loads(t)
     except json.JSONDecodeError as e:
-        # Empty response
         if "Expecting value" in str(e):
             raise ValueError("SITE_EMPTY_JSON")
-        raise ValueError(f"SITE_INVALID_JSON")
-    
-    # Check if products key exists
+        raise ValueError("SITE_INVALID_JSON")
     if "products" not in response_data:
         raise ValueError("SITE_NO_PRODUCTS_KEY")
-    
     products_data = response_data["products"]
-    
     if not products_data:
         raise ValueError("SITE_PRODUCTS_EMPTY")
-    
     products = {}
     for product in products_data:
         try:
@@ -145,13 +138,34 @@ def get_product_id(response):
                 products[product_id] = price
         except (KeyError, ValueError, TypeError):
             continue
-    
     if products:
-        min_price_product_id = min(products, key=products.get)
-        price = products[min_price_product_id]
-        return min_price_product_id, price
+        min_id = min(products, key=products.get)
+        return min_id, products[min_id]
+    raise ValueError("SITE_PRODUCTS_EMPTY")
 
-    raise ValueError("NO_AVAILABLE_PRODUCTS")
+
+def _fetch_products_cloudscraper_sync(url: str):
+    """Fetch /products.json via cloudscraper (captcha bypass). Returns (product_id, price) or raises."""
+    if not HAS_CLOUDSCRAPER:
+        raise ValueError("SITE_CAPTCHA_BLOCK")
+    u = url.rstrip("/").split("?")[0]
+    fetch_url = f"{u}/products.json?limit=100"
+    scraper = cloudscraper.create_scraper(browser={"browser": "chrome", "platform": "windows", "mobile": False})
+    r = scraper.get(fetch_url, timeout=25)
+    if r.status_code != 200:
+        raise ValueError(f"SITE_HTTP_{r.status_code}")
+    return _products_from_json_text(r.text or "")
+
+
+def get_product_id(response):
+    """
+    Extract the lowest priced available product from /products.json response.
+    Returns (product_id, price) tuple or raises ValueError with descriptive message.
+    """
+    if not response or not response.text:
+        raise ValueError("SITE_EMPTY_RESPONSE")
+    return _products_from_json_text(response.text)
+
 
 USER_AGENTS = [
     # --- Android ---
@@ -269,22 +283,24 @@ async def autoshopify(url, card, session):
             })
             return output
         
-        # Parse products with detailed error handling
+        # Parse products with detailed error handling; cloudscraper fallback on captcha
+        product_id, price = None, None
         try:
             product_id, price = get_product_id(request)
         except ValueError as e:
             error_msg = str(e)
-            output.update({
-                "Response": error_msg,
-                "Status": False,
-            })
-            return output
+            if error_msg == "SITE_CAPTCHA_BLOCK" and HAS_CLOUDSCRAPER:
+                try:
+                    product_id, price = await asyncio.to_thread(_fetch_products_cloudscraper_sync, url)
+                    logger.info(f"Products fetch via cloudscraper bypass for {url}")
+                except Exception:
+                    pass
+            if not product_id:
+                output.update({"Response": error_msg, "Status": False})
+                return output
         
         if not product_id:
-            output.update({
-                "Response": "NO_AVAILABLE_PRODUCTS",
-                "Status": False,
-            })
+            output.update({"Response": "NO_AVAILABLE_PRODUCTS", "Status": False})
             return output
 
         try:
@@ -1841,63 +1857,62 @@ async def autoshopify(url, card, session):
 
 # ==================== CAPTCHA-AWARE WRAPPER ====================
 
+TLS_CLIENT_IDS = ["chrome_120", "chrome_124", "firefox_120", "chrome_117", "safari_16_0"]
+
+
 async def autoshopify_with_captcha_retry(
     url: str,
     card: str,
     session: TLSAsyncSession,
-    max_captcha_retries: int = 3
+    max_captcha_retries: int = 5,
+    proxy: Optional[str] = None,
 ) -> dict:
     """
-    Wrapper for autoshopify with automatic captcha retry handling.
-    
-    Args:
-        url: Shopify store URL
-        card: Card in format cc|mm|yy|cvv
-        session: TLS session
-        max_captcha_retries: Maximum number of captcha retries
-        
-    Returns:
-        Result dictionary from autoshopify
+    Wrapper for autoshopify with captcha retry: TLS fingerprint rotation
+    and exponential backoff. Products fetch uses cloudscraper fallback on captcha.
     """
     captcha_attempts = 0
     last_result = None
     
     while captcha_attempts < max_captcha_retries:
-        result = await autoshopify(url, card, session)
+        use_session = session
+        if captcha_attempts > 0:
+            cid = TLS_CLIENT_IDS[captcha_attempts % len(TLS_CLIENT_IDS)]
+            try:
+                use_session = TLSAsyncSession(
+                    client_identifier=cid,
+                    timeout_seconds=90,
+                    proxy=proxy,
+                )
+            except Exception:
+                use_session = session
+        
+        try:
+            result = await autoshopify(url, card, use_session)
+        finally:
+            if use_session is not session and hasattr(use_session, "close"):
+                try:
+                    await use_session.close()
+                except Exception:
+                    pass
+        
         last_result = result
-        
         response = str(result.get("Response", "")).upper()
-        
-        # Check if captcha was detected
         is_captcha = any(x in response for x in [
             "CAPTCHA", "HCAPTCHA", "RECAPTCHA", "CHALLENGE",
-            "CAPTCHA_METADATA_MISSING"
+            "CAPTCHA_METADATA_MISSING", "SITE_CAPTCHA", "CART_HTML", "HCAPTCHA_DETECTED"
         ])
         
         if not is_captcha:
-            # Real response, return immediately
             return result
         
         captcha_attempts += 1
-        logger.info(f"Captcha detected on attempt {captcha_attempts}/{max_captcha_retries} for {url}")
-        
+        logger.info(f"Captcha on attempt {captcha_attempts}/{max_captcha_retries} for {url}")
         if captcha_attempts < max_captcha_retries:
-            # Try captcha bypass if available
-            if CAPTCHA_SOLVER_AVAILABLE:
-                try:
-                    # Generate new fingerprint and motion data for next attempt
-                    bypass_data = generate_bypass_data(url, str(time.time()))
-                    logger.debug(f"Generated bypass data for retry")
-                except Exception as e:
-                    logger.error(f"Bypass data generation failed: {e}")
-            
-            # Wait before retry with exponential backoff
-            await asyncio.sleep(1 + captcha_attempts * 0.5)
+            await asyncio.sleep(1.5 + captcha_attempts * 0.5)
     
-    # All attempts exhausted
     if last_result:
         last_result["Response"] = f"CAPTCHA_MAX_RETRIES ({max_captcha_retries})"
-    
     return last_result or {"Response": "CAPTCHA_UNRESOLVED", "Status": False}
 
 
