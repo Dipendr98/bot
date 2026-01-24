@@ -163,210 +163,80 @@ def get_currency_symbol(code: str) -> str:
     return CURRENCY_SYMBOLS.get(code.upper(), f"{code} ")
 
 
-async def fetch_with_retry(
-    session: TLSAsyncSession,
-    url: str,
-    max_retries: int = 3,
-    timeout: int = FAST_TIMEOUT
-) -> Optional[Any]:
-    """Fetch URL with exponential backoff retry."""
-    for attempt in range(max_retries):
-        try:
-            response = await asyncio.wait_for(
-                session.get(url, headers=get_random_headers(), follow_redirects=True),
-                timeout=timeout
-            )
-            if response.status_code == 200:
-                return response
-            elif response.status_code == 429:
-                wait_time = min(2 ** attempt, 10)
-                await asyncio.sleep(wait_time)
-            else:
-                return None
-        except asyncio.TimeoutError:
-            if attempt < max_retries - 1:
-                await asyncio.sleep(2 ** attempt)
-        except Exception:
-            return None
-    return None
-
-
-async def get_store_info(session: TLSAsyncSession, base_url: str) -> Dict[str, str]:
-    """Extract store currency and country."""
+async def fetch_products_json(session: TLSAsyncSession, base_url: str) -> List[Dict]:
+    """Fetch products from Shopify /products.json endpoint - robust version."""
+    products_url = f"{base_url}/products.json?limit=100"
+    
     try:
-        response = await fetch_with_retry(session, base_url)
-        if not response:
-            return {'currency': 'USD', 'country': 'US'}
+        response = await asyncio.wait_for(
+            session.get(products_url, headers=get_random_headers(), follow_redirects=True),
+            timeout=FAST_TIMEOUT
+        )
         
-        text = response.text
+        if response.status_code != 200:
+            return []
         
-        currency = 'USD'
-        currency_patterns = [
-            r'Shopify\.currency\s*=\s*["\']([A-Z]{3})["\']',
-            r'"currency"\s*:\s*"([A-Z]{3})"',
-            r'window\.Currency\s*=\s*["\']([A-Z]{3})["\']',
-            r'data-currency=["\']([A-Z]{3})["\']'
-        ]
+        raw = response.content.decode("utf-8", errors="ignore")
         
-        for pattern in currency_patterns:
-            match = re.search(pattern, text, re.IGNORECASE)
-            if match:
-                currency = match.group(1).upper()
-                break
+        # Check for HTML response (not JSON)
+        if raw.lstrip().startswith("<"):
+            return []
         
-        country = 'US'
-        country_patterns = [
-            r'Shopify\.country\s*=\s*["\']([A-Z]{2})["\']',
-            r'"country_code"\s*:\s*"([A-Z]{2})"',
-            r'data-country=["\']([A-Z]{2})["\']'
-        ]
+        data = json.loads(raw)
+        products = data.get("products", [])
         
-        for pattern in country_patterns:
-            match = re.search(pattern, text, re.IGNORECASE)
-            if match:
-                country = match.group(1).upper()
-                break
+        return products if isinstance(products, list) else []
         
-        return {'currency': currency, 'country': country}
-        
+    except asyncio.TimeoutError:
+        return []
+    except json.JSONDecodeError:
+        return []
     except Exception:
-        return {'currency': 'USD', 'country': 'US'}
+        return []
 
 
-def find_lowest_variant(product: Dict) -> Optional[Dict]:
-    """Find lowest priced available variant."""
-    try:
+def find_lowest_variant_from_products(products: List[Dict]) -> Optional[Dict]:
+    """Find lowest priced available product from products list - robust version."""
+    lowest_price = float('inf')
+    lowest_product = None
+    lowest_variant = None
+    
+    for product in products:
         variants = product.get('variants', [])
-        if not variants:
-            return None
         
-        # Filter available variants
-        available_variants = [v for v in variants if v.get('available', False)]
-        candidates = available_variants if available_variants else variants
-        
-        valid_variants = []
-        for variant in candidates:
+        for variant in variants:
             try:
+                # Check availability
+                available = variant.get('available', False)
                 price_str = variant.get('price', '0')
                 price = float(price_str) if price_str else 0.0
-                if price > 0:
-                    valid_variants.append((price, variant))
-            except (ValueError, TypeError):
-                continue
-        
-        if not valid_variants:
-            return None
-        
-        lowest_price, lowest_variant = min(valid_variants, key=lambda x: x[0])
-        return lowest_variant
-        
-    except Exception:
-        return None
-
-
-async def fetch_products(session: TLSAsyncSession, base_url: str, max_pages: int = 3) -> List[Dict]:
-    """Fetch products from multiple pages concurrently."""
-    products_limit = 100
-    
-    async def fetch_page(page: int) -> List[Dict]:
-        url = f"{base_url}/products.json?limit={products_limit}&page={page}"
-        response = await fetch_with_retry(session, url)
-        
-        if not response:
-            return []
-        
-        try:
-            raw = response.content.decode("utf-8", errors="ignore")
-            
-            if raw.lstrip().startswith("<"):
-                return []
-            
-            data = json.loads(raw)
-            products = data.get("products", [])
-            
-            return products if isinstance(products, list) else []
-            
-        except Exception:
-            return []
-    
-    tasks = [fetch_page(page) for page in range(1, max_pages + 1)]
-    results = await asyncio.gather(*tasks, return_exceptions=True)
-    
-    all_products = []
-    for result in results:
-        if isinstance(result, list):
-            all_products.extend(result)
-    
-    return all_products
-
-
-async def find_lowest_product(session: TLSAsyncSession, base_url: str) -> Optional[Dict]:
-    """
-    Find the lowest priced product from a Shopify store.
-    
-    Returns:
-        Dict with product info or None if not found
-    """
-    try:
-        # Fetch store info and products
-        store_info = await get_store_info(session, base_url)
-        products = await fetch_products(session, base_url)
-        
-        if not products:
-            return None
-        
-        # Find product with lowest price
-        lowest_price = float('inf')
-        lowest_product = None
-        lowest_variant = None
-        
-        for product in products:
-            variant = find_lowest_variant(product)
-            if variant:
-                price = float(variant.get('price', 0))
-                if 0 < price < lowest_price:
+                
+                # Skip unavailable or free products
+                if not available or price < 0.10:
+                    continue
+                
+                if price < lowest_price:
                     lowest_price = price
                     lowest_product = product
                     lowest_variant = variant
-        
-        if not lowest_product or not lowest_variant:
-            return None
-        
-        currency = store_info.get('currency', 'USD')
-        currency_symbol = get_currency_symbol(currency)
-        
+                    
+            except (ValueError, TypeError):
+                continue
+    
+    if lowest_product and lowest_variant:
         return {
-            'success': True,
-            'domain': base_url.replace('https://', ''),
-            'product': {
-                'id': lowest_product.get('id'),
-                'title': lowest_product.get('title', 'N/A')[:200],
-                'handle': lowest_product.get('handle', ''),
-                'url': f"{base_url}/products/{lowest_product.get('handle', '')}",
-            },
-            'variant': {
-                'id': lowest_variant.get('id'),
-                'title': lowest_variant.get('title', 'Default')[:100],
-                'available': lowest_variant.get('available', False),
-            },
-            'pricing': {
-                'price': round(lowest_price, 2),
-                'currency_code': currency,
-                'currency_symbol': currency_symbol,
-                'formatted_price': f"{currency_symbol}{lowest_price:.2f}",
-            },
-            'checkout': {
-                'direct_url': f"{base_url}/cart/{lowest_variant.get('id')}:1",
-            },
+            'product': lowest_product,
+            'variant': lowest_variant,
+            'price': lowest_price
         }
-        
-    except Exception:
-        return None
+    
+    return None
 
 
 async def validate_and_parse_site(url: str, session: TLSAsyncSession) -> Dict[str, Any]:
     """
     Validate if a URL is a working Shopify store and parse lowest product.
+    Uses robust validation logic.
     
     Returns:
         Dict with validation result and product info
@@ -374,82 +244,40 @@ async def validate_and_parse_site(url: str, session: TLSAsyncSession) -> Dict[st
     result = {
         "valid": False,
         "url": url,
-        "gateway": "Unknown",
+        "gateway": "Normal",
         "price": "N/A",
         "error": None,
         "product_id": None,
         "product_title": None,
         "currency": "USD",
+        "formatted_price": None,
     }
     
     try:
         normalized_url = normalize_url(url)
         result["url"] = normalized_url
         
-        # Find lowest product
-        product_info = await find_lowest_product(session, normalized_url)
+        # Fetch products using robust method
+        products = await fetch_products_json(session, normalized_url)
         
-        if not product_info:
-            result["error"] = "No Products Found"
+        if not products:
+            result["error"] = "No products or not Shopify"
             return result
         
-        result["product_id"] = product_info['variant']['id']
-        result["product_title"] = product_info['product']['title'][:50]
-        result["price"] = str(product_info['pricing']['price'])
-        result["currency"] = product_info['pricing']['currency_code']
-        result["formatted_price"] = product_info['pricing']['formatted_price']
+        # Find lowest variant using robust method
+        lowest = find_lowest_variant_from_products(products)
         
-        # Try to detect gateway
-        try:
-            home_response = await fetch_with_retry(session, normalized_url, timeout=FAST_TIMEOUT)
-            if home_response:
-                site_key = extract_between(home_response.text, '"accessToken":"', '"')
-                
-                if site_key:
-                    # Try to create cart for gateway detection
-                    cart_headers = {
-                        **get_random_headers(),
-                        'content-type': 'application/json',
-                        'origin': normalized_url,
-                        'x-shopify-storefront-access-token': site_key,
-                    }
-                    
-                    cart_payload = {
-                        'query': 'mutation cartCreate($input:CartInput!){result:cartCreate(input:$input){cart{id checkoutUrl}errors:userErrors{message}}}',
-                        'variables': {
-                            'input': {
-                                'lines': [{
-                                    'merchandiseId': f'gid://shopify/ProductVariant/{result["product_id"]}',
-                                    'quantity': 1,
-                                }],
-                            },
-                        },
-                    }
-                    
-                    cart_response = await asyncio.wait_for(
-                        session.post(
-                            f'{normalized_url}/api/unstable/graphql.json',
-                            params={'operation_name': 'cartCreate'},
-                            headers=cart_headers,
-                            json=cart_payload,
-                            follow_redirects=True
-                        ),
-                        timeout=STANDARD_TIMEOUT
-                    )
-                    
-                    cart_data = cart_response.json()
-                    checkout_url = cart_data.get("data", {}).get("result", {}).get("cart", {}).get("checkoutUrl")
-                    
-                    if checkout_url:
-                        checkout_response = await fetch_with_retry(session, checkout_url, timeout=STANDARD_TIMEOUT)
-                        if checkout_response:
-                            result["gateway"] = detect_gateway(checkout_response.text)
-                else:
-                    result["gateway"] = "Normal"
-        except Exception:
-            result["gateway"] = "Normal"
+        if not lowest:
+            result["error"] = "No available products"
+            return result
         
+        # Populate result
         result["valid"] = True
+        result["product_id"] = lowest['variant'].get('id')
+        result["product_title"] = lowest['product'].get('title', 'N/A')[:50]
+        result["price"] = f"{lowest['price']:.2f}"
+        result["formatted_price"] = f"${lowest['price']:.2f}"
+        
         return result
         
     except Exception as e:
@@ -458,7 +286,7 @@ async def validate_and_parse_site(url: str, session: TLSAsyncSession) -> Dict[st
 
 
 async def validate_sites_batch(urls: List[str], user_proxy: Optional[str] = None) -> List[Dict[str, Any]]:
-    """Validate multiple Shopify sites concurrently."""
+    """Validate multiple Shopify sites concurrently with robust logic."""
     results = []
     
     async with TLSAsyncSession(timeout_seconds=STANDARD_TIMEOUT) as session:
@@ -473,13 +301,17 @@ async def validate_sites_batch(urls: List[str], user_proxy: Optional[str] = None
                 if isinstance(result, Exception):
                     results.append({
                         "valid": False,
-                        "url": url,
-                        "gateway": "Unknown",
+                        "url": normalize_url(url),
+                        "gateway": "Normal",
                         "price": "N/A",
                         "error": str(result)[:50]
                     })
                 else:
                     results.append(result)
+            
+            # Small delay between batches
+            if i + batch_size < len(urls):
+                await asyncio.sleep(0.3)
     
     return results
 
