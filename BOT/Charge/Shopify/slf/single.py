@@ -2,7 +2,6 @@
 Professional Shopify Single Card Checker
 Handles /sh and /slf commands for checking cards on user's saved site.
 Uses the complete autoshopify checkout flow for real results.
-Includes professional BIN billing information in responses.
 """
 
 import re
@@ -74,120 +73,90 @@ def get_user_site(user_id: str):
 def determine_status(response: str) -> tuple:
     """
     Determine status category from response.
-    Returns (status_text, emoji, header, is_live)
+    Returns (status_text, header, is_live)
     """
     response_upper = str(response).upper()
     
     # Charged/Success
     if any(x in response_upper for x in ["ORDER_PLACED", "ORDER_CONFIRMED", "THANK_YOU", "SUCCESS", "CHARGED"]):
-        return "CHARGED 💎", "💎", "CHARGED", True
+        return "Charged 💎", "CHARGED", True
     
     # CCN/Live (CVV/Address issues but card is valid)
     if any(x in response_upper for x in [
         "3DS", "AUTHENTICATION", "INCORRECT_CVC", "INVALID_CVC", 
         "MISMATCHED", "INCORRECT_ADDRESS", "INCORRECT_ZIP", "INCORRECT_PIN",
-        "FRAUD", "INSUFFICIENT_FUNDS", "CVV"
+        "FRAUD", "INSUFFICIENT_FUNDS", "CVV", "CARD_DECLINED", "GENERIC_DECLINE",
+        "DO_NOT_HONOR", "MISMATCHED_BILL"
     ]):
-        return "CCN LIVE ✅", "✅", "CCN LIVE", True
+        return "Approved ✅", "CCN LIVE", True
+    
+    # Errors
+    if any(x in response_upper for x in ["ERROR", "TIMEOUT", "CAPTCHA", "EMPTY", "DEAD", "TAX", "HCAPTCHA"]):
+        return "Error ⚠️", "ERROR", False
     
     # Declined
     if any(x in response_upper for x in [
-        "DECLINED", "CARD_DECLINED", "GENERIC_ERROR", "INCORRECT_NUMBER",
-        "INVALID_NUMBER", "EXPIRED", "NOT_SUPPORTED", "LOST", "STOLEN"
+        "DECLINED", "INCORRECT_NUMBER", "INVALID_NUMBER", "EXPIRED", "NOT_SUPPORTED", "LOST", "STOLEN"
     ]):
-        return "DECLINED ❌", "❌", "DECLINED", False
+        return "Declined ❌", "DECLINED", False
     
-    # Errors
-    if any(x in response_upper for x in ["ERROR", "TIMEOUT", "CAPTCHA", "EMPTY", "DEAD", "TAX"]):
-        return "ERROR ⚠️", "⚠️", "ERROR", False
-    
-    return "UNKNOWN ❓", "❓", "RESULT", False
+    return "Declined ❌", "RESULT", False
 
 
-def format_bill_response(fullcc: str, result: dict, user_info: dict, time_taken: float) -> str:
-    """
-    Format the checkout response professionally with BIN billing information.
-    Shows a professional 'bill' style output.
-    """
+def format_response(fullcc: str, result: dict, user_info: dict, time_taken: float) -> str:
+    """Format the checkout response in the original professional style."""
     parts = fullcc.split("|")
     cc = parts[0] if len(parts) > 0 else "Unknown"
-    mm = parts[1] if len(parts) > 1 else "00"
-    yy = parts[2] if len(parts) > 2 else "00"
-    cvv = parts[3] if len(parts) > 3 else "000"
     
     response = result.get("Response", "UNKNOWN")
     gateway = result.get("Gateway", "Unknown")
     price = result.get("Price", "0.00")
+    receipt_id = result.get("ReceiptId", None)  # Get receipt ID if present
     
-    status_text, emoji, header, is_live = determine_status(response)
+    status_text, header, is_live = determine_status(response)
     
-    # BIN lookup for professional billing info
+    # BIN lookup
     bin_data = get_bin_details(cc[:6]) if get_bin_details else None
     
     if bin_data:
         bin_number = bin_data.get('bin', cc[:6])
-        vendor = bin_data.get('vendor', 'Unknown')
-        card_type = bin_data.get('type', 'Unknown')
-        level = bin_data.get('level', 'Unknown')
-        bank = bin_data.get('bank', 'Unknown')
-        country = bin_data.get('country', 'Unknown')
+        vendor = bin_data.get('vendor', 'N/A')
+        card_type = bin_data.get('type', 'N/A')
+        level = bin_data.get('level', 'N/A')
+        bank = bin_data.get('bank', 'N/A')
+        country = bin_data.get('country', 'N/A')
         country_flag = bin_data.get('flag', '🏳️')
     else:
         bin_number = cc[:6]
-        vendor = "Unknown"
-        card_type = "Unknown"
-        level = "Unknown"
-        bank = "Unknown"
-        country = "Unknown"
+        vendor = "N/A"
+        card_type = "N/A"
+        level = "N/A"
+        bank = "N/A"
+        country = "N/A"
         country_flag = "🏳️"
     
-    # Get current time
-    current_time = datetime.now().strftime("%I:%M:%S %p")
-    current_date = datetime.now().strftime("%d/%m/%Y")
+    # Build bill line if receipt exists
+    bill_line = ""
+    if receipt_id:
+        bill_line = f"\n<b>[•] Bill:</b> <code>{receipt_id}</code>"
     
-    # Format card display (mask middle digits for security appearance)
-    card_display = f"{cc[:6]}****{cc[-4:]}" if len(cc) > 10 else cc
-    
-    # Build professional bill response
-    bill = f"""<b>╔══════════════════════════╗
-║     𝐒𝐇𝐎𝐏𝐈𝐅𝐘 𝐂𝐇𝐄𝐂𝐊𝐄𝐑 {emoji}     
-╚══════════════════════════╝</b>
-
-<b>┌─────── CARD DETAILS ───────┐</b>
-│ <b>Card:</b> <code>{fullcc}</code>
-│ <b>Status:</b> <code>{status_text}</code>
-│ <b>Response:</b> <code>{response}</code>
-<b>└────────────────────────────┘</b>
-
-<b>┌─────── GATEWAY INFO ───────┐</b>
-│ <b>Gateway:</b> <code>Shopify {gateway}</code>
-│ <b>Amount:</b> <code>${price} USD</code>
-│ <b>Merchant:</b> <code>Self Site</code>
-<b>└────────────────────────────┘</b>
-
-<b>┌──────── BIN BILLING ───────┐</b>
-│ <b>BIN:</b> <code>{bin_number}</code>
-│ <b>Brand:</b> <code>{vendor}</code>
-│ <b>Type:</b> <code>{card_type}</code>
-│ <b>Level:</b> <code>{level}</code>
-│ <b>Bank:</b> <code>{bank}</code>
-│ <b>Country:</b> <code>{country}</code> {country_flag}
-<b>└────────────────────────────┘</b>
-
-<b>┌──────── CHECK INFO ────────┐</b>
-│ <b>Checked By:</b> {user_info['profile']}
-│ <b>Plan:</b> <code>{user_info['plan']} {user_info['badge']}</code>
-│ <b>Time:</b> <code>{time_taken}s</code>
-│ <b>Proxy:</b> <code>Live ⚡️</code>
-<b>└────────────────────────────┘</b>
-
-<b>┌────────── RECEIPT ─────────┐</b>
-│ <b>Date:</b> <code>{current_date}</code>
-│ <b>Time:</b> <code>{current_time}</code>
-│ <b>Dev:</b> <a href="https://t.me/Chr1shtopher">Chr1shtopher</a>
-<b>└────────────────────────────┘</b>"""
-    
-    return bill
+    # Build message in original format
+    return f"""<b>[#Shopify] | {header}</b> ✦
+━━━━━━━━━━━━━━━
+<b>[•] Card:</b> <code>{fullcc}</code>
+<b>[•] Gateway:</b> <code>Shopify {gateway} ${price}</code>
+<b>[•] Status:</b> <code>{status_text}</code>
+<b>[•] Response:</b> <code>{response}</code>{bill_line}
+━ ━ ━ ━ ━ ━ ━ ━ ━ ━ ━ ━ ━
+<b>[+] BIN:</b> <code>{bin_number}</code>
+<b>[+] Info:</b> <code>{vendor} - {card_type} - {level}</code>
+<b>[+] Bank:</b> <code>{bank}</code> 🏦
+<b>[+] Country:</b> <code>{country}</code> {country_flag}
+━ ━ ━ ━ ━ ━ ━ ━ ━ ━ ━ ━ ━
+<b>[ﾒ] Checked By:</b> {user_info['profile']} [<code>{user_info['plan']} {user_info['badge']}</code>]
+<b>[ϟ] Dev:</b> <a href="https://t.me/Chr1shtopher">Chr1shtopher</a>
+━━━━━━━━━━━━━━━
+<b>[ﾒ] Time:</b> <code>{time_taken}s</code> | <b>Proxy:</b> <code>Live ⚡️</code>"""
 
 
 async def check_group_command(message: Message) -> bool:
@@ -200,6 +169,14 @@ async def check_group_command(message: Message) -> bool:
         command = message.text.split()[0].replace("/", "").replace(".", "").replace("$", "").lower()
         
         if command in PRIVATE_ONLY_COMMANDS:
+            # Get bot username for link
+            try:
+                bot_info = await message._client.get_me()
+                bot_username = bot_info.username
+                bot_link = f"https://t.me/{bot_username}"
+            except:
+                bot_link = "https://t.me/YOUR_BOT"
+            
             await message.reply(
                 f"""<pre>🔒 Private Command</pre>
 ━━━━━━━━━━━━━━━
@@ -218,7 +195,7 @@ async def check_group_command(message: Message) -> bool:
                 reply_to_message_id=message.id,
                 parse_mode=ParseMode.HTML,
                 reply_markup=InlineKeyboardMarkup([
-                    [InlineKeyboardButton("📱 Open Private Chat", url="https://t.me/YOUR_BOT_USERNAME")],
+                    [InlineKeyboardButton("📱 Open Private Chat", url=bot_link)],
                     [InlineKeyboardButton("📖 Help", callback_data="show_help")]
                 ])
             )
@@ -242,12 +219,8 @@ async def handle_sh_command(client: Client, message: Message):
         # Check registration
         if user_id not in users:
             return await message.reply(
-                """<pre>🚫 Access Denied</pre>
-━━━━━━━━━━━━━━━
-<b>You must register first!</b>
-
-Use <code>/register</code> to create your account.
-━━━━━━━━━━━━━━━""",
+                """<pre>Access Denied 🚫</pre>
+<b>You must register first using</b> <code>/register</code> <b>command.</b>""",
                 reply_to_message_id=message.id,
                 parse_mode=ParseMode.HTML
             )
@@ -259,12 +232,10 @@ Use <code>/register</code> to create your account.
         # Check credits
         if not has_credits(user_id):
             return await message.reply(
-                """<pre>💳 Insufficient Credits</pre>
-━━━━━━━━━━━━━━━
-<b>You have no credits remaining.</b>
-
-Use <code>/buy</code> to purchase credits.
-━━━━━━━━━━━━━━━""",
+                """<pre>Notification ❗️</pre>
+<b>Message:</b> <code>You Have Insufficient Credits</code>
+━━━━━━━━━━━━━
+<b>Type <code>/buy</code> to get Credits.</b>""",
                 reply_to_message_id=message.id,
                 parse_mode=ParseMode.HTML
             )
@@ -273,21 +244,12 @@ Use <code>/buy</code> to purchase credits.
         user_site_info = get_user_site(user_id)
         if not user_site_info:
             return await message.reply(
-                """<pre>⚠️ No Site Found</pre>
-━━━━━━━━━━━━━━━
-<b>You haven't added a Shopify site yet!</b>
+                """<pre>Site Not Found ⚠️</pre>
+<b>Error:</b> <code>Please set a site first</code>
 
-<b>Add a site first:</b>
-<code>/addurl https://store.com</code>
-
-<b>Or use multiple sites:</b>
-<code>/txturl site1.com site2.com</code>
-━━━━━━━━━━━━━━━""",
+Use <code>/addurl https://store.com</code> to add a Shopify site.""",
                 reply_to_message_id=message.id,
-                parse_mode=ParseMode.HTML,
-                reply_markup=InlineKeyboardMarkup([
-                    [InlineKeyboardButton("📖 How to Add Site", callback_data="help_addurl")]
-                ])
+                parse_mode=ParseMode.HTML
             )
         
         # Extract card
@@ -299,15 +261,11 @@ Use <code>/buy</code> to purchase credits.
         
         if not target_text:
             return await message.reply(
-                """<pre>❌ Card Not Found</pre>
-━━━━━━━━━━━━━━━
-<b>No card detected in your input!</b>
+                """<pre>Card Not Found ❌</pre>
+<b>Error:</b> <code>No card found in your input</code>
 
 <b>Usage:</b> <code>/sh cc|mm|yy|cvv</code>
-<b>Example:</b> <code>/sh 4111111111111111|12|25|123</code>
-
-<b>Or reply to a message containing a card.</b>
-━━━━━━━━━━━━━━━""",
+<b>Example:</b> <code>/sh 4111111111111111|12|2025|123</code>""",
                 reply_to_message_id=message.id,
                 parse_mode=ParseMode.HTML
             )
@@ -315,16 +273,11 @@ Use <code>/buy</code> to purchase credits.
         extracted = extract_card(target_text)
         if not extracted:
             return await message.reply(
-                """<pre>❌ Invalid Format</pre>
-━━━━━━━━━━━━━━━
-<b>Card format is incorrect!</b>
+                """<pre>Invalid Format ❌</pre>
+<b>Error:</b> <code>Card format is incorrect</code>
 
-<b>Correct Format:</b>
-<code>cc|mm|yy|cvv</code> or <code>cc|mm|yyyy|cvv</code>
-
-<b>Example:</b>
-<code>/sh 4111111111111111|12|25|123</code>
-━━━━━━━━━━━━━━━""",
+<b>Format:</b> <code>cc|mm|yy|cvv</code> or <code>cc|mm|yyyy|cvv</code>
+<b>Example:</b> <code>/sh 4111111111111111|12|25|123</code>""",
                 reply_to_message_id=message.id,
                 parse_mode=ParseMode.HTML
             )
@@ -333,14 +286,9 @@ Use <code>/buy</code> to purchase credits.
         allowed, wait_time = can_run_command(user_id, users)
         if not allowed:
             return await message.reply(
-                f"""<pre>⏳ Antispam Active</pre>
-━━━━━━━━━━━━━━━
-<b>Please wait before checking again.</b>
-
-<b>Try again in:</b> <code>{wait_time}s</code>
-
-<i>Upgrade your plan to reduce wait time!</i>
-━━━━━━━━━━━━━━━""",
+                f"""<pre>Antispam Detected ⚠️</pre>
+<b>Message:</b> <code>Please wait before checking again</code>
+<b>Try again in:</b> <code>{wait_time}s</code>""",
                 reply_to_message_id=message.id,
                 parse_mode=ParseMode.HTML
             )
@@ -363,12 +311,11 @@ Use <code>/buy</code> to purchase credits.
         
         # Show processing message
         loading_msg = await message.reply(
-            f"""<pre>🔄 Processing...</pre>
-━━━━━━━━━━━━━━━
-<b>Card:</b> <code>{fullcc}</code>
-<b>Gate:</b> <code>{gate}</code>
-<b>Status:</b> <i>Checking checkout...</i>
-━━━━━━━━━━━━━━━""",
+            f"""<pre>Processing Request...</pre>
+━ ━ ━ ━ ━ ━ ━ ━ ━ ━ ━ ━
+<b>• Card:</b> <code>{fullcc}</code>
+<b>• Gate:</b> <code>{gate}</code>
+<b>• Status:</b> <i>Checking...</i>""",
             reply_to_message_id=message.id,
             parse_mode=ParseMode.HTML
         )
@@ -388,42 +335,15 @@ Use <code>/buy</code> to purchase credits.
         
         time_taken = round(time() - start_time, 2)
         
-        # Format professional bill response
-        final_message = format_bill_response(fullcc, result, user_info, time_taken)
+        # Format response
+        final_message = format_response(fullcc, result, user_info, time_taken)
         
-        # Create buttons based on result
-        response_upper = str(result.get("Response", "")).upper()
-        
-        if any(x in response_upper for x in ["ORDER_PLACED", "CHARGED", "SUCCESS"]):
-            buttons = InlineKeyboardMarkup([
-                [
-                    InlineKeyboardButton("💎 Charged!", callback_data="charged_info"),
-                    InlineKeyboardButton("📋 My Site", callback_data="show_my_site")
-                ],
-                [
-                    InlineKeyboardButton("Support", url="https://t.me/Chr1shtopher")
-                ]
-            ])
-        elif any(x in response_upper for x in ["INCORRECT_CVC", "3DS", "INSUFFICIENT", "CVV"]):
-            buttons = InlineKeyboardMarkup([
-                [
-                    InlineKeyboardButton("✅ CCN Live", callback_data="ccn_info"),
-                    InlineKeyboardButton("📋 My Site", callback_data="show_my_site")
-                ],
-                [
-                    InlineKeyboardButton("Support", url="https://t.me/Chr1shtopher")
-                ]
-            ])
-        else:
-            buttons = InlineKeyboardMarkup([
-                [
-                    InlineKeyboardButton("🔄 Try Another", callback_data="try_another"),
-                    InlineKeyboardButton("📋 My Site", callback_data="show_my_site")
-                ],
-                [
-                    InlineKeyboardButton("Support", url="https://t.me/Chr1shtopher")
-                ]
-            ])
+        buttons = InlineKeyboardMarkup([
+            [
+                InlineKeyboardButton("Support", url="https://t.me/Chr1shtopher"),
+                InlineKeyboardButton("Plans", callback_data="plans_info")
+            ]
+        ])
         
         await loading_msg.edit(
             final_message,
@@ -443,11 +363,7 @@ Use <code>/buy</code> to purchase credits.
         traceback.print_exc()
         try:
             await message.reply(
-                f"""<pre>⚠️ Error Occurred</pre>
-━━━━━━━━━━━━━━━
-<code>{str(e)[:100]}</code>
-
-<i>Please try again or contact support.</i>""",
+                f"<pre>Error Occurred ⚠️</pre>\n<code>{str(e)[:100]}</code>",
                 reply_to_message_id=message.id,
                 parse_mode=ParseMode.HTML
             )

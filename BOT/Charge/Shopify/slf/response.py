@@ -1,10 +1,9 @@
 """
-Professional Shopify Response Formatter
-Formats Shopify checkout responses with BIN billing information.
+Shopify Response Formatter
+Professional response formatting for Shopify card checking results.
 """
 
 import json
-from datetime import datetime
 from typing import Tuple
 
 # Try to import BIN lookup
@@ -28,10 +27,11 @@ def format_shopify_response(
     cvv: str, 
     raw_response: str, 
     timet: float, 
-    profile: str
+    profile: str,
+    receipt_id: str = None
 ) -> Tuple[str, str]:
     """
-    Format Shopify checkout response for display with professional billing info.
+    Format Shopify checkout response for display.
     
     Args:
         cc: Card number
@@ -41,12 +41,12 @@ def format_shopify_response(
         raw_response: Raw response from checkout
         timet: Time taken in seconds
         profile: User profile HTML string
+        receipt_id: Receipt ID if order was placed (optional)
         
     Returns:
         Tuple of (status_flag, formatted_message)
     """
     fullcc = f"{cc}|{mes}|{ano}|{cvv}"
-    bin_number = cc[:6]
     
     # Extract user_id from profile
     try:
@@ -67,46 +67,48 @@ def format_shopify_response(
     
     # Determine status based on response
     if any(x in response for x in ["ORDER_PLACED", "ORDER_CONFIRMED", "CHARGED", "THANK_YOU"]):
-        status_flag = "CHARGED 💎"
+        status_flag = "Charged 💎"
         header = "CHARGED"
-        status_emoji = "💎"
     elif any(x in response for x in [
         "3DS", "AUTHENTICATION", "INCORRECT_CVC", "INVALID_CVC", "INCORRECT_CVV",
         "MISMATCHED", "INCORRECT_ADDRESS", "INCORRECT_ZIP", "INCORRECT_PIN",
-        "FRAUD", "INSUFFICIENT_FUNDS", "CARD_DECLINED"
+        "FRAUD", "INSUFFICIENT_FUNDS", "CARD_DECLINED", "GENERIC_DECLINE",
+        "DO_NOT_HONOR", "MISMATCHED_BILL"
     ]):
-        status_flag = "CCN LIVE ✅"
+        status_flag = "Approved ✅"
         header = "CCN LIVE"
-        status_emoji = "✅"
     elif any(x in response for x in [
         "CAPTCHA", "HCAPTCHA", "RECAPTCHA", "EMPTY", "DEAD", "ERROR",
         "TIMEOUT", "FAILED", "TAX"
     ]):
-        status_flag = "ERROR ⚠️"
+        status_flag = "Error ⚠️"
         header = "ERROR"
-        status_emoji = "⚠️"
     else:
-        status_flag = "DECLINED ❌"
+        status_flag = "Declined ❌"
         header = "DECLINED"
-        status_emoji = "❌"
     
-    # BIN lookup for professional billing info
-    bin_data = get_bin_details(bin_number) if get_bin_details else None
-    
+    # BIN lookup
+    bin_data = get_bin_details(cc[:6]) if get_bin_details else None
     if bin_data:
-        vendor = bin_data.get("vendor", "Unknown")
-        card_type = bin_data.get("type", "Unknown")
-        level = bin_data.get("level", "Unknown")
-        bank = bin_data.get("bank", "Unknown")
-        country = bin_data.get("country", "Unknown")
-        country_flag = bin_data.get("flag", "🏳️")
+        bin_info = {
+            "bin": bin_data.get("bin", cc[:6]),
+            "country": bin_data.get("country", "Unknown"),
+            "flag": bin_data.get("flag", "🏳️"),
+            "vendor": bin_data.get("vendor", "N/A"),
+            "type": bin_data.get("type", "N/A"),
+            "level": bin_data.get("level", "N/A"),
+            "bank": bin_data.get("bank", "N/A")
+        }
     else:
-        vendor = "Unknown"
-        card_type = "Unknown"
-        level = "Unknown"
-        bank = "Unknown"
-        country = "Unknown"
-        country_flag = "🏳️"
+        bin_info = {
+            "bin": cc[:6],
+            "country": "Unknown",
+            "flag": "🏳️",
+            "vendor": "N/A",
+            "type": "N/A",
+            "level": "N/A",
+            "bank": "N/A"
+        }
     
     # Get user plan
     try:
@@ -118,46 +120,27 @@ def format_shopify_response(
         plan = "Free"
         badge = "🎟️"
     
-    # Current time
-    current_time = datetime.now().strftime("%I:%M:%S %p")
-    current_date = datetime.now().strftime("%d/%m/%Y")
+    # Build bill line if receipt exists
+    bill_line = ""
+    if receipt_id:
+        bill_line = f"\n<b>[•] Bill:</b> <code>{receipt_id}</code>"
     
-    # Format professional bill response
-    result = f"""<b>╔══════════════════════════╗
-║     𝐒𝐇𝐎𝐏𝐈𝐅𝐘 𝐂𝐇𝐄𝐂𝐊𝐄𝐑 {status_emoji}     
-╚══════════════════════════╝</b>
-
-<b>┌─────── CARD DETAILS ───────┐</b>
-│ <b>Card:</b> <code>{fullcc}</code>
-│ <b>Status:</b> <code>{status_flag}</code>
-│ <b>Response:</b> <code>{response}</code>
-<b>└────────────────────────────┘</b>
-
-<b>┌─────── GATEWAY INFO ───────┐</b>
-│ <b>Gateway:</b> <code>{gateway}</code>
-│ <b>Type:</b> <code>Shopify Checkout</code>
-<b>└────────────────────────────┘</b>
-
-<b>┌──────── BIN BILLING ───────┐</b>
-│ <b>BIN:</b> <code>{bin_number}</code>
-│ <b>Brand:</b> <code>{vendor}</code>
-│ <b>Type:</b> <code>{card_type}</code>
-│ <b>Level:</b> <code>{level}</code>
-│ <b>Bank:</b> <code>{bank}</code>
-│ <b>Country:</b> <code>{country}</code> {country_flag}
-<b>└────────────────────────────┘</b>
-
-<b>┌──────── CHECK INFO ────────┐</b>
-│ <b>Checked By:</b> {profile}
-│ <b>Plan:</b> <code>{plan} {badge}</code>
-│ <b>Time:</b> <code>{timet}s</code>
-│ <b>Proxy:</b> <code>Live ⚡️</code>
-<b>└────────────────────────────┘</b>
-
-<b>┌────────── RECEIPT ─────────┐</b>
-│ <b>Date:</b> <code>{current_date}</code>
-│ <b>Time:</b> <code>{current_time}</code>
-│ <b>Dev:</b> <a href="https://t.me/Chr1shtopher">Chr1shtopher</a>
-<b>└────────────────────────────┘</b>"""
+    # Format response message in original style
+    result = f"""<b>[#Shopify] | {header}</b> ✦
+━━━━━━━━━━━━━━━
+<b>[•] Card:</b> <code>{fullcc}</code>
+<b>[•] Gateway:</b> <code>{gateway}</code>
+<b>[•] Status:</b> <code>{status_flag}</code>
+<b>[•] Response:</b> <code>{response}</code>{bill_line}
+━ ━ ━ ━ ━ ━ ━ ━ ━ ━ ━ ━ ━
+<b>[+] BIN:</b> <code>{bin_info['bin']}</code>
+<b>[+] Info:</b> <code>{bin_info['vendor']} - {bin_info['type']} - {bin_info['level']}</code>
+<b>[+] Bank:</b> <code>{bin_info['bank']}</code> 🏦
+<b>[+] Country:</b> <code>{bin_info['country']}</code> {bin_info['flag']}
+━ ━ ━ ━ ━ ━ ━ ━ ━ ━ ━ ━ ━
+<b>[ﾒ] Checked By:</b> {profile} [<code>{plan} {badge}</code>]
+<b>[ϟ] Dev:</b> <a href="https://t.me/Chr1shtopher">Chr1shtopher</a>
+━━━━━━━━━━━━━━━
+<b>[ﾒ] Time:</b> <code>{timet}s</code> | <b>Proxy:</b> <code>Live ⚡️</code>"""
     
     return status_flag, result

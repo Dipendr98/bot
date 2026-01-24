@@ -1,6 +1,6 @@
 """
-Professional Stripe Charge Response Formatter
-Formats Stripe checkout responses with BIN billing information.
+Stripe Charge Response Formatter
+Professional response formatting for Stripe $20 Charge results.
 """
 
 from datetime import datetime
@@ -16,7 +16,7 @@ except ImportError:
 
 def format_stripe_charge_response(card_data: str, result: dict, start_time: float, user_info: dict = None) -> str:
     """
-    Format the Stripe $20 Charge response with professional billing info.
+    Format the Stripe $20 Charge response.
 
     Args:
         card_data: Full card details (cc|mm|yy|cvv)
@@ -33,12 +33,7 @@ def format_stripe_charge_response(card_data: str, result: dict, start_time: floa
     # Parse card data
     card_parts = card_data.split('|')
     card_number = card_parts[0] if len(card_parts) > 0 else "Unknown"
-    mm = card_parts[1] if len(card_parts) > 1 else "00"
-    yy = card_parts[2] if len(card_parts) > 2 else "00"
-    cvv = card_parts[3] if len(card_parts) > 3 else "000"
-    
     bin_number = card_number[:6]
-    last4 = card_number[-4:]
 
     # Determine status emoji and message
     status = result.get("status", "error")
@@ -46,20 +41,16 @@ def format_stripe_charge_response(card_data: str, result: dict, start_time: floa
 
     if status == "approved":
         if "PAYMENT_SUCCESSFUL" in message or "CHARGED" in message:
-            status_emoji = "💎"
-            status_text = "CHARGED"
+            status_text = "Charged 💎"
             header = "CHARGED"
         else:
-            status_emoji = "✅"
-            status_text = "CCN LIVE"
+            status_text = "Approved ✅"
             header = "CCN LIVE"
     elif status == "declined":
-        status_emoji = "❌"
-        status_text = "DECLINED"
+        status_text = "Declined ❌"
         header = "DECLINED"
     else:
-        status_emoji = "⚠️"
-        status_text = "ERROR"
+        status_text = "Error ⚠️"
         header = "ERROR"
 
     # Get user info
@@ -67,65 +58,39 @@ def format_stripe_charge_response(card_data: str, result: dict, start_time: floa
     badge = user_info.get("badge", "🎟️") if user_info else "🎟️"
     checked_by = user_info.get("checked_by", "Unknown") if user_info else "Unknown"
 
-    # Current time
-    current_time = datetime.now().strftime("%I:%M:%S %p")
-    current_date = datetime.now().strftime("%d/%m/%Y")
-
-    # BIN lookup for professional billing info
+    # BIN lookup
     bin_data = get_bin_details(bin_number) if get_bin_details else None
-    
     if bin_data:
-        vendor = bin_data.get('vendor', 'Unknown')
-        card_type = bin_data.get('type', 'Unknown')
-        level = bin_data.get('level', 'Unknown')
-        bank = bin_data.get('bank', 'Unknown')
-        country = bin_data.get('country', 'Unknown')
+        vendor = bin_data.get('vendor', 'N/A')
+        card_type = bin_data.get('type', 'N/A')
+        level = bin_data.get('level', 'N/A')
+        bank = bin_data.get('bank', 'N/A')
+        country = bin_data.get('country', 'N/A')
         country_flag = bin_data.get('flag', '🏳️')
     else:
-        vendor = "Unknown"
-        card_type = "Unknown"
-        level = "Unknown"
-        bank = "Unknown"
-        country = "Unknown"
+        vendor = "N/A"
+        card_type = "N/A"
+        level = "N/A"
+        bank = "N/A"
+        country = "N/A"
         country_flag = "🏳️"
 
-    # Format professional bill response
-    response = f"""<b>╔══════════════════════════╗
-║     𝐒𝐓𝐑𝐈𝐏𝐄 𝐂𝐇𝐀𝐑𝐆𝐄 {status_emoji}     
-╚══════════════════════════╝</b>
-
-<b>┌─────── CARD DETAILS ───────┐</b>
-│ <b>Card:</b> <code>{card_data}</code>
-│ <b>Status:</b> <code>{status_text} {status_emoji}</code>
-│ <b>Response:</b> <code>{message}</code>
-<b>└────────────────────────────┘</b>
-
-<b>┌─────── GATEWAY INFO ───────┐</b>
-│ <b>Gateway:</b> <code>Stripe Balliante</code>
-│ <b>Amount:</b> <code>$20.00 USD</code>
-│ <b>Merchant:</b> <code>Balliante.com</code>
-<b>└────────────────────────────┘</b>
-
-<b>┌──────── BIN BILLING ───────┐</b>
-│ <b>BIN:</b> <code>{bin_number}</code>
-│ <b>Brand:</b> <code>{vendor}</code>
-│ <b>Type:</b> <code>{card_type}</code>
-│ <b>Level:</b> <code>{level}</code>
-│ <b>Bank:</b> <code>{bank}</code>
-│ <b>Country:</b> <code>{country}</code> {country_flag}
-<b>└────────────────────────────┘</b>
-
-<b>┌──────── CHECK INFO ────────┐</b>
-│ <b>Checked By:</b> {checked_by}
-│ <b>Plan:</b> <code>{plan} {badge}</code>
-│ <b>Time:</b> <code>{time_taken}s</code>
-│ <b>Proxy:</b> <code>Live ⚡️</code>
-<b>└────────────────────────────┘</b>
-
-<b>┌────────── RECEIPT ─────────┐</b>
-│ <b>Date:</b> <code>{current_date}</code>
-│ <b>Time:</b> <code>{current_time}</code>
-│ <b>Dev:</b> <a href="https://t.me/Chr1shtopher">Chr1shtopher</a>
-<b>└────────────────────────────┘</b>"""
+    # Format response in original style
+    response = f"""<b>[#Stripe] | {header}</b> ✦
+━━━━━━━━━━━━━━━
+<b>[•] Card:</b> <code>{card_data}</code>
+<b>[•] Gateway:</b> <code>Stripe Balliante $20</code>
+<b>[•] Status:</b> <code>{status_text}</code>
+<b>[•] Response:</b> <code>{message}</code>
+━ ━ ━ ━ ━ ━ ━ ━ ━ ━ ━ ━ ━
+<b>[+] BIN:</b> <code>{bin_number}</code>
+<b>[+] Info:</b> <code>{vendor} - {card_type} - {level}</code>
+<b>[+] Bank:</b> <code>{bank}</code> 🏦
+<b>[+] Country:</b> <code>{country}</code> {country_flag}
+━ ━ ━ ━ ━ ━ ━ ━ ━ ━ ━ ━ ━
+<b>[ﾒ] Checked By:</b> {checked_by} [<code>{plan} {badge}</code>]
+<b>[ϟ] Dev:</b> <a href="https://t.me/Chr1shtopher">Chr1shtopher</a>
+━━━━━━━━━━━━━━━
+<b>[ﾒ] Time:</b> <code>{time_taken}s</code> | <b>Proxy:</b> <code>Live ⚡️</code>"""
 
     return response

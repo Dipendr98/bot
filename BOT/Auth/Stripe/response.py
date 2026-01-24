@@ -1,6 +1,6 @@
 """
-Professional Stripe Auth Response Formatter
-Formats Stripe authentication responses with BIN billing information.
+Stripe Auth Response Formatter
+Professional response formatting for Stripe Auth results.
 """
 
 from datetime import datetime
@@ -15,7 +15,7 @@ except ImportError:
 
 def format_stripe_response(card, mes, ano, cvv, result, timetaken, gateway="Stripe Auth"):
     """
-    Format Stripe Auth response for Telegram with professional billing info.
+    Format Stripe Auth response for Telegram.
 
     Args:
         card: Card number
@@ -38,75 +38,48 @@ def format_stripe_response(card, mes, ano, cvv, result, timetaken, gateway="Stri
     # Status emojis and text
     if status == "approved":
         if "AUTH_SUCCESS" in response or "CARD_ADDED" in response:
-            status_emoji = "✅"
-            status_text = "APPROVED"
+            status_text = "Approved ✅"
+            header = "APPROVED"
         else:
-            status_emoji = "✅"
-            status_text = "CCN LIVE"
+            status_text = "CCN Live ✅"
+            header = "CCN LIVE"
     elif status == "declined":
-        status_emoji = "❌"
-        status_text = "DECLINED"
+        status_text = "Declined ❌"
+        header = "DECLINED"
     else:
-        status_emoji = "⚠️"
-        status_text = "ERROR"
+        status_text = "Error ⚠️"
+        header = "ERROR"
 
-    # Current time
-    current_time = datetime.now().strftime("%I:%M:%S %p")
-    current_date = datetime.now().strftime("%d/%m/%Y")
-
-    # BIN lookup for professional billing info
+    # BIN lookup
     bin_data = get_bin_details(bin_number) if get_bin_details else None
-    
     if bin_data:
-        vendor = bin_data.get('vendor', 'Unknown')
-        card_type = bin_data.get('type', 'Unknown')
-        level = bin_data.get('level', 'Unknown')
-        bank = bin_data.get('bank', 'Unknown')
-        country = bin_data.get('country', 'Unknown')
+        vendor = bin_data.get('vendor', 'N/A')
+        card_type = bin_data.get('type', 'N/A')
+        level = bin_data.get('level', 'N/A')
+        bank = bin_data.get('bank', 'N/A')
+        country = bin_data.get('country', 'N/A')
         country_flag = bin_data.get('flag', '🏳️')
     else:
-        vendor = "Unknown"
-        card_type = "Unknown"
-        level = "Unknown"
-        bank = "Unknown"
-        country = "Unknown"
+        vendor = "N/A"
+        card_type = "N/A"
+        level = "N/A"
+        bank = "N/A"
+        country = "N/A"
         country_flag = "🏳️"
 
-    # Format professional bill response
-    formatted = f"""<b>╔══════════════════════════╗
-║     𝐒𝐓𝐑𝐈𝐏𝐄 𝐀𝐔𝐓𝐇 {status_emoji}     
-╚══════════════════════════╝</b>
-
-<b>┌─────── CARD DETAILS ───────┐</b>
-│ <b>Card:</b> <code>{fullcc}</code>
-│ <b>Status:</b> <code>{status_text} {status_emoji}</code>
-│ <b>Response:</b> <code>{response}</code>
-<b>└────────────────────────────┘</b>
-
-<b>┌─────── GATEWAY INFO ───────┐</b>
-│ <b>Gateway:</b> <code>{gateway}</code>
-│ <b>Amount:</b> <code>$0.00 (Auth)</code>
-│ <b>Type:</b> <code>Card Verification</code>
-<b>└────────────────────────────┘</b>
-
-<b>┌──────── BIN BILLING ───────┐</b>
-│ <b>BIN:</b> <code>{bin_number}</code>
-│ <b>Brand:</b> <code>{vendor}</code>
-│ <b>Type:</b> <code>{card_type}</code>
-│ <b>Level:</b> <code>{level}</code>
-│ <b>Bank:</b> <code>{bank}</code>
-│ <b>Country:</b> <code>{country}</code> {country_flag}
-<b>└────────────────────────────┘</b>
-
-<b>┌──────── CHECK INFO ────────┐</b>
-│ <b>Time:</b> <code>{timetaken}s</code>
-│ <b>Proxy:</b> <code>Live ⚡️</code>
-<b>└────────────────────────────┘</b>
-
-<b>┌────────── RECEIPT ─────────┐</b>
-│ <b>Date:</b> <code>{current_date}</code>
-│ <b>Time:</b> <code>{current_time}</code>
-│ <b>Dev:</b> <a href="https://t.me/Chr1shtopher">Chr1shtopher</a>
-<b>└────────────────────────────┘</b>"""
+    # Format response in original style
+    formatted = f"""<b>[#StripeAuth] | {header}</b> ✦
+━━━━━━━━━━━━━━━
+<b>[•] Card:</b> <code>{fullcc}</code>
+<b>[•] Gateway:</b> <code>{gateway}</code>
+<b>[•] Status:</b> <code>{status_text}</code>
+<b>[•] Response:</b> <code>{response}</code>
+━ ━ ━ ━ ━ ━ ━ ━ ━ ━ ━ ━ ━
+<b>[+] BIN:</b> <code>{bin_number}</code>
+<b>[+] Info:</b> <code>{vendor} - {card_type} - {level}</code>
+<b>[+] Bank:</b> <code>{bank}</code> 🏦
+<b>[+] Country:</b> <code>{country}</code> {country_flag}
+━━━━━━━━━━━━━━━
+<b>[ﾒ] Time:</b> <code>{timetaken}s</code> | <b>Proxy:</b> <code>Live ⚡️</code>"""
 
     return formatted
