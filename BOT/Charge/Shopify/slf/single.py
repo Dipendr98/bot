@@ -310,14 +310,37 @@ Use <code>/txturl site1.com site2.com</code> for multiple sites.""",
         
         start_time = time()
         
-        # Get user's proxy
+        # Get user's proxy - REQUIRED for Shopify checks
         try:
             from BOT.tools.proxy import get_proxy
             user_proxy = get_proxy(int(user_id))
         except:
             user_proxy = None
         
-        has_proxy = user_proxy is not None
+        # Check if proxy is configured - REQUIRED
+        if not user_proxy:
+            return await message.reply(
+                """<pre>Proxy Required 🔐</pre>
+━━━━━━━━━━━━━━━
+<b>You haven't configured a proxy yet.</b>
+
+<b>Proxy is required for:</b>
+• Avoiding rate limits
+• Better success rates
+• Secure checking
+
+<b>How to set up:</b>
+<code>/setpx ip:port:user:pass</code>
+
+<b>Example:</b>
+<code>/setpx 192.168.1.1:8080:user:pass</code>
+━━━━━━━━━━━━━━━
+<i>Set your proxy in private chat first!</i>""",
+                reply_to_message_id=message.id,
+                parse_mode=ParseMode.HTML
+            )
+        
+        has_proxy = True
         
         # Loading animation frames
         loading_frames = ["◐", "◓", "◑", "◒"]

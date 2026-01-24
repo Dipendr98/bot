@@ -9,7 +9,7 @@ import random
 from typing import List, Dict, Optional, Tuple
 from dataclasses import dataclass
 
-# Unified storage path
+# Storage paths
 UNIFIED_SITES_PATH = "DATA/user_sites.json"
 LEGACY_SITES_PATH = "DATA/sites.json"
 LEGACY_TXT_SITES_PATH = "DATA/txtsite.json"
@@ -31,40 +31,45 @@ def ensure_data_directory():
 
 
 def load_unified_sites() -> Dict[str, List[Dict]]:
-    """Load all sites from unified storage."""
+    """
+    Load all sites from unified storage.
+    If unified storage doesn't exist, migrate from legacy storage.
+    """
     ensure_data_directory()
     
     # Try to load from unified storage first
     if os.path.exists(UNIFIED_SITES_PATH):
         try:
             with open(UNIFIED_SITES_PATH, "r", encoding="utf-8") as f:
-                return json.load(f)
+                data = json.load(f)
+                if data:  # Only return if there's actual data
+                    return data
         except (json.JSONDecodeError, IOError):
             pass
     
     # Migrate from legacy storages
     unified_data = {}
     
-    # Migrate from sites.json (addurl)
+    # Migrate from sites.json (addurl) first
     if os.path.exists(LEGACY_SITES_PATH):
         try:
             with open(LEGACY_SITES_PATH, "r", encoding="utf-8") as f:
                 legacy_sites = json.load(f)
             
             for user_id, site_info in legacy_sites.items():
-                if user_id not in unified_data:
-                    unified_data[user_id] = []
-                
-                # Add as primary site
-                site_entry = {
-                    "url": site_info.get("site", ""),
-                    "gateway": site_info.get("gate", "Unknown"),
-                    "price": "N/A",
-                    "active": True,
-                    "fail_count": 0,
-                    "is_primary": True
-                }
-                unified_data[user_id].insert(0, site_entry)
+                if isinstance(site_info, dict) and site_info.get("site"):
+                    if user_id not in unified_data:
+                        unified_data[user_id] = []
+                    
+                    site_entry = {
+                        "url": site_info.get("site", ""),
+                        "gateway": site_info.get("gate", "Unknown"),
+                        "price": "N/A",
+                        "active": True,
+                        "fail_count": 0,
+                        "is_primary": True
+                    }
+                    unified_data[user_id].insert(0, site_entry)
         except (json.JSONDecodeError, IOError):
             pass
     
@@ -75,28 +80,34 @@ def load_unified_sites() -> Dict[str, List[Dict]]:
                 legacy_txt = json.load(f)
             
             for user_id, sites_list in legacy_txt.items():
+                if not isinstance(sites_list, list):
+                    continue
+                    
                 if user_id not in unified_data:
                     unified_data[user_id] = []
                 
-                existing_urls = {s.get("url", "").lower() for s in unified_data[user_id]}
+                existing_urls = {s.get("url", "").lower().rstrip("/") for s in unified_data[user_id]}
                 
                 for site_info in sites_list:
+                    if not isinstance(site_info, dict):
+                        continue
                     site_url = site_info.get("site", "")
-                    if site_url.lower() not in existing_urls:
+                    if site_url and site_url.lower().rstrip("/") not in existing_urls:
+                        is_first = len(unified_data[user_id]) == 0
                         site_entry = {
                             "url": site_url,
                             "gateway": site_info.get("gate", "Unknown"),
                             "price": "N/A",
                             "active": True,
                             "fail_count": 0,
-                            "is_primary": False
+                            "is_primary": is_first
                         }
                         unified_data[user_id].append(site_entry)
-                        existing_urls.add(site_url.lower())
+                        existing_urls.add(site_url.lower().rstrip("/"))
         except (json.JSONDecodeError, IOError):
             pass
     
-    # Save migrated data
+    # Save migrated data if we found any
     if unified_data:
         save_unified_sites(unified_data)
     
@@ -104,8 +115,10 @@ def load_unified_sites() -> Dict[str, List[Dict]]:
 
 
 def save_unified_sites(data: Dict[str, List[Dict]]):
-    """Save all sites to unified storage."""
+    """Save all sites to unified storage and update legacy files."""
     ensure_data_directory()
+    
+    # Save to unified storage
     with open(UNIFIED_SITES_PATH, "w", encoding="utf-8") as f:
         json.dump(data, f, indent=4)
     
@@ -175,20 +188,21 @@ def add_site_for_user(user_id: str, url: str, gateway: str, price: str = "N/A", 
             data[user_id] = []
         
         # Check for duplicate
-        existing_urls = {s.get("url", "").lower() for s in data[user_id]}
+        existing_urls = {s.get("url", "").lower().rstrip("/") for s in data[user_id]}
         url_normalized = url.lower().rstrip("/")
         
         if url_normalized in existing_urls:
             return True  # Already exists
         
         # Create new site entry
+        is_first = len(data[user_id]) == 0
         site_entry = {
             "url": url,
             "gateway": gateway,
             "price": price,
             "active": True,
             "fail_count": 0,
-            "is_primary": set_primary or len(data[user_id]) == 0  # First site is primary
+            "is_primary": set_primary or is_first  # First site is primary
         }
         
         if set_primary:
@@ -202,7 +216,8 @@ def add_site_for_user(user_id: str, url: str, gateway: str, price: str = "N/A", 
         
         save_unified_sites(data)
         return True
-    except Exception:
+    except Exception as e:
+        print(f"Error adding site: {e}")
         return False
 
 
@@ -229,14 +244,15 @@ def add_sites_batch(user_id: str, sites: List[Dict]) -> int:
         
         for site_info in sites:
             url = site_info.get("url", "").rstrip("/")
-            if url.lower() not in existing_urls:
+            if url and url.lower() not in existing_urls:
+                is_first = len(data[user_id]) == 0
                 site_entry = {
                     "url": url,
                     "gateway": site_info.get("gateway", "Unknown"),
                     "price": site_info.get("price", "N/A"),
                     "active": True,
                     "fail_count": 0,
-                    "is_primary": len(data[user_id]) == 0  # First site is primary
+                    "is_primary": is_first  # First site is primary
                 }
                 data[user_id].append(site_entry)
                 existing_urls.add(url.lower())
@@ -246,7 +262,8 @@ def add_sites_batch(user_id: str, sites: List[Dict]) -> int:
             save_unified_sites(data)
         
         return added_count
-    except Exception:
+    except Exception as e:
+        print(f"Error adding sites batch: {e}")
         return 0
 
 
@@ -268,6 +285,9 @@ def remove_site_for_user(user_id: str, url: str) -> bool:
         ]
         
         if len(data[user_id]) < original_count:
+            # If we removed the primary, mark the first remaining as primary
+            if data[user_id] and not any(s.get("is_primary") for s in data[user_id]):
+                data[user_id][0]["is_primary"] = True
             save_unified_sites(data)
             return True
         
