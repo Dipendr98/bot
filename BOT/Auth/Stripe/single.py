@@ -3,8 +3,7 @@ Stripe Auth Single Card Checker
 ===============================
 Handles /au command for Stripe authentication checks.
 
-Uses ONLY the external API: https://dclub.site/apis/stripe/auth/st7.php
-All checks are done via this API with site rotation on errors.
+Uses WooCommerce site (epicalarc.com) with auto-registration for Stripe auth checks.
 """
 
 import re
@@ -21,8 +20,8 @@ from BOT.helper.permissions import check_private_access, is_premium_user
 from BOT.helper.antispam import can_run_command
 from BOT.gc.credit import deduct_credit, has_credits
 
-# Import the external API functions - THIS IS THE ONLY API USED
-from BOT.Auth.StripeAuth.api import check_stripe_auth_with_retry, determine_status
+# Import the WooCommerce Stripe checker
+from BOT.Auth.StripeAuth.wc_checker import check_stripe_wc_fullcc, determine_status
 
 # Try to import BIN lookup
 try:
@@ -42,7 +41,7 @@ def extract_card(text: str):
     return None
 
 
-def format_response(fullcc: str, result: dict, user_info: dict, time_taken: float, retry_count: int = 0) -> str:
+def format_response(fullcc: str, result: dict, user_info: dict, time_taken: float) -> str:
     """Format the Stripe Auth response in professional style."""
     parts = fullcc.split("|")
     cc = parts[0] if len(parts) > 0 else "Unknown"
@@ -51,9 +50,21 @@ def format_response(fullcc: str, result: dict, user_info: dict, time_taken: floa
     message = result.get("message", "Unknown")
     site = result.get("site", "Unknown")
     
-    # Get pre-computed status
-    status_text = result.get("status_text", "Unknown ❓")
-    header = result.get("header", "UNKNOWN")
+    # Determine status and header
+    status = determine_status(result)
+    
+    if status == "APPROVED":
+        header = "APPROVED"
+        status_text = "Approved ✅"
+    elif status == "CCN LIVE":
+        header = "CCN LIVE"
+        status_text = "CCN Live ⚡"
+    elif status == "DECLINED":
+        header = "DECLINED"
+        status_text = "Declined ❌"
+    else:
+        header = "ERROR"
+        status_text = "Error ⚠️"
     
     # Clean up response for display
     response_display = response.replace("_", " ").title() if response else "Unknown"
@@ -79,23 +90,18 @@ def format_response(fullcc: str, result: dict, user_info: dict, time_taken: floa
         country = "N/A"
         country_flag = "🏳️"
     
-    # Build extra info
-    extra_lines = []
-    if retry_count > 0:
-        extra_lines.append(f"<b>[•] Retries:</b> <code>{retry_count}</code>")
+    # Site display
     if site and site != "Unknown":
-        site_display = site[:25] + "..." if len(site) > 25 else site
-        extra_lines.append(f"<b>[•] Site:</b> <code>{site_display}</code>")
-    
-    extra_section = "\n" + "\n".join(extra_lines) if extra_lines else ""
+        site_display = site.replace("https://", "").replace("http://", "")[:25]
+    else:
+        site_display = "WC Stripe"
     
     return f"""<b>[#StripeAuth] | {header}</b> ✦
 ━━━━━━━━━━━━━━━
 <b>[•] Card:</b> <code>{fullcc}</code>
-<b>[•] Gateway:</b> <code>Stripe Auth API</code>
+<b>[•] Gateway:</b> <code>Stripe Auth [{site_display}]</code>
 <b>[•] Status:</b> <code>{status_text}</code>
-<b>[•] Response:</b> <code>{response_display}</code>
-<b>[•] Message:</b> <code>{message_display}</code>{extra_section}
+<b>[•] Response:</b> <code>{message_display}</code>
 ━ ━ ━ ━ ━ ━ ━ ━ ━ ━ ━ ━ ━
 <b>[+] BIN:</b> <code>{bin_number}</code>
 <b>[+] Info:</b> <code>{vendor} - {card_type} - {level}</code>
@@ -105,7 +111,7 @@ def format_response(fullcc: str, result: dict, user_info: dict, time_taken: floa
 <b>[ﾒ] Checked By:</b> {user_info['profile']} [<code>{user_info['plan']} {user_info['badge']}</code>]
 <b>[ϟ] Dev:</b> <a href="https://t.me/Chr1shtopher">Chr1shtopher</a>
 ━━━━━━━━━━━━━━━
-<b>[ﾒ] Time:</b> <code>{time_taken}s</code>"""
+<b>[ﾒ] Time:</b> <code>{time_taken}s</code> | Proxy: <code>Live ⚡️</code>"""
 
 
 @Client.on_message(filters.command("au") | filters.regex(r"^\$au(\s|$)"))
@@ -113,8 +119,7 @@ async def handle_au_command(client: Client, message: Message):
     """
     Handle /au and $au commands for Stripe Auth checking.
     
-    Uses ONLY the external API: https://dclub.site/apis/stripe/auth/st7.php
-    Rotates through sites on errors until a real response is received.
+    Uses WooCommerce Stripe auth with auto-registration.
     """
     if not message.from_user:
         return
@@ -205,7 +210,7 @@ async def handle_au_command(client: Client, message: Message):
         # Get user info
         user_data = users.get(user_id, {})
         plan = user_data.get("plan", {}).get("plan", "Free")
-        badge = user_data.get("plan", {}).get("badge", "🎟️")
+        badge = user_data.get("plan", {}).get("badge", "🧿")
         profile = f"<a href='tg://user?id={user_id}'>{message.from_user.first_name}</a>"
         
         user_info = {"profile": profile, "plan": plan, "badge": badge}
@@ -217,19 +222,19 @@ async def handle_au_command(client: Client, message: Message):
             f"""<pre>Processing Request...</pre>
 ━ ━ ━ ━ ━ ━ ━ ━ ━ ━ ━ ━
 <b>• Card:</b> <code>{fullcc}</code>
-<b>• Gate:</b> <code>Stripe Auth API</code>
-<b>• Status:</b> <i>Checking via external API... ◐</i>""",
+<b>• Gate:</b> <code>Stripe Auth [WC]</code>
+<b>• Status:</b> <i>Registering and checking... ◐</i>""",
             reply_to_message_id=message.id,
             parse_mode=ParseMode.HTML
         )
         
-        # Check card using ONLY the external API with site rotation
-        result, retry_count = await check_stripe_auth_with_retry(fullcc)
+        # Check card using WooCommerce Stripe checker
+        result = await check_stripe_wc_fullcc(fullcc)
         
         time_taken = round(time() - start_time, 2)
         
         # Format response
-        final_message = format_response(fullcc, result, user_info, time_taken, retry_count)
+        final_message = format_response(fullcc, result, user_info, time_taken)
         
         buttons = InlineKeyboardMarkup([
             [
