@@ -13,7 +13,7 @@ from datetime import datetime
 
 from pyrogram import Client, filters
 from pyrogram.types import Message, InlineKeyboardMarkup, InlineKeyboardButton
-from pyrogram.enums import ParseMode, ChatType
+from pyrogram.enums import ParseMode, ChatType, ChatAction
 
 from BOT.helper.start import load_users
 from BOT.helper.antispam import can_run_command
@@ -81,40 +81,64 @@ async def check_card_all_sites_parallel(
         except Exception as e:
             return (url, gate, {"Response": f"ERROR: {str(e)[:50]}", "Status": False, "Gateway": gate, "Price": "0.00", "cc": fullcc})
 
-    tasks = [asyncio.create_task(check_one(s)) for s in sites]
-    last_res = None
-    last_gate = "Unknown"
-
-    try:
-        while tasks:
-            done, pending = await asyncio.wait(tasks, return_when=asyncio.FIRST_COMPLETED)
-            for t in done:
-                try:
-                    url, gate, res = t.result()
-                except asyncio.CancelledError:
-                    continue
-                except Exception as e:
-                    gate = "Unknown"
-                    res = {"Response": f"ERROR: {str(e)[:50]}", "Status": False, "Gateway": gate, "Price": "0.00", "cc": fullcc}
-                resp = str((res or {}).get("Response", ""))
-                last_res, last_gate = res, gate
-                if _is_valid_shopify_response(rotator, resp):
-                    for p in pending:
-                        p.cancel()
-                    res["Gateway"] = gate
-                    return (res, 0)
-            tasks = list(pending)
-    except asyncio.CancelledError:
-        pass
-    for t in tasks:
+    async def _run_parallel() -> tuple:
+        """Run parallel site checks; return (result_dict, gate_str, all_retryable). Valid result returns (res, gate, False)."""
+        ts = [asyncio.create_task(check_one(s)) for s in sites]
+        last_res = None
+        last_gate = "Unknown"
+        all_retryable = True
         try:
-            t.cancel()
-        except Exception:
+            while ts:
+                done, pending = await asyncio.wait(ts, return_when=asyncio.FIRST_COMPLETED)
+                for t in done:
+                    try:
+                        url, gate, res = t.result()
+                    except asyncio.CancelledError:
+                        continue
+                    except Exception as e:
+                        gate = "Unknown"
+                        res = {"Response": f"ERROR: {str(e)[:50]}", "Status": False, "Gateway": gate, "Price": "0.00", "cc": fullcc}
+                    resp = str((res or {}).get("Response", ""))
+                    last_res, last_gate = res, gate
+                    if _is_valid_shopify_response(rotator, resp):
+                        for p in pending:
+                            p.cancel()
+                        res["Gateway"] = gate
+                        return (res, gate, False)
+                    if not rotator.should_retry(resp):
+                        all_retryable = False
+                ts = list(pending)
+        except asyncio.CancelledError:
             pass
+        for t in ts:
+            try:
+                t.cancel()
+            except Exception:
+                pass
+        return (last_res, last_gate, all_retryable)
+
+    res, gate_str, all_retryable = await _run_parallel()
+    if isinstance(res, dict) and _is_valid_shopify_response(rotator, str((res or {}).get("Response", ""))):
+        res["Gateway"] = res.get("Gateway") or gate_str
+        return (res, 0)
+
+    last_res = res
+    last_gate = gate_str if isinstance(gate_str, str) else "Unknown"
+    retry_count = 0
+
+    if all_retryable and last_res is not None and len(sites) > 1:
+        await asyncio.sleep(4)
+        res2, gate2, _ = await _run_parallel()
+        if isinstance(res2, dict) and _is_valid_shopify_response(rotator, str((res2 or {}).get("Response", ""))):
+            res2["Gateway"] = res2.get("Gateway") or (gate2 if isinstance(gate2, str) else "Unknown")
+            return (res2, 1)
+        if res2 is not None:
+            last_res, last_gate = res2, (gate2 if isinstance(gate2, str) else "Unknown")
+        retry_count = 1
 
     if last_res is not None:
         last_res["Gateway"] = last_gate
-        return (last_res, 0)
+        return (last_res, retry_count)
     return (
         {"Response": "UNKNOWN", "Status": False, "Gateway": "Unknown", "Price": "0.00", "cc": fullcc},
         0,
@@ -184,7 +208,7 @@ def determine_status(response: str) -> tuple:
         "LOST", "STOLEN", "PICKUP", "RESTRICTED", "SECURITY_VIOLATION",
         "FRAUD", "FRAUDULENT", "INVALID_ACCOUNT", "CARD_NOT_SUPPORTED",
         "TRY_AGAIN", "PROCESSING_ERROR", "NO_SUCH_CARD", "LIMIT_EXCEEDED",
-        "REVOKED", "SERVICE_NOT_ALLOWED"
+        "REVOKED", "SERVICE_NOT_ALLOWED", "RISKY"
     ]):
         return "Declined ❌", "DECLINED", False
     
@@ -201,6 +225,12 @@ def format_response(fullcc: str, result: dict, user_info: dict, time_taken: floa
     gateway = result.get("Gateway", "Unknown")
     price = result.get("Price", "0.00")
     receipt_id = result.get("ReceiptId", None)  # Get receipt ID if present
+
+    # Gateway display: site gateway may already be "Shopify Normal $0.50"; avoid "Shopify ... $0.50 $0.54" (double price)
+    if "$" in str(gateway):
+        gateway_display = gateway
+    else:
+        gateway_display = f"Shopify {gateway} ${price}"
     
     status_text, header, is_live = determine_status(response)
     
@@ -229,7 +259,7 @@ def format_response(fullcc: str, result: dict, user_info: dict, time_taken: floa
     if receipt_id:
         bill_line = f"\n<b>[•] Bill:</b> <code>{receipt_id}</code>"
     
-    retry_line = f"\n<b>[•] Retries:</b> <code>{retry_count}</code>" if retry_count > 0 else ""
+    retry_line = f"\n<b>[•] Retries:</b> <code>{retry_count}</code>"
     
     proxy_status = "Live ⚡️" if has_proxy else "None"
     
@@ -237,7 +267,7 @@ def format_response(fullcc: str, result: dict, user_info: dict, time_taken: floa
     return f"""<b>[#Shopify] | {header}</b> ✦
 ━━━━━━━━━━━━━━━
 <b>[•] Card:</b> <code>{fullcc}</code>
-<b>[•] Gateway:</b> <code>Shopify {gateway} ${price}</code>
+<b>[•] Gateway:</b> <code>{gateway_display}</code>
 <b>[•] Status:</b> <code>{status_text}</code>
 <b>[•] Response:</b> <code>{response}</code>{retry_line}{bill_line}
 ━ ━ ━ ━ ━ ━ ━ ━ ━ ━ ━ ━ ━
@@ -430,33 +460,89 @@ Use <code>/txturl site1.com site2.com</code> for multiple sites.""",
         
         has_proxy = True
         
-        # Show processing message (parallel across all sites)
+        # Show loading message with round spinner
         site_count = rotator.get_site_count()
         loading_msg = await message.reply(
-            f"""<pre>Processing Request...</pre>
+            f"""<pre>◐ Checking...</pre>
 ━ ━ ━ ━ ━ ━ ━ ━ ━ ━ ━ ━
 <b>• Card:</b> <code>{fullcc}</code>
 <b>• Gate:</b> <code>Shopify</code>
-<b>• Sites:</b> <code>{site_count}</code> (parallel)
-<b>• Status:</b> <i>Checking...</i>""",
+<b>• Sites:</b> <code>{site_count}</code>
+<b>• Status:</b> <i>◐ Processing...</i>""",
             reply_to_message_id=message.id,
             parse_mode=ParseMode.HTML
         )
 
-        result, retry_count = await check_card_all_sites_parallel(user_id, fullcc, user_proxy)
-        
+        spinners = ("◐", "◓", "◑", "◒")
+
+        async def spinner_loop():
+            i = 0
+            while True:
+                try:
+                    await loading_msg.edit(
+                        f"""<pre>{spinners[i % 4]} Checking...</pre>
+━ ━ ━ ━ ━ ━ ━ ━ ━ ━ ━ ━
+<b>• Card:</b> <code>{fullcc}</code>
+<b>• Gate:</b> <code>Shopify</code>
+<b>• Sites:</b> <code>{site_count}</code>
+<b>• Status:</b> <i>{spinners[i % 4]} Processing...</i>""",
+                        parse_mode=ParseMode.HTML,
+                    )
+                except Exception:
+                    pass
+                i += 1
+                await asyncio.sleep(1.2)
+
+        async def typing_loop():
+            while True:
+                try:
+                    await client.send_chat_action(message.chat.id, ChatAction.TYPING)
+                except Exception:
+                    pass
+                await asyncio.sleep(4)
+
+        spinner_task = asyncio.create_task(spinner_loop())
+        typing_task = asyncio.create_task(typing_loop())
+
+        SH_RETRY_ATTEMPTS = 3
+        result = None
+        retry_count = 0
+        try:
+            for attempt in range(SH_RETRY_ATTEMPTS):
+                res, r = await check_card_all_sites_parallel(user_id, fullcc, user_proxy)
+                retry_count += r
+                resp = str((res or {}).get("Response", ""))
+                if _is_valid_shopify_response(rotator, resp):
+                    result = res
+                    break
+                if rotator.should_retry(resp) and attempt < SH_RETRY_ATTEMPTS - 1:
+                    await asyncio.sleep(1.5)
+                    continue
+                result = res
+                break
+        finally:
+            spinner_task.cancel()
+            typing_task.cancel()
+            try:
+                await spinner_task
+            except asyncio.CancelledError:
+                pass
+            try:
+                await typing_task
+            except asyncio.CancelledError:
+                pass
+
+        if result is None:
+            result = {"Response": "UNKNOWN", "Status": False, "Gateway": "Unknown", "Price": "0.00"}
+
         time_taken = round(time() - start_time, 2)
-        
-        # Format response with retry count
         final_message = format_response(fullcc, result, user_info, time_taken, retry_count, has_proxy)
-        
         buttons = InlineKeyboardMarkup([
             [
                 InlineKeyboardButton("Support", url="https://t.me/Chr1shtopher"),
                 InlineKeyboardButton("Plans", callback_data="plans_info")
             ]
         ])
-        
         await loading_msg.edit(
             final_message,
             reply_markup=buttons,

@@ -382,6 +382,8 @@ async def mslf_handler(client, message):
 
         start_time = time.time()
         total_cc = len(all_cards)
+        last_progress_edit = 0.0
+        PROGRESS_THROTTLE = 1.0
         approved_count = 0
         declined_count = 0
         charged_count = 0
@@ -390,13 +392,43 @@ async def mslf_handler(client, message):
         processed_count = 0
         total_retries = 0
 
+        async def _edit_progress(force: bool = False):
+            nonlocal last_progress_edit
+            now = time.time()
+            if not force and (now - last_progress_edit) < PROGRESS_THROTTLE:
+                return
+            elapsed = now - start_time
+            rate = (processed_count / elapsed) if elapsed > 0 else 0
+            try:
+                await loader_msg.edit(
+                    f"""<pre>✦ [#MSH] | Mass Shopify Check</pre>
+━━━━━━━━━━━━━━━
+<b>🟢 Total CC:</b> <code>{total_cc}</code>
+<b>💬 Progress:</b> <code>{processed_count}/{total_cc}</code>
+<b>✅ Approved:</b> <code>{approved_count}</code>
+<b>💎 Charged:</b> <code>{charged_count}</code>
+<b>❌ Declined:</b> <code>{declined_count}</code>
+<b>⚠️ Errors:</b> <code>{error_count}</code>
+<b>🔄 Rotations:</b> <code>{total_retries}</code>
+<b>⏱️ Time:</b> <code>{elapsed:.1f}s</code> · <code>{rate:.1f} cc/s</code>
+<b>👤 Checked By:</b> {checked_by} [<code>{plan} {badge}</code>]""",
+                    parse_mode=ParseMode.HTML,
+                    disable_web_page_preview=True,
+                )
+                last_progress_edit = now
+            except Exception:
+                pass
+
         for idx, card in enumerate(all_cards, start=1):
+            result = None
             try:
                 result, retries = await check_card_all_sites_parallel(user_id, card, proxy)
-                raw_response = str(result.get("Response", "UNKNOWN"))
-                used_site = result.get("Gateway")
+                raw_response = str((result or {}).get("Response", "UNKNOWN"))
+                used_site = (result or {}).get("Gateway")
             except Exception as e:
-                raw_response, used_site, retries = f"ERROR: {str(e)[:40]}", None, 0
+                raw_response = f"ERROR: {str(e)[:40]}"
+                used_site = None
+                retries = 0
             processed_count = idx
             total_retries += retries
 
@@ -446,7 +478,7 @@ async def mslf_handler(client, message):
                 hit_message = f"""<b>[#Shopify] | {hit_header}</b> ✦
 ━━━━━━━━━━━━━━━
 <b>[•] Card:</b> <code>{card}</code>
-<b>[•] Gateway:</b> <code>{gateway}</code>
+<b>[•] Gateway:</b> <code>{used_site or gateway}</code>
 <b>[•] Status:</b> <code>{hit_status}</code>
 <b>[•] Response:</b> <code>{raw_response}</code>
 <b>[•] Retries:</b> <code>{retries}</code>
@@ -462,32 +494,17 @@ async def mslf_handler(client, message):
                 
                 try:
                     await message.reply(hit_message, parse_mode=ParseMode.HTML, disable_web_page_preview=True)
-                except:
+                except Exception:
                     pass
-            
-            # Update progress every 3 cards or on last card
-            if processed_count % 3 == 0 or processed_count == total_cc:
-                try:
-                    await loader_msg.edit(
-                        f"""<pre>✦ [#MSH] | Mass Shopify Check</pre>
-━━━━━━━━━━━━━━━
-<b>🟢 Total CC:</b> <code>{total_cc}</code>
-<b>💬 Progress:</b> <code>{processed_count}/{total_cc}</code>
-<b>✅ Approved:</b> <code>{approved_count}</code>
-<b>💎 Charged:</b> <code>{charged_count}</code>
-<b>❌ Declined:</b> <code>{declined_count}</code>
-<b>⚠️ Errors:</b> <code>{error_count}</code>
-━━━━━━━━━━━━━━━
-<b>🔄 Site Rotations:</b> <code>{total_retries}</code>
-<b>👤 Checked By:</b> {checked_by} [<code>{plan} {badge}</code>]""",
-                        parse_mode=ParseMode.HTML,
-                        disable_web_page_preview=True
-                    )
-                except:
-                    pass
+                await _edit_progress(force=True)
+
+            # Update progress (throttled; always on last card)
+            is_last = processed_count == total_cc
+            await _edit_progress(force=is_last)
 
         end_time = time.time()
         timetaken = round(end_time - start_time, 2)
+        rate_final = (processed_count / timetaken) if timetaken > 0 else 0
 
         # Deduct credits after processing
         if user_data["plan"].get("credits") != "∞":
@@ -507,12 +524,15 @@ async def mslf_handler(client, message):
 ⚠️ <b>Errors</b>      : <code>{error_count}</code>
 ⚠️ <b>CAPTCHA</b>     : <code>{captcha_count}</code>
 ━━━━━━━━━━━━━━━
-⏱️ <b>Time Elapsed</b> : <code>{timetaken}s</code>
+⏱️ <b>Time</b> : <code>{timetaken}s</code> · <code>{rate_final:.1f} cc/s</code>
 👤 <b>Checked By</b> : {checked_by} [<code>{plan} {badge}</code>]
 🔧 <b>Dev</b>: <a href="https://t.me/Chr1shtopher">Chr1shtopher</a> <code>{current_time}</code>
 ━━━━━━━━━━━━━━━"""
 
-        await loader_msg.edit(completion_message, parse_mode=ParseMode.HTML, disable_web_page_preview=True)
+        try:
+            await loader_msg.edit(completion_message, parse_mode=ParseMode.HTML, disable_web_page_preview=True)
+        except Exception:
+            pass
 
     except Exception as e:
         await message.reply(f"⚠️ Error: {e}", reply_to_message_id=message.id)

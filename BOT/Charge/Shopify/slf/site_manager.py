@@ -472,7 +472,8 @@ class SiteRotator:
             # Declined (card issues)
             "CARD_DECLINED", "DECLINED", "GENERIC_DECLINE", "DO_NOT_HONOR",
             "EXPIRED", "INVALID_NUMBER", "LOST", "STOLEN", "PICKUP", "FRAUD",
-            "RESTRICTED", "REVOKED", "INVALID_ACCOUNT", "NOT_SUPPORTED"
+            "RESTRICTED", "REVOKED", "INVALID_ACCOUNT", "NOT_SUPPORTED",
+            "RISKY"
         ]
         
         return any(keyword in response_upper for keyword in real_keywords)

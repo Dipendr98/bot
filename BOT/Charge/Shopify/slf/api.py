@@ -265,20 +265,29 @@ async def autoshopify(url, card, session):
             "Accept-Language": "en-US,en;q=0.9",
         }
         
-        # Fetch products with proper error handling
-        try:
-            request = await session.get(f"{url}/products.json", headers=headers, follow_redirects=True, timeout=30)
-        except Exception as e:
+        # Fetch products with retry on 429/5xx (rate-limit, server errors)
+        request = None
+        products_fetch_retries = 3
+        for attempt in range(products_fetch_retries):
+            try:
+                request = await session.get(f"{url}/products.json", headers=headers, follow_redirects=True, timeout=30)
+            except Exception as e:
+                output.update({
+                    "Response": "SITE_CONNECTION_ERROR",
+                    "Status": False,
+                })
+                return output
+
+            sc = getattr(request, "status_code", 0)
+            if sc == 200:
+                break
+            if sc == 429 or (500 <= sc <= 599):
+                if attempt < products_fetch_retries - 1:
+                    backoff = 2 + attempt * 2
+                    await asyncio.sleep(backoff)
+                    continue
             output.update({
-                "Response": "SITE_CONNECTION_ERROR",
-                "Status": False,
-            })
-            return output
-        
-        # Check HTTP status
-        if hasattr(request, 'status_code') and request.status_code != 200:
-            output.update({
-                "Response": f"SITE_HTTP_{request.status_code}",
+                "Response": f"SITE_HTTP_{sc}",
                 "Status": False,
             })
             return output
