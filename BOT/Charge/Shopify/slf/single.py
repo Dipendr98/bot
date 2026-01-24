@@ -74,32 +74,51 @@ def determine_status(response: str) -> tuple:
     """
     Determine status category from response.
     Returns (status_text, header, is_live)
+    
+    Categories:
+    - CHARGED: Payment went through successfully
+    - CCN LIVE: Card is valid but CVV/Address/3DS issue (can be used with correct CVV)
+    - DECLINED: Card is dead/blocked/expired
+    - ERROR: System/Site errors, not card-related
     """
     response_upper = str(response).upper()
     
-    # Charged/Success
-    if any(x in response_upper for x in ["ORDER_PLACED", "ORDER_CONFIRMED", "THANK_YOU", "SUCCESS", "CHARGED"]):
+    # Charged/Success - Payment completed
+    if any(x in response_upper for x in [
+        "ORDER_PLACED", "ORDER_CONFIRMED", "THANK_YOU", "SUCCESS", "CHARGED", 
+        "PAYMENT_RECEIVED", "COMPLETE"
+    ]):
         return "Charged 💎", "CHARGED", True
     
-    # CCN/Live (CVV/Address issues but card is valid)
+    # Errors - System issues, not card-related
     if any(x in response_upper for x in [
-        "3DS", "AUTHENTICATION", "INCORRECT_CVC", "INVALID_CVC", 
-        "MISMATCHED", "INCORRECT_ADDRESS", "INCORRECT_ZIP", "INCORRECT_PIN",
-        "FRAUD", "INSUFFICIENT_FUNDS", "CVV", "CARD_DECLINED", "GENERIC_DECLINE",
-        "DO_NOT_HONOR", "MISMATCHED_BILL"
+        "ERROR", "TIMEOUT", "CAPTCHA", "EMPTY", "DEAD", "TAX", "HCAPTCHA",
+        "CONNECTION", "RATE_LIMIT", "SITE_ERROR", "BLOCKED", "PROXY"
+    ]):
+        return "Error ⚠️", "ERROR", False
+    
+    # CCN/Live (CVV/Address issues but card NUMBER is valid)
+    # These indicate the card exists and is active, just wrong CVV/address
+    if any(x in response_upper for x in [
+        "3DS", "3D_SECURE", "AUTHENTICATION_REQUIRED", "INCORRECT_CVC", "INVALID_CVC", 
+        "INCORRECT_ADDRESS", "INCORRECT_ZIP", "INCORRECT_PIN", "MISMATCHED_BILLING",
+        "MISMATCHED_ZIP", "MISMATCHED_PIN", "MISMATCHED_BILL", "CVV_MISMATCH",
+        "INSUFFICIENT_FUNDS"  # Card is valid but no funds
     ]):
         return "Approved ✅", "CCN LIVE", True
     
-    # Errors
-    if any(x in response_upper for x in ["ERROR", "TIMEOUT", "CAPTCHA", "EMPTY", "DEAD", "TAX", "HCAPTCHA"]):
-        return "Error ⚠️", "ERROR", False
-    
-    # Declined
+    # Declined - Card is dead/blocked/stolen/expired/invalid
     if any(x in response_upper for x in [
-        "DECLINED", "INCORRECT_NUMBER", "INVALID_NUMBER", "EXPIRED", "NOT_SUPPORTED", "LOST", "STOLEN"
+        "CARD_DECLINED", "DECLINED", "GENERIC_DECLINE", "DO_NOT_HONOR",
+        "INCORRECT_NUMBER", "INVALID_NUMBER", "EXPIRED", "NOT_SUPPORTED", 
+        "LOST", "STOLEN", "PICKUP", "RESTRICTED", "SECURITY_VIOLATION",
+        "FRAUD", "FRAUDULENT", "INVALID_ACCOUNT", "CARD_NOT_SUPPORTED",
+        "TRY_AGAIN", "PROCESSING_ERROR", "NO_SUCH_CARD", "LIMIT_EXCEEDED",
+        "REVOKED", "SERVICE_NOT_ALLOWED"
     ]):
         return "Declined ❌", "DECLINED", False
     
+    # Default to declined for unknown responses
     return "Declined ❌", "RESULT", False
 
 
