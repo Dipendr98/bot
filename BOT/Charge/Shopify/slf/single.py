@@ -33,9 +33,13 @@ except ImportError:
 MAX_SITE_RETRIES = 5
 # Checks per site before rotating to next (professional site rotation)
 CHECKS_PER_SITE = 3
+# Max site changes: try up to (1 + MAX_SITE_CHANGES) sites, then stop
+MAX_SITE_CHANGES = 3
 # Delay (seconds) between attempts on same site; between site rotations
 DELAY_BETWEEN_ATTEMPTS = 2
 DELAY_BETWEEN_SITES = 1
+# Captcha retries per attempt (TLS fingerprint rotation)
+CAPTCHA_RETRIES_PER_ATTEMPT = 3
 # Kept for /tsh mass-check display; /sh uses CHECKS_PER_SITE rotation
 SH_CONCURRENT_THREADS = 10
 
@@ -50,9 +54,9 @@ def _is_valid_shopify_response(rotator: SiteRotator, resp: str) -> bool:
         return False
     u = resp.upper()
     invalid = (
-        "CAPTCHA" in u or "HCAPTCHA" in u or "SITE_" in u or "CART_" in u or "SESSION_" in u
+        "CAPTCHA" in u or "HCAPTCHA" in u or "SITE_" in u or "SITE DEAD" in u or "CART_" in u or "SESSION_" in u
         or "ERROR" in u or "TIMEOUT" in u or "CONNECTION" in u or "JSON" in u or "HTTP" in u
-        or "CHECKOUT_" in u or "NEGOTIATE_" in u
+        or "CHECKOUT_" in u or "NEGOTIATE_" in u or "DEAD" in u
     )
     return not invalid
 
@@ -101,17 +105,19 @@ async def check_card_all_sites_parallel(
         try:
             async with TLSAsyncSession(timeout_seconds=120, proxy=proxy) as session:
                 res = await autoshopify_with_captcha_retry(
-                    url, fullcc, session, max_captcha_retries=7, proxy=proxy
+                    url, fullcc, session, max_captcha_retries=CAPTCHA_RETRIES_PER_ATTEMPT, proxy=proxy
                 )
             return (gate, res)
         except Exception as e:
             return (gate, {"Response": f"ERROR: {str(e)[:50]}", "Status": False, "Gateway": gate, "Price": "0.00", "cc": fullcc})
 
-    for site_info in ordered:
+    sites_to_try = ordered[: 1 + MAX_SITE_CHANGES]
+    for site_info in sites_to_try:
         gate = site_info.get("gateway", "Shopify")
         for attempt in range(CHECKS_PER_SITE):
             g, res = await check_one(site_info)
             gate = g
+            _log_check_to_terminal(gate, res, fullcc)
             resp = str((res or {}).get("Response", ""))
             last_res, last_gate = res, gate
 
@@ -135,6 +141,25 @@ async def check_card_all_sites_parallel(
         {"Response": "UNKNOWN", "Status": False, "Gateway": "Unknown", "Price": "0.00", "cc": fullcc},
         retry_count,
     )
+
+
+def _log_check_to_terminal(gate: str, res: dict, fullcc: str) -> None:
+    """Print one check result to terminal (Gateway, Price, ReceiptId, Response, Status, cc)."""
+    r = res or {}
+    gate = r.get("Gateway") or gate or "Unknown"
+    price = r.get("Price", "0.00")
+    rid = r.get("ReceiptId")
+    resp = r.get("Response", "UNKNOWN")
+    status = r.get("Status", False)
+    cc = r.get("cc", fullcc)
+    lines = [f"Gateway: {gate}", f"Price: {price}"]
+    if rid:
+        lines.append(f"ReceiptId: {rid}")
+    lines.append(f"Response: {resp} Status: {str(status).lower()}")
+    if cc:
+        lines.append(f"cc: {cc}")
+    print("\n".join(lines))
+    print()
 
 
 def extract_card(text: str):

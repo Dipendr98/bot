@@ -37,24 +37,8 @@ logger = logging.getLogger(__name__)
 
 
 def _log_output_to_terminal(output: dict) -> None:
-    """Print check result to terminal in compact key-value format (Gateway, Price, ReceiptId, Response, Status, cc)."""
-    gate = output.get("Gateway", "Unknown")
-    price = output.get("Price", "0.00")
-    rid = output.get("ReceiptId")
-    resp = output.get("Response", "UNKNOWN")
-    status = output.get("Status", False)
-    cc = output.get("cc", "")
-    lines = [
-        f"Gateway: {gate}",
-        f"Price: {price}",
-    ]
-    if rid:
-        lines.append(f"ReceiptId: {rid}")
-    lines.append(f"Response: {resp} Status: {str(status).lower()}")
-    if cc:
-        lines.append(f"cc: {cc}")
-    print("\n".join(lines))
-    print()
+    """No-op: logging is done in single.py per check_one to avoid spam."""
+    pass
 
 
 def get_proxy():
@@ -192,6 +176,28 @@ def _fetch_products_cloudscraper_sync(url: str):
     return _products_from_json_text(r.text or "")
 
 
+def _fetch_checkout_cloudscraper_sync(checkout_url: str, proxy: Optional[str] = None):
+    """Fetch checkout page via cloudscraper (captcha bypass). Returns (status_code, text)."""
+    if not HAS_CLOUDSCRAPER:
+        return (0, "")
+    scraper = cloudscraper.create_scraper(browser={"browser": "chrome", "platform": "windows", "mobile": False})
+    proxies = {"http": proxy, "https": proxy} if proxy else None
+    try:
+        r = scraper.get(
+            checkout_url,
+            headers={
+                "Accept": "text/html,application/xhtml+xml,application/xml;q=0.9,image/avif,image/webp,*/*;q=0.8",
+                "Accept-Language": "en-US,en;q=0.9",
+                "User-Agent": "Mozilla/5.0 (Windows NT 10.0; Win64; x64) AppleWebKit/537.36 (KHTML, like Gecko) Chrome/120.0.0.0 Safari/537.36",
+            },
+            timeout=25,
+            proxies=proxies,
+        )
+        return (r.status_code, r.text or "")
+    except Exception:
+        return (0, "")
+
+
 def get_product_id(response):
     """
     Extract the lowest priced available product from /products.json response.
@@ -261,7 +267,7 @@ def platform(ua):
     else:
         return "Unknown"
 
-async def autoshopify(url, card, session):
+async def autoshopify(url, card, session, proxy=None):
 
     output = {
         "Response": "UNKNOWN ERROR",
@@ -481,6 +487,9 @@ async def autoshopify(url, card, session):
         request = await session.get(checkout_url, headers=headers, params=params, follow_redirects=True, timeout=20)
 
         checkout_sc = getattr(request, "status_code", 0)
+        checkout_text = request.text if request.text else ""
+        checkout_lower = checkout_text.lower()
+
         if checkout_sc != 200:
             output.update({
                 "Response": f"CHECKOUT_HTTP_{checkout_sc}",
@@ -489,14 +498,28 @@ async def autoshopify(url, card, session):
             _log_output_to_terminal(output)
             return output
 
-        checkout_text = request.text if request.text else ""
-        checkout_lower = checkout_text.lower()
-
         if checkout_text.strip().startswith("<"):
             if any(x in checkout_lower for x in ["captcha", "hcaptcha", "recaptcha", "challenge", "verify"]):
-                output.update({"Response": "HCAPTCHA_DETECTED", "Status": False})
-                _log_output_to_terminal(output)
-                return output
+                if HAS_CLOUDSCRAPER:
+                    try:
+                        cs_sc, cs_text = await asyncio.to_thread(
+                            _fetch_checkout_cloudscraper_sync, checkout_url, proxy
+                        )
+                        if cs_sc == 200 and cs_text and "serialized-session-token" in cs_text and "serialized-source-token" in cs_text:
+                            checkout_text = cs_text
+                            checkout_lower = checkout_text.lower()
+                        else:
+                            output.update({"Response": "HCAPTCHA_DETECTED", "Status": False})
+                            _log_output_to_terminal(output)
+                            return output
+                    except Exception:
+                        output.update({"Response": "HCAPTCHA_DETECTED", "Status": False})
+                        _log_output_to_terminal(output)
+                        return output
+                else:
+                    output.update({"Response": "HCAPTCHA_DETECTED", "Status": False})
+                    _log_output_to_terminal(output)
+                    return output
             if "serialized-session-token" not in checkout_text and "serialized-source-token" not in checkout_text:
                 output.update({"Response": "CHECKOUT_HTML_ERROR", "Status": False})
                 _log_output_to_terminal(output)
@@ -2063,7 +2086,7 @@ async def autoshopify_with_captcha_retry(
                 use_session = session
         
         try:
-            result = await autoshopify(url, card, use_session)
+            result = await autoshopify(url, card, use_session, proxy=proxy)
         finally:
             if use_session is not session and hasattr(use_session, "close"):
                 try:
