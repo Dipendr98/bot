@@ -77,7 +77,7 @@ async def check_card_all_sites_parallel(
         try:
             async with TLSAsyncSession(timeout_seconds=120, proxy=proxy) as session:
                 res = await autoshopify_with_captcha_retry(
-                    url, fullcc, session, max_captcha_retries=5, proxy=proxy
+                    url, fullcc, session, max_captcha_retries=7, proxy=proxy
                 )
             return (url, gate, res)
         except Exception as e:

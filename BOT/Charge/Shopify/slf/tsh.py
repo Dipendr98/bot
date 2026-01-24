@@ -9,7 +9,7 @@ from pyrogram.enums import ParseMode
 from BOT.Charge.Shopify.slf.api import autoshopify, autoshopify_with_captcha_retry
 from BOT.Charge.Shopify.tls_session import TLSAsyncSession
 from BOT.Charge.Shopify.slf.site_manager import SiteRotator, get_user_sites
-from BOT.Charge.Shopify.slf.single import check_card_all_sites_parallel
+from BOT.Charge.Shopify.slf.single import check_card_all_sites_parallel, SH_CONCURRENT_THREADS
 from BOT.helper.permissions import check_private_access
 from BOT.tools.proxy import get_proxy
 from BOT.helper.start import load_users
@@ -235,14 +235,14 @@ async def tsh_handler(client: Client, m: Message):
     
     site_count = len(user_sites)
     gateway = user_sites[0].get("gateway", "Shopify") if user_sites else "Shopify"
+    thread_count = SH_CONCURRENT_THREADS  # 10 constant; bulletproof parallel checks
 
     # Send preparing message
     status_msg = await m.reply(
         f"""<pre>✦ [#TSH] | TXT Shopify Check</pre>
 ━━━━━━━━━━━━━
 <b>⊙ Total CC:</b> <code>{total_cards}</code>
-<b>⊙ Sites:</b> <code>{site_count}</code> (parallel)
-<b>⊙ Threads:</b> <code>{site_count}</code>
+<b>⊙ Sites:</b> <code>{site_count}</code> · <b>Threads:</b> <code>{thread_count}</code>
 <b>⊙ Status:</b> <code>Preparing...</code>
 ━━━━━━━━━━━━━
 <b>[ﾒ] Checked By:</b> {user.mention}""",
