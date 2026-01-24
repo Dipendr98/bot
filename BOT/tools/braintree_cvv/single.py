@@ -10,9 +10,9 @@ from pyrogram.enums import ChatType
 
 user_locks = {}
 
-@Client.on_message(filters.command("btcvv") | filters.regex(r"^\$btcvv(\s|$)"))
-async def handle_btcvv_command(client, message):
-    """Handle single Braintree CVV check command: $btcvv cc|mes|ano|cvv or $btcvv cc|mes|ano|cvv proxy"""
+@Client.on_message(filters.command("bt") | filters.regex(r"^\$bt(\s|$)"))
+async def handle_bt_command(client, message):
+    """Handle single Braintree CVV check command: /bt cc|mes|ano|cvv or $bt cc|mes|ano|cvv proxy"""
 
     user_id = str(message.from_user.id)
 
@@ -20,7 +20,7 @@ async def handle_btcvv_command(client, message):
     if user_id in user_locks:
         return await message.reply(
             "<pre>⚠️ Wait!</pre>\n"
-            "<b>Your previous</b> <code>$btcvv</code> <b>request is still processing.</b>\n"
+            "<b>Your previous</b> <code>/bt</code> <b>request is still processing.</b>\n"
             "<b>Please wait until it finishes.</b>",
             reply_to_message_id=message.id
         )
@@ -68,9 +68,9 @@ async def handle_btcvv_command(client, message):
 
         if not target_text:
             return await message.reply(
-                "❌ <b>Send card in format:</b>\n<code>$btcvv cc|mes|ano|cvv</code>\n"
-                "<code>$btcvv cc|mes|ano|cvv user:pass@ip:port</code>\n\n"
-                "<b>Example:</b> <code>$btcvv 4242424242424242|08|28|690</code>",
+                "❌ <b>Send card in format:</b>\n<code>/bt cc|mes|ano|cvv</code>\n"
+                "<code>/bt cc|mes|ano|cvv user:pass@ip:port</code>\n\n"
+                "<b>Example:</b> <code>/bt 4242424242424242|08|28|690</code>",
                 reply_to_message_id=message.id
             )
 
@@ -78,7 +78,7 @@ async def handle_btcvv_command(client, message):
         if not card_data:
             return await message.reply(
                 "❌ <b>Invalid card format!</b>\n"
-                "<b>Use:</b> <code>$btcvv cc|mes|ano|cvv</code>",
+                "<b>Use:</b> <code>/bt cc|mes|ano|cvv</code>",
                 reply_to_message_id=message.id
             )
 

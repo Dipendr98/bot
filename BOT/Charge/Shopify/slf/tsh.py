@@ -208,6 +208,29 @@ async def tsh_handler(client: Client, m: Message):
         )
 
     proxy = get_proxy(int(user_id))
+    
+    # Check if proxy is configured
+    if not proxy:
+        return await m.reply(
+            """<pre>Proxy Required 🔐</pre>
+━━━━━━━━━━━━━━━
+<b>You haven't configured a proxy yet.</b>
+
+<b>Proxy is required for:</b>
+• Avoiding rate limits
+• Better success rates
+• Secure checking
+
+<b>How to set up:</b>
+<code>/setpx ip:port:user:pass</code>
+
+<b>Example:</b>
+<code>/setpx 192.168.1.1:8080:user:pass</code>
+━━━━━━━━━━━━━━━
+<i>Set your proxy in private chat first!</i>""",
+            parse_mode=ParseMode.HTML
+        )
+    
     site_count = len(user_sites)
     gateway = user_sites[0].get("gateway", "Shopify") if user_sites else "Shopify"
 
