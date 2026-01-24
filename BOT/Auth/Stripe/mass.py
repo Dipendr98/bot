@@ -3,8 +3,7 @@ Stripe Auth Mass Card Checker
 =============================
 Handles /mau command for mass Stripe authentication checks.
 
-Uses ONLY the external API: https://dclub.site/apis/stripe/auth/st7.php
-All checks are done via this API with site rotation on errors.
+Uses WooCommerce site (epicalarc.com) with auto-registration for Stripe auth checks.
 """
 
 import re
@@ -18,8 +17,8 @@ from BOT.helper.start import load_users
 from BOT.helper.permissions import check_private_access, is_premium_user
 from BOT.gc.credit import deduct_credit_bulk
 
-# Import ONLY the external API functions - no other checking logic is used
-from BOT.Auth.StripeAuth.api import check_stripe_auth_with_retry, determine_status
+# Import the WooCommerce Stripe checker
+from BOT.Auth.StripeAuth.wc_checker import check_stripe_wc_fullcc, determine_status
 
 # Try to import BIN lookup
 try:
@@ -41,8 +40,7 @@ async def handle_mau_command(client, message):
     """
     Handle /mau and $mau commands for mass Stripe Auth checking.
     
-    Uses ONLY the external API: https://dclub.site/apis/stripe/auth/st7.php
-    Rotates through sites on errors until a real response is received.
+    Uses WooCommerce Stripe auth with auto-registration.
     """
     user_id = str(message.from_user.id)
     
@@ -84,7 +82,7 @@ async def handle_mau_command(client, message):
         plan_info = user_data.get("plan", {})
         mlimit = plan_info.get("mlimit")
         plan = plan_info.get("plan", "Free")
-        badge = plan_info.get("badge", "🎟️")
+        badge = plan_info.get("badge", "🧿")
         
         if mlimit is None or str(mlimit).lower() in ["null", "none"]:
             mlimit = 10_000
@@ -136,11 +134,11 @@ async def handle_mau_command(client, message):
         
         # Send initial message
         loader_msg = await message.reply(
-            f"""<pre>✦ [#MAU] | Mass Stripe Auth API</pre>
+            f"""<pre>✦ [#MAU] | Mass Stripe Auth [WC]</pre>
 ━━━━━━━━━━━━━━━
-<b>[⚬] Gateway:</b> <code>Stripe Auth API</code>
+<b>[⚬] Gateway:</b> <code>Stripe Auth [WC]</code>
 <b>[⚬] Cards:</b> <code>{card_count}</code>
-<b>[⚬] Status:</b> <code>Processing via external API...</code>
+<b>[⚬] Status:</b> <code>Processing...</code>
 ━━━━━━━━━━━━━━━
 <b>[⚬] Checked By:</b> {checked_by} [<code>{plan} {badge}</code>]""",
             reply_to_message_id=message.id,
@@ -152,11 +150,10 @@ async def handle_mau_command(client, message):
         # Statistics
         total_cc = len(all_cards)
         approved_count = 0
+        ccn_live_count = 0
         declined_count = 0
-        charged_count = 0
         error_count = 0
         processed_count = 0
-        total_retries = 0
         
         # Process cards
         for idx, card in enumerate(all_cards, start=1):
@@ -168,27 +165,39 @@ async def handle_mau_command(client, message):
                 parts[2] = "20" + parts[2]
                 card = "|".join(parts)
             
-            # Check card using ONLY the external API
-            result, retries = await check_stripe_auth_with_retry(card)
-            total_retries += retries
+            # Check card using WooCommerce Stripe checker
+            result = await check_stripe_wc_fullcc(card)
             
             # Get status from result
-            header = result.get("header", "UNKNOWN")
-            status_text = result.get("status_text", "Unknown")
-            is_live = result.get("success", False)
+            status = determine_status(result)
+            response = result.get("response", "UNKNOWN")
+            message_text = result.get("message", "Unknown")
+            site = result.get("site", "Unknown")
             
-            # Count stats based on header
-            if header == "CHARGED":
-                charged_count += 1
-            elif header == "CCN LIVE":
+            # Determine header and status text
+            if status == "APPROVED":
+                header = "APPROVED"
+                status_text = "Approved ✅"
                 approved_count += 1
-            elif header == "ERROR":
-                error_count += 1
-            else:
+                is_hit = True
+            elif status == "CCN LIVE":
+                header = "CCN LIVE"
+                status_text = "CCN Live ⚡"
+                ccn_live_count += 1
+                is_hit = True
+            elif status == "DECLINED":
+                header = "DECLINED"
+                status_text = "Declined ❌"
                 declined_count += 1
+                is_hit = False
+            else:
+                header = "ERROR"
+                status_text = "Error ⚠️"
+                error_count += 1
+                is_hit = False
             
-            # Send individual result for charged/approved
-            if is_live:
+            # Send individual result for hits (approved or CCN live)
+            if is_hit:
                 cc_num = card.split("|")[0] if "|" in card else card
                 try:
                     bin_data = get_bin_details(cc_num[:6])
@@ -205,19 +214,15 @@ async def handle_mau_command(client, message):
                     bank = "N/A"
                     country = "N/A"
                 
-                response_display = result.get('response', 'N/A').replace('_', ' ').title()[:50]
-                message_display = result.get('message', 'N/A')[:60]
-                site = result.get('site', 'N/A')
+                message_display = message_text[:60] if message_text else "N/A"
+                site_display = site.replace("https://", "").replace("http://", "")[:25] if site else "WC Stripe"
                 
                 hit_message = f"""<b>[#StripeAuth] | {header}</b> ✦
 ━━━━━━━━━━━━━━━
 <b>[•] Card:</b> <code>{card}</code>
-<b>[•] Gateway:</b> <code>Stripe Auth API</code>
+<b>[•] Gateway:</b> <code>Stripe Auth [{site_display}]</code>
 <b>[•] Status:</b> <code>{status_text}</code>
-<b>[•] Response:</b> <code>{response_display}</code>
-<b>[•] Message:</b> <code>{message_display}</code>
-<b>[•] Site:</b> <code>{site[:25] if site else 'N/A'}</code>
-<b>[•] Retries:</b> <code>{retries}</code>
+<b>[•] Response:</b> <code>{message_display}</code>
 ━ ━ ━ ━ ━ ━ ━ ━ ━ ━ ━ ━ ━
 <b>[+] BIN:</b> <code>{cc_num[:6]}</code>
 <b>[+] Info:</b> <code>{bin_info}</code>
@@ -233,20 +238,19 @@ async def handle_mau_command(client, message):
                 except:
                     pass
             
-            # Update progress every 3 cards
-            if idx % 3 == 0 or idx == total_cc:
+            # Update progress every 2 cards or last card
+            if idx % 2 == 0 or idx == total_cc:
                 try:
                     await loader_msg.edit(
-                        f"""<pre>✦ [#MAU] | Mass Stripe Auth API</pre>
+                        f"""<pre>✦ [#MAU] | Mass Stripe Auth [WC]</pre>
 ━━━━━━━━━━━━━━━
 <b>🟢 Total CC:</b> <code>{total_cc}</code>
 <b>💬 Progress:</b> <code>{processed_count}/{total_cc}</code>
 <b>✅ Approved:</b> <code>{approved_count}</code>
-<b>💎 Charged:</b> <code>{charged_count}</code>
+<b>⚡ CCN Live:</b> <code>{ccn_live_count}</code>
 <b>❌ Declined:</b> <code>{declined_count}</code>
 <b>⚠️ Errors:</b> <code>{error_count}</code>
 ━━━━━━━━━━━━━━━
-<b>🔄 Retries:</b> <code>{total_retries}</code>
 <b>👤 Checked By:</b> {checked_by} [<code>{plan} {badge}</code>]""",
                         parse_mode=ParseMode.HTML,
                         disable_web_page_preview=True
@@ -270,11 +274,10 @@ async def handle_mau_command(client, message):
 🟢 <b>Total CC</b>     : <code>{total_cc}</code>
 💬 <b>Progress</b>    : <code>{processed_count}/{total_cc}</code>
 ✅ <b>Approved</b>    : <code>{approved_count}</code>
-💎 <b>Charged</b>     : <code>{charged_count}</code>
+⚡ <b>CCN Live</b>    : <code>{ccn_live_count}</code>
 ❌ <b>Declined</b>    : <code>{declined_count}</code>
 ⚠️ <b>Errors</b>      : <code>{error_count}</code>
 ━━━━━━━━━━━━━━━
-🔄 <b>Total Retries</b>: <code>{total_retries}</code>
 ⏱️ <b>Time Elapsed</b> : <code>{timetaken}s</code>
 👤 <b>Checked By</b> : {checked_by} [<code>{plan} {badge}</code>]
 🔧 <b>Dev</b>: <a href="https://t.me/Chr1shtopher">Chr1shtopher</a> <code>{current_time}</code>
