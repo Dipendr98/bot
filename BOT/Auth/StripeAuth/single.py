@@ -109,10 +109,11 @@ def format_response(fullcc: str, result: dict, user_info: dict, time_taken: floa
 <b>[ﾒ] Time:</b> <code>{time_taken}s</code>"""
 
 
-@Client.on_message(filters.command(["au", "auth"]) | filters.regex(r"^\.au(\s|$)"))
-async def handle_au_command(client: Client, message: Message):
+@Client.on_message(filters.command(["stripeauth", "sauth"]) | filters.regex(r"^\.sauth(\s|$)"))
+async def handle_stripeauth_command(client: Client, message: Message):
     """
-    Handle /au command for Stripe Auth checking.
+    Handle /stripeauth command for Stripe Auth checking (alternative command).
+    Main /au command is handled in BOT/Auth/Stripe/single.py
     Uses external API with site rotation for real results.
     """
     try:
