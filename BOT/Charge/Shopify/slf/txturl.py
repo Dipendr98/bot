@@ -107,7 +107,7 @@ async def validate_shopify_site(site_url: str, session: TLSAsyncSession) -> Dict
         return result
 
 
-@Client.on_message(filters.command("txturl") & filters.private)
+@Client.on_message(filters.command("txturl"))
 async def txturl_handler(client: Client, message: Message):
     """Add multiple sites for TXT checking."""
     args = message.command[1:]
@@ -188,7 +188,7 @@ async def txturl_handler(client: Client, message: Message):
     await wait_msg.edit_text("\n".join(result_lines), parse_mode=ParseMode.HTML)
 
 
-@Client.on_message(filters.command("txtls") & filters.private)
+@Client.on_message(filters.command("txtls"))
 async def txtls_handler(client: Client, message: Message):
     """List user's TXT sites."""
     user_id = str(message.from_user.id)
@@ -219,7 +219,7 @@ async def txtls_handler(client: Client, message: Message):
     await message.reply("\n".join(lines), parse_mode=ParseMode.HTML)
 
 
-@Client.on_message(filters.command("rurl") & filters.private)
+@Client.on_message(filters.command("rurl"))
 async def rurl_handler(client: Client, message: Message):
     """Remove sites from TXT list."""
     args = message.command[1:]
@@ -268,7 +268,7 @@ async def rurl_handler(client: Client, message: Message):
         )
 
 
-@Client.on_message(filters.command("clearurl") & filters.private)
+@Client.on_message(filters.command("clearurl"))
 async def clearurl_handler(client: Client, message: Message):
     """Clear all TXT sites for user."""
     user_id = str(message.from_user.id)
