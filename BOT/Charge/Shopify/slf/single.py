@@ -8,14 +8,14 @@ import re
 import json
 import os
 from time import time
+from datetime import datetime
 
 from pyrogram import Client, filters
 from pyrogram.types import Message, InlineKeyboardMarkup, InlineKeyboardButton
-from pyrogram.enums import ParseMode
+from pyrogram.enums import ParseMode, ChatType
 
 from BOT.helper.start import load_users
 from BOT.helper.antispam import can_run_command
-from BOT.helper.permissions import check_private_access
 from BOT.gc.credit import has_credits, deduct_credit
 from BOT.Charge.Shopify.slf.api import autoshopify
 from BOT.Charge.Shopify.tls_session import TLSAsyncSession
@@ -29,6 +29,9 @@ except ImportError:
 
 SITES_PATH = "DATA/sites.json"
 TXT_SITES_PATH = "DATA/txtsite.json"
+
+# Private commands that should only work in DM
+PRIVATE_ONLY_COMMANDS = ["sh", "slf", "addurl", "slfurl", "mysite", "delsite", "txturl", "txtls", "rurl"]
 
 
 def extract_card(text: str):
@@ -70,81 +73,134 @@ def get_user_site(user_id: str):
 def determine_status(response: str) -> tuple:
     """
     Determine status category from response.
-    Returns (status_text, emoji, is_live)
+    Returns (status_text, header, is_live)
     """
     response_upper = str(response).upper()
     
     # Charged/Success
-    if any(x in response_upper for x in ["ORDER_PLACED", "ORDER_CONFIRMED", "THANK_YOU", "SUCCESS"]):
-        return "Charged 💎", "💎", True
+    if any(x in response_upper for x in ["ORDER_PLACED", "ORDER_CONFIRMED", "THANK_YOU", "SUCCESS", "CHARGED"]):
+        return "Charged 💎", "CHARGED", True
     
     # CCN/Live (CVV/Address issues but card is valid)
     if any(x in response_upper for x in [
         "3DS", "AUTHENTICATION", "INCORRECT_CVC", "INVALID_CVC", 
         "MISMATCHED", "INCORRECT_ADDRESS", "INCORRECT_ZIP", "INCORRECT_PIN",
-        "FRAUD", "INSUFFICIENT_FUNDS"
+        "FRAUD", "INSUFFICIENT_FUNDS", "CVV", "CARD_DECLINED", "GENERIC_DECLINE",
+        "DO_NOT_HONOR", "MISMATCHED_BILL"
     ]):
-        return "Approved ✅", "✅", True
+        return "Approved ✅", "CCN LIVE", True
+    
+    # Errors
+    if any(x in response_upper for x in ["ERROR", "TIMEOUT", "CAPTCHA", "EMPTY", "DEAD", "TAX", "HCAPTCHA"]):
+        return "Error ⚠️", "ERROR", False
     
     # Declined
     if any(x in response_upper for x in [
-        "DECLINED", "CARD_DECLINED", "GENERIC_ERROR", "INCORRECT_NUMBER",
-        "INVALID_NUMBER", "EXPIRED", "NOT_SUPPORTED"
+        "DECLINED", "INCORRECT_NUMBER", "INVALID_NUMBER", "EXPIRED", "NOT_SUPPORTED", "LOST", "STOLEN"
     ]):
-        return "Declined ❌", "❌", False
+        return "Declined ❌", "DECLINED", False
     
-    # Errors
-    if any(x in response_upper for x in ["ERROR", "TIMEOUT", "CAPTCHA", "EMPTY", "DEAD"]):
-        return "Error ⚠️", "⚠️", False
-    
-    return "Unknown ❓", "❓", False
+    return "Declined ❌", "RESULT", False
 
 
 def format_response(fullcc: str, result: dict, user_info: dict, time_taken: float) -> str:
-    """Format the checkout response professionally."""
+    """Format the checkout response in the original professional style."""
     parts = fullcc.split("|")
     cc = parts[0] if len(parts) > 0 else "Unknown"
     
     response = result.get("Response", "UNKNOWN")
     gateway = result.get("Gateway", "Unknown")
     price = result.get("Price", "0.00")
+    receipt_id = result.get("ReceiptId", None)  # Get receipt ID if present
     
-    status_text, emoji, is_live = determine_status(response)
-    
-    # Determine header
-    if "Charged" in status_text:
-        header = "CHARGED"
-    elif "Approved" in status_text:
-        header = "CCN LIVE"
-    elif "Declined" in status_text:
-        header = "DECLINED"
-    else:
-        header = "RESULT"
+    status_text, header, is_live = determine_status(response)
     
     # BIN lookup
     bin_data = get_bin_details(cc[:6]) if get_bin_details else None
-    if bin_data:
-        bin_section = f"""<b>[+] BIN:</b> <code>{bin_data.get('bin', cc[:6])}</code>
-<b>[+] Info:</b> <code>{bin_data.get('vendor', 'N/A')} - {bin_data.get('type', 'N/A')} - {bin_data.get('level', 'N/A')}</code>
-<b>[+] Bank:</b> <code>{bin_data.get('bank', 'N/A')}</code> 🏦
-<b>[+] Country:</b> <code>{bin_data.get('country', 'N/A')}</code> {bin_data.get('flag', '🏳️')}"""
-    else:
-        bin_section = f"<b>[+] BIN:</b> <code>{cc[:6]}</code>"
     
-    # Build message
+    if bin_data:
+        bin_number = bin_data.get('bin', cc[:6])
+        vendor = bin_data.get('vendor', 'N/A')
+        card_type = bin_data.get('type', 'N/A')
+        level = bin_data.get('level', 'N/A')
+        bank = bin_data.get('bank', 'N/A')
+        country = bin_data.get('country', 'N/A')
+        country_flag = bin_data.get('flag', '🏳️')
+    else:
+        bin_number = cc[:6]
+        vendor = "N/A"
+        card_type = "N/A"
+        level = "N/A"
+        bank = "N/A"
+        country = "N/A"
+        country_flag = "🏳️"
+    
+    # Build bill line if receipt exists
+    bill_line = ""
+    if receipt_id:
+        bill_line = f"\n<b>[•] Bill:</b> <code>{receipt_id}</code>"
+    
+    # Build message in original format
     return f"""<b>[#Shopify] | {header}</b> ✦
 ━━━━━━━━━━━━━━━
 <b>[•] Card:</b> <code>{fullcc}</code>
 <b>[•] Gateway:</b> <code>Shopify {gateway} ${price}</code>
 <b>[•] Status:</b> <code>{status_text}</code>
-<b>[•] Response:</b> <code>{response}</code>
+<b>[•] Response:</b> <code>{response}</code>{bill_line}
 ━ ━ ━ ━ ━ ━ ━ ━ ━ ━ ━ ━ ━
-{bin_section}
+<b>[+] BIN:</b> <code>{bin_number}</code>
+<b>[+] Info:</b> <code>{vendor} - {card_type} - {level}</code>
+<b>[+] Bank:</b> <code>{bank}</code> 🏦
+<b>[+] Country:</b> <code>{country}</code> {country_flag}
 ━ ━ ━ ━ ━ ━ ━ ━ ━ ━ ━ ━ ━
 <b>[ﾒ] Checked By:</b> {user_info['profile']} [<code>{user_info['plan']} {user_info['badge']}</code>]
 <b>[ϟ] Dev:</b> <a href="https://t.me/Chr1shtopher">Chr1shtopher</a>
 ━━━━━━━━━━━━━━━
 <b>[ﾒ] Time:</b> <code>{time_taken}s</code> | <b>Proxy:</b> <code>Live ⚡️</code>"""
+
+
+async def check_group_command(message: Message) -> bool:
+    """
+    Check if command is used in group and guide user to use in private.
+    Returns True if command should continue, False if it was blocked.
+    """
+    if message.chat.type in [ChatType.GROUP, ChatType.SUPERGROUP]:
+        # Extract command name
+        command = message.text.split()[0].replace("/", "").replace(".", "").replace("$", "").lower()
+        
+        if command in PRIVATE_ONLY_COMMANDS:
+            # Get bot username for link
+            try:
+                bot_info = await message._client.get_me()
+                bot_username = bot_info.username
+                bot_link = f"https://t.me/{bot_username}"
+            except:
+                bot_link = "https://t.me/YOUR_BOT"
+            
+            await message.reply(
+                f"""<pre>🔒 Private Command</pre>
+━━━━━━━━━━━━━━━
+<b>This command only works in private chat.</b>
+
+<b>How to use:</b>
+1️⃣ Click the button below to open private chat
+2️⃣ Use <code>/{command}</code> command there
+
+<b>Why private?</b>
+• 🔐 Protects your card data
+• ⚡ Faster response times
+• 📊 Personal site management
+━━━━━━━━━━━━━━━
+<i>Your data security is our priority!</i>""",
+                reply_to_message_id=message.id,
+                parse_mode=ParseMode.HTML,
+                reply_markup=InlineKeyboardMarkup([
+                    [InlineKeyboardButton("📱 Open Private Chat", url=bot_link)],
+                    [InlineKeyboardButton("📖 Help", callback_data="show_help")]
+                ])
+            )
+            return False
+    return True
 
 
 @Client.on_message(filters.command(["sh", "slf"]) | filters.regex(r"^\.sh(\s|$)") | filters.regex(r"^\.slf(\s|$)"))
@@ -169,17 +225,17 @@ async def handle_sh_command(client: Client, message: Message):
                 parse_mode=ParseMode.HTML
             )
         
-        # Check private access
-        if not await check_private_access(message):
+        # Check if command is used in group
+        if not await check_group_command(message):
             return
         
         # Check credits
         if not has_credits(user_id):
             return await message.reply(
-                """<pre>Insufficient Credits ❗️</pre>
-<b>Message:</b> <code>You have no credits remaining</code>
+                """<pre>Notification ❗️</pre>
+<b>Message:</b> <code>You Have Insufficient Credits</code>
 ━━━━━━━━━━━━━
-<b>Type <code>/buy</code> to get credits.</b>""",
+<b>Type <code>/buy</code> to get Credits.</b>""",
                 reply_to_message_id=message.id,
                 parse_mode=ParseMode.HTML
             )
@@ -313,3 +369,82 @@ Use <code>/addurl https://store.com</code> to add a Shopify site.""",
             )
         except:
             pass
+
+
+# Callback handlers for buttons
+@Client.on_callback_query(filters.regex("^help_addurl$"))
+async def help_addurl_callback(client, callback_query):
+    """Show help for adding URL."""
+    await callback_query.answer()
+    await callback_query.message.reply(
+        """<pre>📖 How to Add Shopify Site</pre>
+━━━━━━━━━━━━━━━
+<b>Step 1:</b> Find a Shopify store URL
+<b>Step 2:</b> Use the command:
+
+<code>/addurl https://store.myshopify.com</code>
+
+<b>The bot will:</b>
+• ✅ Validate the site
+• ✅ Find cheapest product
+• ✅ Detect payment gateway
+• ✅ Save it for your checks
+
+<b>After adding, use:</b>
+<code>/sh cc|mm|yy|cvv</code>
+━━━━━━━━━━━━━━━""",
+        parse_mode=ParseMode.HTML
+    )
+
+
+@Client.on_callback_query(filters.regex("^show_help$"))
+async def show_help_callback(client, callback_query):
+    """Show general help."""
+    await callback_query.answer("Opening help menu...")
+    await callback_query.message.reply(
+        """<pre>📖 Bot Commands Help</pre>
+━━━━━━━━━━━━━━━
+<b>Shopify Commands:</b>
+• <code>/addurl</code> - Add Shopify site
+• <code>/mysite</code> - View your site
+• <code>/sh</code> - Check card on your site
+• <code>/msh</code> - Mass check cards
+
+<b>Stripe Commands:</b>
+• <code>/st</code> - Stripe $20 charge
+• <code>/au</code> - Stripe auth check
+
+<b>Other Commands:</b>
+• <code>/bin</code> - BIN lookup
+• <code>/fake</code> - Generate fake info
+• <code>/gen</code> - Generate cards
+━━━━━━━━━━━━━━━""",
+        parse_mode=ParseMode.HTML
+    )
+
+
+@Client.on_callback_query(filters.regex("^charged_info$"))
+async def charged_info_callback(client, callback_query):
+    """Show info about charged card."""
+    await callback_query.answer(
+        "💎 Card was successfully charged! The payment went through.",
+        show_alert=True
+    )
+
+
+@Client.on_callback_query(filters.regex("^ccn_info$"))
+async def ccn_info_callback(client, callback_query):
+    """Show info about CCN live card."""
+    await callback_query.answer(
+        "✅ Card is LIVE! CVV/Address issue but card number is valid.",
+        show_alert=True
+    )
+
+
+@Client.on_callback_query(filters.regex("^try_another$"))
+async def try_another_callback(client, callback_query):
+    """Show how to try another card."""
+    await callback_query.answer(
+        "Use /sh cc|mm|yy|cvv with a different card",
+        show_alert=True
+    )

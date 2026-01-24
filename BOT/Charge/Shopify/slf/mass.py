@@ -17,10 +17,11 @@ def chunk_cards(cards, size):
         yield cards[i:i + size]
 
 def get_status_flag(raw_response):
+    """Determine status flag from response."""
     # Check for system errors first
     if any(error_keyword in raw_response for error_keyword in [
         "CONNECTION FAILED", "IP RATE LIMIT", "PRODUCT ID", "SITE NOT FOUND",
-        "REQUEST TIMEOUT", "REQUEST FAILED", "SITE | CARD ERROR"
+        "REQUEST TIMEOUT", "REQUEST FAILED", "SITE | CARD ERROR", "CAPTCHA", "HCAPTCHA"
     ]):
         return "Error ⚠️"
     elif "ORDER_PLACED" in raw_response or "THANK YOU" in raw_response:
@@ -36,6 +37,35 @@ def get_status_flag(raw_response):
         return "Approved ✅"
     else:
         return "Declined ❌"
+
+
+def format_mass_result(card: str, raw_response: str, gateway: str = "Shopify") -> str:
+    """Format a single card result for mass check with BIN info."""
+    from TOOLS.getbin import get_bin_details
+    
+    status_flag = get_status_flag((raw_response or "").upper())
+    cc = card.split("|")[0] if "|" in card else card
+    
+    # Get BIN info
+    try:
+        bin_data = get_bin_details(cc[:6])
+        if bin_data:
+            bin_info = f"{bin_data.get('vendor', 'N/A')} - {bin_data.get('type', 'N/A')}"
+            country = f"{bin_data.get('country', 'N/A')} {bin_data.get('flag', '')}"
+        else:
+            bin_info = "N/A"
+            country = "N/A"
+    except:
+        bin_info = "N/A"
+        country = "N/A"
+    
+    return (
+        f"<b>[•] Card:</b> <code>{card}</code>\n"
+        f"<b>[•] Status:</b> <code>{status_flag}</code>\n"
+        f"<b>[•] Response:</b> <code>{raw_response or '-'}</code>\n"
+        f"<b>[+] BIN:</b> <code>{cc[:6]}</code> | <code>{bin_info}</code> | <code>{country}</code>\n"
+        "━ ━ ━ ━ ━ ━━━ ━ ━ ━ ━ ━"
+    )
 
 def extract_cards(text):
     return re.findall(r'(\d{12,19}\|\d{1,2}\|\d{2,4}\|\d{3,4})', text)

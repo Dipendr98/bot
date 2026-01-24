@@ -603,28 +603,78 @@ async def show_check_help_callback(client, callback_query):
     """Show card checking help."""
     await callback_query.answer()
     await callback_query.message.reply(
-        """<pre>Card Checking Guide 📖</pre>
-━━━━━━━━━━━━━
-<b>Single Card:</b>
+        """<pre>📖 Card Checking Guide</pre>
+━━━━━━━━━━━━━━━
+<b>Single Card Check:</b>
 <code>/sh 4111111111111111|12|2025|123</code>
 
 <b>Reply to Card:</b>
 Reply to a message containing a card with <code>/sh</code>
 
-<b>Format:</b> <code>cc|mm|yy|cvv</code> or <code>cc|mm|yyyy|cvv</code>""",
+<b>Mass Check:</b>
+<code>/msh</code> (reply to list of cards)
+
+<b>Format:</b> <code>cc|mm|yy|cvv</code> or <code>cc|mm|yyyy|cvv</code>
+━━━━━━━━━━━━━━━
+<b>Supported Gates:</b>
+• Shopify Payments (Normal)
+• Stripe
+• PayPal/Braintree
+━━━━━━━━━━━━━━━""",
         parse_mode=ParseMode.HTML
     )
 
 
 @Client.on_callback_query(filters.regex("^show_my_site$"))
 async def show_my_site_callback(client, callback_query):
-    """Show user's site via callback."""
+    """Show user's site via callback with detailed popup."""
     user_id = str(callback_query.from_user.id)
     site_info = get_user_current_site(user_id)
     
     if site_info:
-        text = f"<b>Your Site:</b> <code>{site_info.get('site', 'N/A')}</code>\n<b>Gateway:</b> <code>{site_info.get('gate', 'Unknown')}</code>"
+        site_url = site_info.get('site', 'N/A')
+        gateway = site_info.get('gate', 'Unknown')
+        
+        # Show detailed popup
+        await callback_query.answer(
+            f"📋 YOUR SITE INFO\n\n"
+            f"🌐 Site: {site_url[:40]}...\n"
+            f"⚡ Gate: {gateway[:30]}\n\n"
+            f"Use /sh to check cards!",
+            show_alert=True
+        )
     else:
-        text = "No site saved. Use /addurl to add one."
-    
-    await callback_query.answer(text[:200], show_alert=True)
+        await callback_query.answer(
+            "❌ No site saved!\n\n"
+            "Use /addurl https://store.com to add a Shopify site.",
+            show_alert=True
+        )
+
+
+@Client.on_callback_query(filters.regex("^plans_info$"))
+async def plans_info_callback(client, callback_query):
+    """Show plans information."""
+    await callback_query.answer()
+    await callback_query.message.reply(
+        """<pre>💎 Available Plans</pre>
+━━━━━━━━━━━━━━━
+<b>🎟️ Free Plan:</b>
+• 10 credits/day
+• 10s antispam delay
+• Basic features
+
+<b>⭐ Premium Plan:</b>
+• 500 credits/day
+• 3s antispam delay
+• All gates access
+• Priority support
+
+<b>👑 VIP Plan:</b>
+• Unlimited credits
+• No antispam delay
+• All features
+• 24/7 support
+━━━━━━━━━━━━━━━
+Use <code>/buy</code> to purchase!""",
+        parse_mode=ParseMode.HTML
+    )

@@ -1,36 +1,19 @@
 from pyrogram import Client, filters
 from BOT.helper.start import load_users
-from pyrogram.types import Message
+from pyrogram.types import Message, InlineKeyboardMarkup, InlineKeyboardButton
 import json
 import os
-from pyrogram.enums import ChatType
-# from typing import Union
-
-# async def check_private_access(message: Message) -> bool:
-#     db = load_users()
-#     user_id = str(message.from_user.id)
-
-#     user_data = db.get(user_id)
-#     if not user_data:
-#         await message.reply("❌ User not found in database.")
-#         return False
-
-#     private_status = user_data.get("plan", {}).get("private", "off")
-#     if private_status != "on":
-#         await message.reply_text(
-#             "<pre>Notification ❗️</pre>\n"
-#             "<b>~ Message :</b> <code>Only For Premium Users !</code>\n"
-#             "<b>~ Use Free In Chat →</b> <a href="https://t.me/SyncUI">Click Here</a>\n"
-#             "━━━━━━━━━━━━━\n"
-#             "<b>Type <code>/buy</code> to get Premium.</b>",
-#             quote=True
-#         )
-#         return False
-
-#     return True
+from pyrogram.enums import ChatType, ParseMode
 
 GROUPS_FILE = "DATA/groups.json"
-OWNER_ID = 6891929831  # apna user ID yahan daal
+OWNER_ID = 6891929831  # Owner user ID
+
+# Commands that require private chat
+PRIVATE_ONLY_COMMANDS = [
+    "sh", "slf", "addurl", "slfurl", "seturl", "mysite", "getsite", "siteinfo",
+    "delsite", "removesite", "clearsite", "txturl", "txtls", "rurl", "clearurl"
+]
+
 
 def load_allowed_groups():
     if not os.path.exists(GROUPS_FILE):
@@ -38,20 +21,122 @@ def load_allowed_groups():
         return []
     with open(GROUPS_FILE, "r") as f:
         data = json.load(f)
-        # print("Loaded groups:", data)
         return data
+
 
 def save_allowed_groups(groups):
     with open(GROUPS_FILE, "w") as f:
         json.dump(groups, f)
 
+
 async def is_premium_user(message: Message) -> bool:
-    # Premium restriction removed - all users have access
+    """Check if user is premium - currently all users have access."""
     return True
 
+
 async def check_private_access(message: Message) -> bool:
-    # Premium restriction removed - all users have private access
+    """
+    Check if command is used in private chat.
+    If used in group, guide user to use in private with professional UI.
+    Returns True to continue, False to block.
+    """
+    # Always allow in private chat
+    if message.chat.type == ChatType.PRIVATE:
+        return True
+    
+    # For group chats, check if command needs private
+    if message.chat.type in [ChatType.GROUP, ChatType.SUPERGROUP]:
+        # Extract command from message
+        if message.text:
+            command_text = message.text.split()[0] if message.text.split() else ""
+            command = command_text.replace("/", "").replace(".", "").replace("$", "").lower()
+            
+            if command in PRIVATE_ONLY_COMMANDS:
+                # Get bot username for link
+                try:
+                    bot_info = await message._client.get_me()
+                    bot_username = bot_info.username
+                    bot_link = f"https://t.me/{bot_username}"
+                except:
+                    bot_link = "https://t.me/YOUR_BOT"
+                
+                await message.reply(
+                    f"""<pre>🔒 Private Command Required</pre>
+━━━━━━━━━━━━━━━━━
+<b>This command only works in private chat.</b>
+
+<b>📋 Command:</b> <code>/{command}</code>
+
+<b>🔐 Why Private Chat?</b>
+• Protects your sensitive card data
+• Faster response without queue
+• Personal site management
+• Better security & privacy
+
+<b>📱 How to Use:</b>
+1️⃣ Click the button below
+2️⃣ Start the bot privately
+3️⃣ Use your command there
+━━━━━━━━━━━━━━━━━
+<i>Your security is our priority!</i>""",
+                    reply_to_message_id=message.id,
+                    parse_mode=ParseMode.HTML,
+                    reply_markup=InlineKeyboardMarkup([
+                        [InlineKeyboardButton("📱 Open Private Chat", url=bot_link)],
+                        [InlineKeyboardButton("📖 Commands Help", callback_data="help_commands")]
+                    ])
+                )
+                return False
+    
+    # Allow other cases
     return True
+
+
+async def require_private_chat(message: Message, command_name: str = None) -> bool:
+    """
+    Decorator-style function to require private chat.
+    Shows professional guide if used in group.
+    
+    Args:
+        message: The Pyrogram message object
+        command_name: Optional command name for better messaging
+        
+    Returns:
+        True if in private chat, False if blocked
+    """
+    if message.chat.type == ChatType.PRIVATE:
+        return True
+    
+    # Get bot info for link
+    try:
+        bot_info = await message._client.get_me()
+        bot_username = bot_info.username
+        bot_link = f"https://t.me/{bot_username}"
+    except:
+        bot_link = "https://t.me/YOUR_BOT"
+    
+    cmd_display = f"<code>/{command_name}</code>" if command_name else "This command"
+    
+    await message.reply(
+        f"""<pre>🔐 Private Access Only</pre>
+━━━━━━━━━━━━━━━━━
+{cmd_display} <b>requires private chat.</b>
+
+<b>Benefits of Private Chat:</b>
+✅ Secure card data handling
+✅ Personal site management
+✅ No message queue delays
+✅ Better user experience
+
+<b>Click below to continue:</b>
+━━━━━━━━━━━━━━━━━""",
+        reply_to_message_id=message.id,
+        parse_mode=ParseMode.HTML,
+        reply_markup=InlineKeyboardMarkup([
+            [InlineKeyboardButton("🚀 Start Private Chat", url=bot_link)]
+        ])
+    )
+    return False
 
 # GROUPS_FILE = "DATA/groups.json"
 # OWNER_ID = 6891929831  # apna user ID yahan daal

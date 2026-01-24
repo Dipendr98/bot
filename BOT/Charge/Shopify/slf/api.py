@@ -1485,7 +1485,8 @@ async def autoshopify(url, card, session):
                 "Status": True,
                 "Gateway": gateway,
                 "Price": total,
-                "cc": card
+                "cc": card,
+                "ReceiptId": receipt_id
             })
         elif result == 'CARD_DECLINED':
             output.update({
@@ -1493,7 +1494,8 @@ async def autoshopify(url, card, session):
                 "Status": True,
                 "Gateway": gateway,
                 "Price": total,
-                "cc": card
+                "cc": card,
+                "ReceiptId": receipt_id
             })
         elif result == 'INCORRECT_NUMBER':
             output.update({
@@ -1501,7 +1503,8 @@ async def autoshopify(url, card, session):
                 "Status": True,
                 "Gateway": gateway,
                 "Price": total,
-                "cc": card
+                "cc": card,
+                "ReceiptId": receipt_id
             })
         elif result == 'GENERIC_ERROR':
             output.update({
@@ -1509,7 +1512,8 @@ async def autoshopify(url, card, session):
                 "Status": True,
                 "Gateway": gateway,
                 "Price": total,
-                "cc": card
+                "cc": card,
+                "ReceiptId": receipt_id
             })
         elif result == 'AUTHENTICATION_FAILED':
             output.update({
@@ -1517,7 +1521,8 @@ async def autoshopify(url, card, session):
                 "Status": True,
                 "Gateway": gateway,
                 "Price": total,
-                "cc": card
+                "cc": card,
+                "ReceiptId": receipt_id
             })
         elif "FRAUD_SUSPECTED" in str(res_json):
             output.update({
@@ -1525,7 +1530,8 @@ async def autoshopify(url, card, session):
                 "Status": True,
                 "Gateway": gateway,
                 "Price": total,
-                "cc": card
+                "cc": card,
+                "ReceiptId": receipt_id
             })
         elif "INCORRECT_ADDRESS" in str(res_json):
             output.update({
@@ -1533,7 +1539,8 @@ async def autoshopify(url, card, session):
                 "Status": True,
                 "Gateway": gateway,
                 "Price": total,
-                "cc": card
+                "cc": card,
+                "ReceiptId": receipt_id
             })
         elif "INCORRECT_ZIP" in str(res_json):
             output.update({
@@ -1541,7 +1548,8 @@ async def autoshopify(url, card, session):
                 "Status": True,
                 "Gateway": gateway,
                 "Price": total,
-                "cc": card
+                "cc": card,
+                "ReceiptId": receipt_id
             })
         elif "INCORRECT_PIN" in str(res_json):
             output.update({
@@ -1549,7 +1557,8 @@ async def autoshopify(url, card, session):
                 "Status": True,
                 "Gateway": gateway,
                 "Price": total,
-                "cc": card
+                "cc": card,
+                "ReceiptId": receipt_id
             })
         elif "insufficient_funds" in str(res_json).lower():
             output.update({
@@ -1557,7 +1566,8 @@ async def autoshopify(url, card, session):
                 "Status": True,
                 "Gateway": gateway,
                 "Price": total,
-                "cc": card
+                "cc": card,
+                "ReceiptId": receipt_id
             })
         elif "INVALID_CVC" in str(res_json) or "INCORRECT_CVC" in str(res_json):
             output.update({
@@ -1565,7 +1575,8 @@ async def autoshopify(url, card, session):
                 "Status": True,
                 "Gateway": gateway,
                 "Price": total,
-                "cc": card
+                "cc": card,
+                "ReceiptId": receipt_id
             })
         elif "CompletePaymentChallenge" in str(res_json):
             output.update({
@@ -1573,7 +1584,8 @@ async def autoshopify(url, card, session):
                 "Status": True,
                 "Gateway": gateway,
                 "Price": total,
-                "cc": card
+                "cc": card,
+                "ReceiptId": receipt_id
             })
         elif result:
             output.update({
@@ -1581,7 +1593,8 @@ async def autoshopify(url, card, session):
                 "Status": True,
                 "Gateway": gateway,
                 "Price": total,
-                "cc": card
+                "cc": card,
+                "ReceiptId": receipt_id
             })
         else:
             # When result is None, check if order was actually successful
@@ -1593,7 +1606,8 @@ async def autoshopify(url, card, session):
                     "Status": True,
                     "Gateway": gateway,
                     "Price": total,
-                    "cc": card
+                    "cc": card,
+                    "ReceiptId": receipt_id
                 })
             else:
                 output.update({
@@ -1601,7 +1615,8 @@ async def autoshopify(url, card, session):
                     "Status": True,
                     "Gateway": gateway,
                     "Price": total,
-                    "cc": card
+                    "cc": card,
+                    "ReceiptId": receipt_id
                 })
 
 

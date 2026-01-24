@@ -27,7 +27,8 @@ def format_shopify_response(
     cvv: str, 
     raw_response: str, 
     timet: float, 
-    profile: str
+    profile: str,
+    receipt_id: str = None
 ) -> Tuple[str, str]:
     """
     Format Shopify checkout response for display.
@@ -40,6 +41,7 @@ def format_shopify_response(
         raw_response: Raw response from checkout
         timet: Time taken in seconds
         profile: User profile HTML string
+        receipt_id: Receipt ID if order was placed (optional)
         
     Returns:
         Tuple of (status_flag, formatted_message)
@@ -70,7 +72,8 @@ def format_shopify_response(
     elif any(x in response for x in [
         "3DS", "AUTHENTICATION", "INCORRECT_CVC", "INVALID_CVC", "INCORRECT_CVV",
         "MISMATCHED", "INCORRECT_ADDRESS", "INCORRECT_ZIP", "INCORRECT_PIN",
-        "FRAUD", "INSUFFICIENT_FUNDS", "CARD_DECLINED"
+        "FRAUD", "INSUFFICIENT_FUNDS", "CARD_DECLINED", "GENERIC_DECLINE",
+        "DO_NOT_HONOR", "MISMATCHED_BILL"
     ]):
         status_flag = "Approved ✅"
         header = "CCN LIVE"
@@ -91,20 +94,20 @@ def format_shopify_response(
             "bin": bin_data.get("bin", cc[:6]),
             "country": bin_data.get("country", "Unknown"),
             "flag": bin_data.get("flag", "🏳️"),
-            "vendor": bin_data.get("vendor", "Unknown"),
-            "type": bin_data.get("type", "Unknown"),
-            "level": bin_data.get("level", "Unknown"),
-            "bank": bin_data.get("bank", "Unknown")
+            "vendor": bin_data.get("vendor", "N/A"),
+            "type": bin_data.get("type", "N/A"),
+            "level": bin_data.get("level", "N/A"),
+            "bank": bin_data.get("bank", "N/A")
         }
     else:
         bin_info = {
             "bin": cc[:6],
             "country": "Unknown",
             "flag": "🏳️",
-            "vendor": "Unknown",
-            "type": "Unknown",
-            "level": "Unknown",
-            "bank": "Unknown"
+            "vendor": "N/A",
+            "type": "N/A",
+            "level": "N/A",
+            "bank": "N/A"
         }
     
     # Get user plan
@@ -117,13 +120,18 @@ def format_shopify_response(
         plan = "Free"
         badge = "🎟️"
     
-    # Format response message
+    # Build bill line if receipt exists
+    bill_line = ""
+    if receipt_id:
+        bill_line = f"\n<b>[•] Bill:</b> <code>{receipt_id}</code>"
+    
+    # Format response message in original style
     result = f"""<b>[#Shopify] | {header}</b> ✦
 ━━━━━━━━━━━━━━━
 <b>[•] Card:</b> <code>{fullcc}</code>
 <b>[•] Gateway:</b> <code>{gateway}</code>
 <b>[•] Status:</b> <code>{status_flag}</code>
-<b>[•] Response:</b> <code>{response}</code>
+<b>[•] Response:</b> <code>{response}</code>{bill_line}
 ━ ━ ━ ━ ━ ━ ━ ━ ━ ━ ━ ━ ━
 <b>[+] BIN:</b> <code>{bin_info['bin']}</code>
 <b>[+] Info:</b> <code>{bin_info['vendor']} - {bin_info['type']} - {bin_info['level']}</code>
