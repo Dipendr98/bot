@@ -320,36 +320,63 @@ async def validate_sites_batch(urls: List[str], user_proxy: Optional[str] = None
 
 
 def save_site_for_user(user_id: str, site: str, gateway: str) -> bool:
-    """Save a site for a user to sites.json."""
-    try:
-        all_sites = {}
-        if os.path.exists(SITES_PATH):
-            with open(SITES_PATH, "r", encoding="utf-8") as f:
-                all_sites = json.load(f)
-        
-        all_sites[user_id] = {
-            "site": site,
-            "gate": gateway
-        }
-        
-        with open(SITES_PATH, "w", encoding="utf-8") as f:
-            json.dump(all_sites, f, indent=4)
-        
-        return True
-    except Exception:
-        return False
+    """Save a site for a user using unified site manager."""
+    from BOT.Charge.Shopify.slf.site_manager import add_site_for_user
+    # Extract price from gateway string if present
+    price = "N/A"
+    if "$" in gateway:
+        try:
+            price = gateway.split("$")[1].split()[0]
+        except:
+            pass
+    return add_site_for_user(user_id, site, gateway, price, set_primary=True)
 
 
 def get_user_current_site(user_id: str) -> Optional[Dict[str, str]]:
-    """Get user's currently saved site."""
-    try:
-        if os.path.exists(SITES_PATH):
-            with open(SITES_PATH, "r", encoding="utf-8") as f:
-                sites = json.load(f)
-            return sites.get(user_id)
-    except Exception:
-        pass
+    """Get user's currently saved site using unified site manager."""
+    from BOT.Charge.Shopify.slf.site_manager import get_primary_site
+    site = get_primary_site(user_id)
+    if site:
+        return {
+            "site": site.get("url"),
+            "gate": site.get("gateway")
+        }
     return None
+
+
+@Client.on_message(filters.command(["addurl", "slfurl", "seturl"]) & ~filters.private)
+async def addurl_group_redirect(client: Client, message: Message):
+    """Redirect /addurl command in groups to private chat."""
+    try:
+        bot_info = await client.get_me()
+        bot_username = bot_info.username
+        bot_link = f"https://t.me/{bot_username}"
+    except:
+        bot_link = "https://t.me/"
+    
+    await message.reply(
+        f"""<pre>🔒 Private Command</pre>
+━━━━━━━━━━━━━━━
+<b>This command only works in private chat.</b>
+
+<b>Command:</b> <code>/addurl</code>
+<b>Purpose:</b> Add Shopify sites for checking
+
+<b>How to use:</b>
+1️⃣ Click the button below
+2️⃣ Use <code>/addurl site.com</code> there
+
+<b>Why private?</b>
+• 🔐 Protects your site data
+• ⚡ Personal site management
+━━━━━━━━━━━━━━━
+<i>Your data security is our priority!</i>""",
+        reply_to_message_id=message.id,
+        parse_mode=ParseMode.HTML,
+        reply_markup=InlineKeyboardMarkup([
+            [InlineKeyboardButton("📱 Open Private Chat", url=bot_link)]
+        ])
+    )
 
 
 @Client.on_message(filters.command(["addurl", "slfurl", "seturl"]) & filters.private)

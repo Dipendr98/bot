@@ -1,14 +1,22 @@
+"""
+TXT Sites Shopify Checker with Site Rotation
+Handles /tsh command with intelligent site rotation on captcha/errors.
+"""
+
 from pyrogram import Client, filters
 from pyrogram.types import Message
 from pyrogram.enums import ParseMode
-from BOT.Charge.Shopify.slf.slf import check_card
-from BOT.helper.permissions import check_private_access, is_premium_user
+from BOT.Charge.Shopify.slf.api import autoshopify
+from BOT.Charge.Shopify.tls_session import TLSAsyncSession
+from BOT.Charge.Shopify.slf.site_manager import SiteRotator, get_user_sites
+from BOT.helper.permissions import check_private_access
 from BOT.tools.proxy import get_proxy
 from BOT.helper.start import load_users
 import json
 import re
 import asyncio
 import time
+from datetime import datetime
 
 # Try to import BIN lookup
 try:
@@ -16,6 +24,8 @@ try:
 except ImportError:
     def get_bin_details(bin_number):
         return None
+
+MAX_SITE_RETRIES = 3
 
 
 def extract_cards_from_text(text: str):
@@ -96,27 +106,66 @@ def get_status_flag(raw_response: str) -> str:
     
     return "Declined ❌"
 
-def get_user_site_info(user_id):
-    try:
-        with open("DATA/txtsite.json", "r") as f:
-            data = json.load(f)
-        return data.get(str(user_id), [])
-    except Exception:
-        return []
-
-def get_site_and_gate(user_id, index):
-    sites = get_user_site_info(user_id)
-    if not sites:
-        return None, None
-    item = sites[index % len(sites)]
-    return item.get("site"), item.get("gate")
+async def check_card_with_rotation(user_id: str, card: str, proxy: str = None) -> tuple:
+    """
+    Check a card with site rotation on captcha/errors.
+    Returns (response, retries, site_url)
+    """
+    rotator = SiteRotator(user_id, max_retries=MAX_SITE_RETRIES)
+    
+    if not rotator.has_sites():
+        return "NO_SITES_CONFIGURED", 0, None
+    
+    retry_count = 0
+    last_response = "UNKNOWN"
+    last_site = None
+    
+    while retry_count < MAX_SITE_RETRIES:
+        current_site = rotator.get_current_site()
+        if not current_site:
+            break
+        
+        site_url = current_site.get("url")
+        last_site = site_url
+        
+        try:
+            async with TLSAsyncSession(timeout_seconds=90, proxy=proxy) as session:
+                result = await autoshopify(site_url, card, session)
+            
+            response = str(result.get("Response", "UNKNOWN"))
+            last_response = response
+            
+            # Check if this is a real response
+            if rotator.is_real_response(response):
+                rotator.mark_current_success()
+                return response, retry_count, site_url
+            
+            # Check if we should retry
+            if rotator.should_retry(response):
+                retry_count += 1
+                rotator.mark_current_failed()
+                next_site = rotator.get_next_site()
+                if not next_site:
+                    break
+                await asyncio.sleep(0.3)
+                continue
+            else:
+                return response, retry_count, site_url
+                
+        except Exception as e:
+            last_response = f"ERROR: {str(e)[:30]}"
+            retry_count += 1
+            next_site = rotator.get_next_site()
+            if not next_site:
+                break
+    
+    return last_response, retry_count, last_site
 
 
 @Client.on_message(filters.command("tsh") & filters.reply)
 async def tsh_handler(client: Client, m: Message):
-    """Handle /tsh command for TXT sites checking."""
+    """Handle /tsh command for TXT sites checking with site rotation."""
     
-    # Check if user is registered
     users = load_users()
     user_id = str(m.from_user.id)
     
@@ -131,13 +180,11 @@ async def tsh_handler(client: Client, m: Message):
     cards = []
     
     if m.reply_to_message.document:
-        # Download and read file
         file = await m.reply_to_message.download()
         with open(file, "r", encoding="utf-8", errors="ignore") as f:
             text = f.read()
         cards = extract_cards_from_text(text)
     elif m.reply_to_message.text:
-        # Extract from text
         cards = extract_cards_from_text(m.reply_to_message.text)
     
     if not cards:
@@ -152,153 +199,146 @@ async def tsh_handler(client: Client, m: Message):
         total_cards = len(cards)
 
     user = m.from_user
-    sites = get_user_site_info(int(user_id))
+    user_sites = get_user_sites(user_id)
 
-    if not sites:
+    if not user_sites:
         return await m.reply(
-            "<pre>No Sites Found ❌</pre>\n<b>Use <code>/txturl site.com</code> to add sites.</b>",
+            "<pre>No Sites Found ❌</pre>\n<b>Use <code>/addurl</code> or <code>/txturl</code> to add sites.</b>",
             parse_mode=ParseMode.HTML
         )
 
-    # Proxy is optional now
     proxy = get_proxy(int(user_id))
+    site_count = len(user_sites)
+    gateway = user_sites[0].get("gateway", "Shopify") if user_sites else "Shopify"
 
-    site, gate = get_site_and_gate(user_id, 0)
-
-    # Step 1: Send "Preparing" message
-    status_msg = await m.reply("<pre>Preparing For Check</pre>")
+    # Send preparing message
+    status_msg = await m.reply(
+        f"""<pre>✦ [#TSH] | TXT Shopify Check</pre>
+━━━━━━━━━━━━━
+<b>⊙ Total CC:</b> <code>{total_cards}</code>
+<b>⊙ Sites:</b> <code>{site_count}</code> (rotation enabled)
+<b>⊙ Status:</b> <code>Preparing...</code>
+━━━━━━━━━━━━━
+<b>[ﾒ] Checked By:</b> {user.mention}"""
+    )
 
     start_time = time.time()
     checked_count = 0
     charged_count = 0
     approved_count = 0
-    dead_count = 0
+    declined_count = 0
     error_count = 0
+    captcha_count = 0
+    total_retries = 0
 
-    async def update_progress():
-        elapsed = time.time() - start_time
-        await status_msg.edit_text(
-            f"<pre>Check Started</pre>\n"
-            f"━━━━━━━━━━━━━\n"
-            f"⊙ <b>Total CC     :</b> <code>{total_cards}</code>\n"
-            f"⊙ <b>Progress     :</b> <code>{checked_count}/{total_cards}</code> ✅\n"
-            f"⊙ <b>Time Elapsed :</b> <code>{elapsed:.2f}s</code> ⏱\n"
-            f"━━━━━━━━━━━━━\n"
-            f"[ﾒ] <b>Checked By:</b> {user.mention}\n"
-            f"⌥ <b>Dev:</b> <code>Chr1shtopher</code>"
-        )
-    
-
-    await update_progress()  # Initial edit
-
-    sem = asyncio.Semaphore(25)
-    lock = asyncio.Lock()
-
-    async def process_card(index, card):
-        nonlocal checked_count, charged_count, approved_count, dead_count, error_count
-
-        async with sem:
-            site, gate = get_site_and_gate(user_id, index)
-            if not site:
-                async with lock:
-                    checked_count += 1
-                    await update_progress()
-                return
-
-            t1 = time.time()
-            raw_response = await check_card(user_id, card, site=site)
-            t2 = time.time()
-            elapsed = t2 - t1
-
-            async with lock:
-                checked_count += 1
-                if checked_count % 25 == 0 or checked_count == total_cards:
-                    await update_progress()
-
-            if "HCAPTCHA DETECTED" in raw_response.upper():
-                with open("DATA/txtsite.json", "r") as f:
-                    all_sites = json.load(f)
-
-                user_sites = all_sites.get(str(user.id), [])
-
-                # filter out the site
-                new_user_sites = [s for s in user_sites if s.get("site") != site]
-
-                if len(new_user_sites) < len(user_sites):  # site was removed
-                    all_sites[str(user.id)] = new_user_sites
-                    with open("DATA/txtsite.json", "w") as f:
-                        json.dump(all_sites, f, indent=4)
-
-                    await m.reply_text(f"<b>{site}</b> Has Been Removed\nDue to Captcha ⚠️")
-
-                    if not new_user_sites:
-                        await m.reply_text("❌ All sites removed due to Captcha. Checking stopped.")
-                        return
-
-
-            # Get proper status flag
-            status_flag = get_status_flag(raw_response)
-            
-            # Count statistics
-            async with lock:
-                if "Charged" in status_flag:
-                    charged_count += 1
-                elif "Approved" in status_flag:
-                    approved_count += 1
-                elif "Error" in status_flag:
-                    error_count += 1
-                else:
-                    dead_count += 1
-            
-            # Get BIN info
+    # Process cards sequentially for site rotation
+    for idx, card in enumerate(cards, start=1):
+        checked_count = idx
+        
+        # Check card with site rotation
+        raw_response, retries, used_site = await check_card_with_rotation(user_id, card, proxy)
+        total_retries += retries
+        
+        response_upper = (raw_response or "").upper()
+        status_flag = get_status_flag(response_upper)
+        
+        # Track stats
+        is_charged = "Charged 💎" in status_flag
+        is_approved = "Approved ✅" in status_flag
+        is_error = "Error ⚠️" in status_flag
+        is_captcha = any(x in response_upper for x in ["CAPTCHA", "HCAPTCHA", "RECAPTCHA"])
+        
+        if is_charged:
+            charged_count += 1
+        elif is_approved:
+            approved_count += 1
+        elif is_error:
+            error_count += 1
+        else:
+            declined_count += 1
+        
+        if is_captcha:
+            captcha_count += 1
+        
+        # Send result for charged/approved cards immediately
+        if is_charged or is_approved:
             cc = card.split("|")[0] if "|" in card else card
             try:
                 bin_data = get_bin_details(cc[:6])
                 if bin_data:
-                    bin_info = f"{bin_data.get('vendor', 'N/A')} - {bin_data.get('type', 'N/A')}"
+                    bin_info = f"{bin_data.get('vendor', 'N/A')} - {bin_data.get('type', 'N/A')} - {bin_data.get('level', 'N/A')}"
+                    bank = bin_data.get('bank', 'N/A')
                     country = f"{bin_data.get('country', 'N/A')} {bin_data.get('flag', '')}"
                 else:
                     bin_info = "N/A"
+                    bank = "N/A"
                     country = "N/A"
             except:
                 bin_info = "N/A"
+                bank = "N/A"
                 country = "N/A"
-
-            message = f"""<b>[#Shopify] | TXT CHECK ✦</b>
+            
+            hit_header = "CHARGED" if is_charged else "CCN LIVE"
+            
+            hit_message = f"""<b>[#Shopify] | {hit_header}</b> ✦
 ━━━━━━━━━━━━━━━
 <b>[•] Card:</b> <code>{card}</code>
-<b>[•] Gateway:</b> <code>{gate}</code>
+<b>[•] Gateway:</b> <code>{gateway}</code>
 <b>[•] Status:</b> <code>{status_flag}</code>
 <b>[•] Response:</b> <code>{raw_response}</code>
+<b>[•] Retries:</b> <code>{retries}</code>
 ━ ━ ━ ━ ━ ━ ━ ━ ━ ━ ━ ━ ━
-<b>[+] BIN:</b> <code>{cc[:6]}</code> | <code>{bin_info}</code>
+<b>[+] BIN:</b> <code>{cc[:6]}</code>
+<b>[+] Info:</b> <code>{bin_info}</code>
+<b>[+] Bank:</b> <code>{bank}</code> 🏦
 <b>[+] Country:</b> <code>{country}</code>
 ━ ━ ━ ━ ━ ━ ━ ━ ━ ━ ━ ━ ━
 <b>[ﾒ] Checked By:</b> {user.mention}
-<b>[ﾒ] Time:</b> <code>{elapsed:.2f}s</code>"""
-
-            if status_flag in ["Charged 💎", "Approved ✅"]:
-                await m.reply(message, parse_mode=ParseMode.HTML)
-
-
-    tasks = [asyncio.create_task(process_card(i, card)) for i, card in enumerate(cards)]
-
-    for task in asyncio.as_completed(tasks):
-        await task
+<b>[ϟ] Dev:</b> <a href="https://t.me/Chr1shtopher">Chr1shtopher</a>
+━━━━━━━━━━━━━━━"""
+            
+            try:
+                await m.reply(hit_message, parse_mode=ParseMode.HTML, disable_web_page_preview=True)
+            except:
+                pass
+        
+        # Update progress every 5 cards
+        if idx % 5 == 0 or idx == total_cards:
+            elapsed = time.time() - start_time
+            try:
+                await status_msg.edit_text(
+                    f"""<pre>✦ [#TSH] | TXT Shopify Check</pre>
+━━━━━━━━━━━━━
+<b>🟢 Total CC:</b> <code>{total_cards}</code>
+<b>💬 Progress:</b> <code>{checked_count}/{total_cards}</code>
+<b>✅ Approved:</b> <code>{approved_count}</code>
+<b>💎 Charged:</b> <code>{charged_count}</code>
+<b>❌ Declined:</b> <code>{declined_count}</code>
+<b>⚠️ Errors:</b> <code>{error_count}</code>
+━━━━━━━━━━━━━
+<b>🔄 Rotations:</b> <code>{total_retries}</code>
+<b>⏱️ Time:</b> <code>{elapsed:.2f}s</code>
+<b>[ﾒ] By:</b> {user.mention}"""
+                )
+            except:
+                pass
 
     total_time = time.time() - start_time
+    current_time = datetime.now().strftime("%I:%M %p")
 
-    summary_text = f"""<b>[#Shopify] | TXT CHECK COMPLETED ✦</b>
+    summary_text = f"""<pre>✦ CC Check Completed</pre>
 ━━━━━━━━━━━━━━━
 🟢 <b>Total CC</b>     : <code>{total_cards}</code>
-💎 <b>Charged</b>     : <code>{charged_count}</code>
+💬 <b>Progress</b>    : <code>{checked_count}/{total_cards}</code>
 ✅ <b>Approved</b>    : <code>{approved_count}</code>
-❌ <b>Declined</b>    : <code>{dead_count}</code>
+💎 <b>Charged</b>     : <code>{charged_count}</code>
+❌ <b>Declined</b>    : <code>{declined_count}</code>
 ⚠️ <b>Errors</b>      : <code>{error_count}</code>
-━ ━ ━ ━ ━ ━ ━ ━ ━ ━ ━ ━ ━
-<b>[ﾒ] Checked By:</b> {user.mention}
-<b>[ϟ] Dev:</b> <a href="https://t.me/Chr1shtopher">Chr1shtopher</a>
+⚠️ <b>CAPTCHA</b>     : <code>{captcha_count}</code>
 ━━━━━━━━━━━━━━━
-<b>[ﾒ] Time:</b> <code>{total_time:.2f}s</code>"""
+⏱️ <b>Time Elapsed</b> : <code>{total_time:.2f}s</code>
+👤 <b>Checked By</b> : {user.mention}
+🔧 <b>Dev</b>: <a href="https://t.me/Chr1shtopher">Chr1shtopher</a> <code>{current_time}</code>
+━━━━━━━━━━━━━━━"""
 
-    await m.reply_to_message.reply(summary_text, parse_mode=ParseMode.HTML)
+    await status_msg.edit_text(summary_text, parse_mode=ParseMode.HTML, disable_web_page_preview=True)
