@@ -78,26 +78,64 @@ def capture(data, first, last):
       return
 
 def get_product_id(response):
-    response_data = response.json()
-
+    """
+    Extract the lowest priced available product from /products.json response.
+    Returns (product_id, price) tuple or raises ValueError with descriptive message.
+    """
+    # Check if response is empty
+    if not response or not response.text:
+        raise ValueError("SITE_EMPTY_RESPONSE")
+    
+    # Check for HTML response (not JSON)
+    text = response.text.strip()
+    if text.startswith("<!") or text.startswith("<html") or text.startswith("<HTML"):
+        # Check for captcha/bot detection
+        if any(x in text.lower() for x in ["captcha", "hcaptcha", "recaptcha", "challenge", "verify"]):
+            raise ValueError("SITE_CAPTCHA_BLOCK")
+        raise ValueError("SITE_HTML_ERROR")
+    
+    # Try to parse JSON
+    try:
+        response_data = response.json()
+    except json.JSONDecodeError as e:
+        # Empty response
+        if "Expecting value" in str(e):
+            raise ValueError("SITE_EMPTY_JSON")
+        raise ValueError(f"SITE_INVALID_JSON")
+    
+    # Check if products key exists
+    if "products" not in response_data:
+        raise ValueError("SITE_NO_PRODUCTS_KEY")
+    
     products_data = response_data["products"]
+    
+    if not products_data:
+        raise ValueError("SITE_PRODUCTS_EMPTY")
+    
     products = {}
     for product in products_data:
-        variants = product["variants"]
-        variant = variants[0]
-        product_id = variant["id"]
-        available = variant["available"]
-        price = float(variant["price"])
-        if price < 0.1:
+        try:
+            variants = product.get("variants", [])
+            if not variants:
+                continue
+            variant = variants[0]
+            product_id = variant.get("id")
+            available = variant.get("available", False)
+            price_str = variant.get("price", "0")
+            price = float(price_str) if price_str else 0.0
+            if price < 0.1:
+                continue
+            if available and product_id:
+                products[product_id] = price
+        except (KeyError, ValueError, TypeError):
             continue
-        if available:
-            products[product_id] = price
+    
     if products:
         min_price_product_id = min(products, key=products.get)
         price = products[min_price_product_id]
-        return min_price_product_id,price
+        return min_price_product_id, price
 
-    return None
+    raise ValueError("NO_AVAILABLE_PRODUCTS")
 
 USER_AGENTS = [
     # --- Android ---
@@ -193,16 +231,44 @@ async def autoshopify(url, card, session):
 
         headers = {
             "User-Agent": f'{getua}',
+            "Accept": "application/json",
+            "Accept-Language": "en-US,en;q=0.9",
         }
-        request = await session.get(f"{url}/products.json", headers=headers, follow_redirects=True)
-
-        product_id,price = get_product_id(request)
-        if not product_id:
+        
+        # Fetch products with proper error handling
+        try:
+            request = await session.get(f"{url}/products.json", headers=headers, follow_redirects=True, timeout=30)
+        except Exception as e:
             output.update({
-                "Response": "PRODUCT EMPTY",
+                "Response": "SITE_CONNECTION_ERROR",
                 "Status": False,
             })
-            print(json.dumps(output))
+            return output
+        
+        # Check HTTP status
+        if hasattr(request, 'status_code') and request.status_code != 200:
+            output.update({
+                "Response": f"SITE_HTTP_{request.status_code}",
+                "Status": False,
+            })
+            return output
+        
+        # Parse products with detailed error handling
+        try:
+            product_id, price = get_product_id(request)
+        except ValueError as e:
+            error_msg = str(e)
+            output.update({
+                "Response": error_msg,
+                "Status": False,
+            })
+            return output
+        
+        if not product_id:
+            output.update({
+                "Response": "NO_AVAILABLE_PRODUCTS",
+                "Status": False,
+            })
             return output
 
         try:
@@ -260,10 +326,49 @@ async def autoshopify(url, card, session):
         }
 
         response = await session.post(f'{url}/api/unstable/graphql.json', params=params, headers=headers, json=json_data, timeout=20, follow_redirects=True)
-        # print(response)
-        response_data = response.json()
-        checkout_url = response_data["data"]["result"]["cart"]["checkoutUrl"]
-        # open("test.json","w").write(response.text)
+        
+        # Parse cart creation response with error handling
+        try:
+            response_text = response.text if response.text else ""
+            
+            # Check for HTML/captcha
+            if response_text.strip().startswith("<"):
+                if any(x in response_text.lower() for x in ["captcha", "hcaptcha", "recaptcha"]):
+                    output.update({
+                        "Response": "HCAPTCHA_DETECTED",
+                        "Status": False,
+                    })
+                    return output
+                output.update({
+                    "Response": "CART_HTML_ERROR",
+                    "Status": False,
+                })
+                return output
+            
+            response_data = response.json()
+            
+            # Check for GraphQL errors
+            if "errors" in response_data and response_data["errors"]:
+                error_msg = response_data["errors"][0].get("message", "GRAPHQL_ERROR")
+                output.update({
+                    "Response": f"CART_ERROR: {error_msg[:50]}",
+                    "Status": False,
+                })
+                return output
+            
+            checkout_url = response_data["data"]["result"]["cart"]["checkoutUrl"]
+        except json.JSONDecodeError:
+            output.update({
+                "Response": "CART_INVALID_JSON",
+                "Status": False,
+            })
+            return output
+        except (KeyError, TypeError) as e:
+            output.update({
+                "Response": "CART_CREATION_FAILED",
+                "Status": False,
+            })
+            return output
 
 
         await asyncio.sleep(1)
@@ -379,9 +484,31 @@ async def autoshopify(url, card, session):
         }
 
         request = await session.post('https://checkout.pci.shopifyinc.com/sessions', headers=headers, json=json_data, timeout=20)
-        # print(request.text)
-
-        sessionid = request.json()["id"]
+        
+        # Parse session response with error handling
+        try:
+            session_response = request.json()
+            if "id" not in session_response:
+                # Check for error messages
+                if "error" in session_response or "message" in session_response:
+                    error_msg = session_response.get("message") or session_response.get("error", "SESSION_ERROR")
+                    output.update({
+                        "Response": f"SESSION_ERROR: {str(error_msg)[:50]}",
+                        "Status": False,
+                    })
+                    return output
+                output.update({
+                    "Response": "SESSION_ID_MISSING",
+                    "Status": False,
+                })
+                return output
+            sessionid = session_response["id"]
+        except json.JSONDecodeError:
+            output.update({
+                "Response": "SESSION_INVALID_JSON",
+                "Status": False,
+            })
+            return output
         # print(f"PAY ID{paymentMethodIdentifier}\nSTABLE ID{stable_id}\nQUTTA TOKEN{queue_token}\nXcheckout :{x_checkout_one_session_token}\ntoken {token}\nmc build{web_build}\nsusion id{sessionid}\nCurrency Code: {currencyCode}\nCountry Code:{countryCode}\nRaw Tax: {tax1}\nGate: {gateway}")
 
         headers = {
@@ -791,24 +918,48 @@ async def autoshopify(url, card, session):
             else:
                 continue
 
-        # open("test.json","w").write(request.text)
-
-        seller = request.json()["data"]["session"]["negotiate"]["result"]["sellerProposal"]["delivery"]["deliveryLines"][0]["availableDeliveryStrategies"][0]
-        amount = seller["deliveryStrategyBreakdown"][0]["amount"]["value"]["amount"]
-        # total = price+float(amount)+float(ttax)
-
-        tax3 = request.json()["data"]["session"]["negotiate"]["result"]["sellerProposal"]["tax"]['totalTaxAmount']["value"]["amount"]
-
-        # tomtal = request.json()["data"]["session"]["negotiate"]["result"]["sellerProposal"]["checkoutTotal"]["value"]["amount"]
-
-        # print(tomtal)
-
+        # Parse negotiate response with error handling
         try:
-            total = request.json()["data"]["session"]["negotiate"]["result"]["sellerProposal"]["checkoutTotal"]["value"]["amount"]
-        except:
-            total = price
-        
-        handle = seller["handle"]
+            negotiate_text = request.text if request.text else ""
+            
+            # Check for HTML/captcha
+            if negotiate_text.strip().startswith("<"):
+                if any(x in negotiate_text.lower() for x in ["captcha", "hcaptcha", "recaptcha"]):
+                    output.update({
+                        "Response": "HCAPTCHA_DETECTED",
+                        "Status": False,
+                    })
+                    return output
+                output.update({
+                    "Response": "NEGOTIATE_HTML_ERROR",
+                    "Status": False,
+                })
+                return output
+            
+            negotiate_data = request.json()
+            seller_proposal = negotiate_data["data"]["session"]["negotiate"]["result"]["sellerProposal"]
+            seller = seller_proposal["delivery"]["deliveryLines"][0]["availableDeliveryStrategies"][0]
+            amount = seller["deliveryStrategyBreakdown"][0]["amount"]["value"]["amount"]
+            tax3 = seller_proposal["tax"]["totalTaxAmount"]["value"]["amount"]
+            
+            try:
+                total = seller_proposal["checkoutTotal"]["value"]["amount"]
+            except:
+                total = price
+            
+            handle = seller["handle"]
+        except json.JSONDecodeError:
+            output.update({
+                "Response": "NEGOTIATE_INVALID_JSON",
+                "Status": False,
+            })
+            return output
+        except (KeyError, TypeError, IndexError) as e:
+            output.update({
+                "Response": "DELIVERY_ERROR",
+                "Status": False,
+            })
+            return output
         if not handle:
             output.update({
                 "Response": "HANDLE EMPTY ",
@@ -1365,13 +1516,36 @@ async def autoshopify(url, card, session):
             print(json.dumps(output))
             return output  
 
-        # receipt_id = request.json()["data"]["submitForCompletion"]["receipt"]["id"]
-        jsun = request.json()
+        # Parse submit response with error handling
+        try:
+            # Check for HTML/captcha
+            response_text = request.text if request.text else ""
+            if response_text.strip().startswith("<"):
+                if any(x in response_text.lower() for x in ["captcha", "hcaptcha", "recaptcha"]):
+                    output.update({
+                        "Response": "HCAPTCHA_DETECTED",
+                        "Status": False,
+                        "Gateway": gateway,
+                        "Price": total,
+                    })
+                    return output
+            
+            jsun = request.json()
+        except json.JSONDecodeError:
+            output.update({
+                "Response": "SUBMIT_INVALID_JSON",
+                "Status": False,
+                "Gateway": gateway,
+                "Price": total,
+            })
+            print(json.dumps(output))
+            return output
+        
         receipt = jsun.get("data", {}).get("submitForCompletion", {}).get("receipt", {})
         receipt_id = receipt.get("id")
         if not receipt_id:
             output.update({
-                "Response": "RECEIPT EMPTY ⚠️",
+                "Response": "RECEIPT_EMPTY",
                 "Status": False,
                 "Gateway": gateway,
                 "Price": total,
@@ -1621,8 +1795,27 @@ async def autoshopify(url, card, session):
 
 
     except Exception as e:
+        error_msg = str(e)
+        
+        # Map common Python errors to user-friendly messages
+        if "Expecting value" in error_msg:
+            error_msg = "SITE_EMPTY_RESPONSE"
+        elif "JSONDecodeError" in error_msg or "json" in error_msg.lower():
+            error_msg = "SITE_INVALID_JSON"
+        elif "ConnectionError" in error_msg or "Connection" in error_msg:
+            error_msg = "SITE_CONNECTION_ERROR"
+        elif "Timeout" in error_msg or "timeout" in error_msg.lower():
+            error_msg = "SITE_TIMEOUT"
+        elif "SSL" in error_msg or "certificate" in error_msg.lower():
+            error_msg = "SITE_SSL_ERROR"
+        elif "proxy" in error_msg.lower():
+            error_msg = "PROXY_ERROR"
+        elif len(error_msg) > 60:
+            # Truncate long error messages
+            error_msg = error_msg[:57] + "..."
+        
         output.update({
-            "Response": str(e),
+            "Response": error_msg,
             "Status": False,
         })
 

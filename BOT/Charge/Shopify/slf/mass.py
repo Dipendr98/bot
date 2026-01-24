@@ -1,16 +1,32 @@
+"""
+Professional Mass Shopify Checker with Site Rotation
+Handles /msh command with intelligent site rotation on captcha/errors.
+"""
+
 import re
 import time
 import asyncio
 import math
+from datetime import datetime
 from pyrogram import Client, filters
-from pyrogram.enums import ChatType
-from BOT.Charge.Shopify.slf.slf import check_card, get_site  # your actual API functions
+from pyrogram.enums import ChatType, ParseMode
+from BOT.Charge.Shopify.slf.api import autoshopify
+from BOT.Charge.Shopify.tls_session import TLSAsyncSession
+from BOT.Charge.Shopify.slf.site_manager import SiteRotator, get_user_sites
 from BOT.helper.start import load_users
 from BOT.tools.proxy import get_proxy
-from BOT.helper.permissions import check_private_access, load_allowed_groups, is_premium_user
+from BOT.helper.permissions import check_private_access
 from BOT.gc.credit import deduct_credit_bulk
 
+# Try to import BIN lookup
+try:
+    from TOOLS.getbin import get_bin_details
+except ImportError:
+    def get_bin_details(bin_number):
+        return None
+
 user_locks = {}
+MAX_SITE_RETRIES = 3
 
 def chunk_cards(cards, size):
     for i in range(0, len(cards), size):
@@ -26,22 +42,34 @@ def get_status_flag(raw_response):
     - Declined ❌: Card is dead/blocked/expired
     - Error ⚠️: System/Site errors
     """
+    response_upper = str(raw_response).upper() if raw_response else ""
+    
     # Check for system errors first
-    if any(error_keyword in raw_response for error_keyword in [
+    if any(error_keyword in response_upper for error_keyword in [
+        # Captcha/Bot detection
+        "CAPTCHA", "HCAPTCHA", "RECAPTCHA", "CHALLENGE", "VERIFY",
+        # Site errors
+        "SITE_EMPTY", "SITE_HTML", "SITE_CAPTCHA", "SITE_HTTP", "SITE_CONNECTION",
+        "SITE_NO_PRODUCTS", "SITE_PRODUCTS_EMPTY", "SITE_INVALID_JSON", "SITE_EMPTY_JSON",
+        # Cart/Session errors
+        "CART_ERROR", "CART_HTML", "CART_INVALID", "CART_CREATION",
+        "SESSION_ERROR", "SESSION_ID", "SESSION_INVALID",
+        # Other system errors
         "CONNECTION FAILED", "IP RATE LIMIT", "PRODUCT ID", "SITE NOT FOUND",
-        "REQUEST TIMEOUT", "REQUEST FAILED", "SITE | CARD ERROR", "CAPTCHA", 
-        "HCAPTCHA", "ERROR", "BLOCKED", "PROXY"
+        "REQUEST TIMEOUT", "REQUEST FAILED", "SITE | CARD ERROR",
+        "ERROR", "BLOCKED", "PROXY", "TIMEOUT", "DEAD", "EMPTY",
+        "NO_AVAILABLE_PRODUCTS", "BUILD", "TAX", "DELIVERY"
     ]):
         return "Error ⚠️"
     
     # Charged - Payment completed
-    elif any(keyword in raw_response for keyword in [
+    elif any(keyword in response_upper for keyword in [
         "ORDER_PLACED", "THANK YOU", "SUCCESS", "CHARGED", "COMPLETE"
     ]):
         return "Charged 💎"
     
     # Approved/CCN - Card is valid, CVV/Address issue
-    elif any(keyword in raw_response for keyword in [
+    elif any(keyword in response_upper for keyword in [
         "3D CC", "3DS", "3D_SECURE", "AUTHENTICATION_REQUIRED",
         "MISMATCHED_BILLING", "MISMATCHED_PIN", "MISMATCHED_ZIP", "MISMATCHED_BILL",
         "INCORRECT_CVC", "INVALID_CVC", "CVV_MISMATCH",
@@ -51,7 +79,7 @@ def get_status_flag(raw_response):
         return "Approved ✅"
     
     # Declined - Card is dead/blocked/expired
-    elif any(keyword in raw_response for keyword in [
+    elif any(keyword in response_upper for keyword in [
         "CARD_DECLINED", "DECLINED", "GENERIC_DECLINE", "DO_NOT_HONOR",
         "INVALID_ACCOUNT", "EXPIRED", "CARD_NOT_SUPPORTED", "TRY_AGAIN",
         "PROCESSING_ERROR", "PICKUP", "LOST", "STOLEN", "FRAUD",
@@ -101,6 +129,62 @@ def load_sites():
         return json.load(f)
 
 
+async def check_card_with_rotation(user_id: str, card: str, proxy: str = None) -> tuple:
+    """
+    Check a card with site rotation on captcha/errors.
+    Returns (response, site_url, retries)
+    """
+    rotator = SiteRotator(user_id, max_retries=MAX_SITE_RETRIES)
+    
+    if not rotator.has_sites():
+        return "NO_SITES_CONFIGURED", None, 0
+    
+    retry_count = 0
+    last_response = "UNKNOWN"
+    last_site = None
+    
+    while retry_count < MAX_SITE_RETRIES:
+        current_site = rotator.get_current_site()
+        if not current_site:
+            break
+        
+        site_url = current_site.get("url")
+        last_site = site_url
+        
+        try:
+            async with TLSAsyncSession(timeout_seconds=90, proxy=proxy) as session:
+                result = await autoshopify(site_url, card, session)
+            
+            response = str(result.get("Response", "UNKNOWN"))
+            last_response = response
+            
+            # Check if this is a real response
+            if rotator.is_real_response(response):
+                rotator.mark_current_success()
+                return response, site_url, retry_count
+            
+            # Check if we should retry with another site
+            if rotator.should_retry(response):
+                retry_count += 1
+                rotator.mark_current_failed()
+                next_site = rotator.get_next_site()
+                if not next_site:
+                    break
+                await asyncio.sleep(0.5)
+                continue
+            else:
+                return response, site_url, retry_count
+                
+        except Exception as e:
+            last_response = f"ERROR: {str(e)[:40]}"
+            retry_count += 1
+            next_site = rotator.get_next_site()
+            if not next_site:
+                break
+    
+    return last_response, last_site, retry_count
+
+
 @Client.on_message(filters.command("msh") | filters.regex(r"^\.mslf(\s|$)"))
 async def mslf_handler(client, message):
     user_id = str(message.from_user.id)
@@ -111,7 +195,7 @@ async def mslf_handler(client, message):
     if user_id in user_locks:
         return await message.reply(
             "<pre>⚠️ Wait!</pre>\n"
-            "<b>Your previous</b> <code>/mslf</code> <b>request is still processing.</b>\n"
+            "<b>Your previous</b> <code>/msh</code> <b>request is still processing.</b>\n"
             "<b>Please wait until it finishes.</b>", reply_to_message_id=message.id
         )
 
@@ -127,21 +211,6 @@ async def mslf_handler(client, message):
                 reply_to_message_id=message.id
             )
 
-        # Group approval check removed - all groups are now allowed
-        # allowed_groups = load_allowed_groups()
-        # if message.chat.type in [ChatType.GROUP, ChatType.SUPERGROUP] and message.chat.id not in allowed_groups:
-        #     return await message.reply(
-        #         "<pre>Notification ❗️</pre>\n"
-        #         "<b>~ Message :</b> <code>This Group Is Not Approved ⚠️</code>\n"
-        #         "<b>~ Contact  →</b> <b>@Chr1shtopher</b>\n"
-        #         "━━━━━━━━━━━━━\n"
-        #         "<b>Contact Owner For Approving</b>",
-        #         reply_to_message_id=message.id
-        #     )
-
-        # if not await is_premium_user(message):
-        #     return
-
         if not await check_private_access(message):
             return
 
@@ -151,6 +220,16 @@ async def mslf_handler(client, message):
                 "<pre>Proxy Error ❗️</pre>\n"
                 "<b>~ Message :</b> <code>You Have To Add Proxy For Mass checking</code>\n"
                 "<b>~ Command  →</b> <b>/setpx</b>\n",
+                reply_to_message_id=message.id
+            )
+        
+        # Check if user has sites
+        user_sites = get_user_sites(user_id)
+        if not user_sites:
+            return await message.reply(
+                "<pre>Site Not Found ⚠️</pre>\n"
+                "Error : <code>Please Set Site First</code>\n"
+                "~ <code>Using /addurl or /txturl</code>",
                 reply_to_message_id=message.id
             )
         
@@ -166,38 +245,8 @@ async def mslf_handler(client, message):
         else:
             mlimit = int(mlimit)
 
-        sites = load_sites()
-        user_site_info = None
-
-        if user_id in sites:
-            user_site_info = sites[user_id]
-        else:
-            # Check txtsite.json as fallback
-            try:
-                with open("DATA/txtsite.json") as f:
-                    txt_sites = json.load(f)
-                user_txt_sites = txt_sites.get(str(user_id), [])
-                if user_txt_sites and len(user_txt_sites) > 0:
-                    # Use the first site from txtsite.json
-                    first_site = user_txt_sites[0]
-                    user_site_info = {
-                        "site": first_site.get("site"),
-                        "gate": first_site.get("gate", "Unknown")
-                    }
-            except Exception:
-                pass
-
-        if not user_site_info:
-            await message.reply(
-                "<pre>Site Not Found ⚠️</pre>\n"
-                "Error : <code>Please Set Site First</code>\n"
-                "~ <code>Using /slfurl or /txturl in Bot's Private</code>",
-                reply_to_message_id=message.id
-            )
-            return
-
-        site = user_site_info["site"]
-        gateway = user_site_info["gate"]
+        gateway = user_sites[0].get("gateway", "Shopify")
+        site_count = len(user_sites)
 
         target_text = None
         if message.reply_to_message and message.reply_to_message.text:
@@ -245,12 +294,16 @@ async def mslf_handler(client, message):
         checked_by = f"<a href='tg://user?id={message.from_user.id}'>{message.from_user.first_name}</a>"
 
         loader_msg = await message.reply(
-            f"<pre>✦ [$mslf] | M-Self Shopify</pre>"
-            f"<b>[⚬] Gateway -</b> <b>{gateway}</b>\n"
-            f"<b>[⚬] CC Amount : {card_count}</b>\n"
-            f"<b>[⚬] Checked By :</b> {checked_by} [<code>{plan} {badge}</code>]\n"
-            f"<b>[⚬] Status :</b> <code>Processing Request..!</code>\n",
-            reply_to_message_id=message.id
+            f"""<pre>✦ [#MSH] | Mass Shopify Check</pre>
+━━━━━━━━━━━━━━━
+<b>[⚬] Gateway:</b> <code>{gateway}</code>
+<b>[⚬] Cards:</b> <code>{card_count}</code>
+<b>[⚬] Sites:</b> <code>{site_count}</code> (rotation enabled)
+<b>[⚬] Status:</b> <code>Processing Request...</code>
+━━━━━━━━━━━━━━━
+<b>[⚬] Checked By:</b> {checked_by} [<code>{plan} {badge}</code>]""",
+            reply_to_message_id=message.id,
+            parse_mode=ParseMode.HTML
         )
 
         # start_time = time.time()
@@ -326,9 +379,6 @@ async def mslf_handler(client, message):
 
         start_time = time.time()
 
-        batch_size = 10
-        final_results = []
-
         # Statistics counters
         total_cc = len(all_cards)
         approved_count = 0
@@ -337,50 +387,101 @@ async def mslf_handler(client, message):
         captcha_count = 0
         error_count = 0
         processed_count = 0
+        total_retries = 0
 
-        for batch in chunk_cards(all_cards, batch_size):
-            # Run check_card in parallel for current batch
-            results = await asyncio.gather(*[
-                check_card(user_id, card) for card in batch
-            ])
-
-            # Process results from batch
-            for card, raw_response in zip(batch, results):
-                status_flag = get_status_flag((raw_response or "").upper())
-
-                # Count statistics
-                if "Charged 💎" in status_flag:
-                    charged_count += 1
-                elif "Approved ✅" in status_flag:
-                    approved_count += 1
-                elif "Error ⚠️" in status_flag:
-                    error_count += 1
-                else:
-                    declined_count += 1
-
-                # Count CAPTCHA
-                if any(x in (raw_response or "").upper() for x in ["CAPTCHA", "RECAPTCHA", "CHALLENGE"]):
-                    captcha_count += 1
-
-                processed_count += 1
-
-                final_results.append(
-                    f"• <b>Card :</b> <code>{card}</code>\n"
-                    f"• <b>Status :</b> <code>{status_flag}</code>\n"
-                    f"• <b>Result :</b> <code>{raw_response or '-'}</code>\n"
-                    "━ ━ ━ ━ ━ ━━━ ━ ━ ━ ━ ━"
-                )
-
-            # Edit after every batch with progress
-            ongoing_result = "\n".join(final_results[-10:])  # Show last 10 cards
-            await loader_msg.edit(
-                f"<pre>✦ [$mslf] | M-Self Shopify</pre>\n"
-                f"{ongoing_result}\n"
-                f"<b>💬 Progress :</b> <code>{processed_count}/{total_cc}</code>\n"
-                f"<b>[⚬] Checked By :</b> {checked_by} [<code>{plan} {badge}</code>]\n"
-                f"<b>[⚬] Dev :</b> <a href='https://t.me/Chr1shtopher'>Chr1shtopher</a>",
-                disable_web_page_preview=True
-            )
+        # Process cards one by one with site rotation
+        for idx, card in enumerate(all_cards, start=1):
+            processed_count = idx
+            
+            # Check card with site rotation
+            raw_response, used_site, retries = await check_card_with_rotation(user_id, card, proxy)
+            total_retries += retries
+            
+            status_flag = get_status_flag((raw_response or "").upper())
+            response_upper = (raw_response or "").upper()
+            
+            # Count statistics
+            is_charged = "Charged 💎" in status_flag
+            is_approved = "Approved ✅" in status_flag
+            is_error = "Error ⚠️" in status_flag
+            is_captcha = any(x in response_upper for x in ["CAPTCHA", "RECAPTCHA", "CHALLENGE", "HCAPTCHA"])
+            
+            if is_charged:
+                charged_count += 1
+            elif is_approved:
+                approved_count += 1
+            elif is_error:
+                error_count += 1
+            else:
+                declined_count += 1
+            
+            if is_captcha:
+                captcha_count += 1
+            
+            # Send individual result for charged/approved cards immediately
+            if is_charged or is_approved:
+                # Get BIN info
+                cc_num = card.split("|")[0] if "|" in card else card
+                try:
+                    bin_data = get_bin_details(cc_num[:6])
+                    if bin_data:
+                        bin_info = f"{bin_data.get('vendor', 'N/A')} - {bin_data.get('type', 'N/A')} - {bin_data.get('level', 'N/A')}"
+                        bank = bin_data.get('bank', 'N/A')
+                        country = f"{bin_data.get('country', 'N/A')} {bin_data.get('flag', '')}"
+                    else:
+                        bin_info = "N/A"
+                        bank = "N/A"
+                        country = "N/A"
+                except:
+                    bin_info = "N/A"
+                    bank = "N/A"
+                    country = "N/A"
+                
+                hit_header = "CHARGED" if is_charged else "CCN LIVE"
+                hit_status = "Charged 💎" if is_charged else "Approved ✅"
+                
+                hit_message = f"""<b>[#Shopify] | {hit_header}</b> ✦
+━━━━━━━━━━━━━━━
+<b>[•] Card:</b> <code>{card}</code>
+<b>[•] Gateway:</b> <code>{gateway}</code>
+<b>[•] Status:</b> <code>{hit_status}</code>
+<b>[•] Response:</b> <code>{raw_response}</code>
+<b>[•] Retries:</b> <code>{retries}</code>
+━ ━ ━ ━ ━ ━ ━ ━ ━ ━ ━ ━ ━
+<b>[+] BIN:</b> <code>{cc_num[:6]}</code>
+<b>[+] Info:</b> <code>{bin_info}</code>
+<b>[+] Bank:</b> <code>{bank}</code> 🏦
+<b>[+] Country:</b> <code>{country}</code>
+━ ━ ━ ━ ━ ━ ━ ━ ━ ━ ━ ━ ━
+<b>[ﾒ] Checked By:</b> {checked_by} [<code>{plan} {badge}</code>]
+<b>[ϟ] Dev:</b> <a href="https://t.me/Chr1shtopher">Chr1shtopher</a>
+━━━━━━━━━━━━━━━"""
+                
+                try:
+                    await message.reply(hit_message, parse_mode=ParseMode.HTML, disable_web_page_preview=True)
+                except:
+                    pass
+            
+            # Update progress every 3 cards or on last card
+            if idx % 3 == 0 or idx == total_cc:
+                try:
+                    await loader_msg.edit(
+                        f"""<pre>✦ [#MSH] | Mass Shopify Check</pre>
+━━━━━━━━━━━━━━━
+<b>🟢 Total CC:</b> <code>{total_cc}</code>
+<b>💬 Progress:</b> <code>{processed_count}/{total_cc}</code>
+<b>✅ Approved:</b> <code>{approved_count}</code>
+<b>💎 Charged:</b> <code>{charged_count}</code>
+<b>❌ Declined:</b> <code>{declined_count}</code>
+<b>⚠️ Errors:</b> <code>{error_count}</code>
+━━━━━━━━━━━━━━━
+<b>🔄 Site Rotations:</b> <code>{total_retries}</code>
+<b>👤 Checked By:</b> {checked_by} [<code>{plan} {badge}</code>]""",
+                        parse_mode=ParseMode.HTML,
+                        disable_web_page_preview=True
+                    )
+                except:
+                    pass
 
         end_time = time.time()
         timetaken = round(end_time - start_time, 2)
@@ -391,7 +492,6 @@ async def mslf_handler(client, message):
             await loop.run_in_executor(None, deduct_credit_bulk, user_id, len(all_cards))
 
         # Final completion response with statistics
-        from datetime import datetime
         current_time = datetime.now().strftime("%I:%M %p")
 
         completion_message = f"""<pre>✦ CC Check Completed</pre>
@@ -404,12 +504,12 @@ async def mslf_handler(client, message):
 ⚠️ <b>Errors</b>      : <code>{error_count}</code>
 ⚠️ <b>CAPTCHA</b>     : <code>{captcha_count}</code>
 ━━━━━━━━━━━━━━━
-⏱️ <b>Time Elapsed :</b> <code>{timetaken}s</code>
-👤 <b>Checked By :</b> {checked_by} [<code>{plan} {badge}</code>]
+⏱️ <b>Time Elapsed</b> : <code>{timetaken}s</code>
+👤 <b>Checked By</b> : {checked_by} [<code>{plan} {badge}</code>]
 🔧 <b>Dev</b>: <a href="https://t.me/Chr1shtopher">Chr1shtopher</a> <code>{current_time}</code>
 ━━━━━━━━━━━━━━━"""
 
-        await loader_msg.edit(completion_message, disable_web_page_preview=True)
+        await loader_msg.edit(completion_message, parse_mode=ParseMode.HTML, disable_web_page_preview=True)
 
     except Exception as e:
         await message.reply(f"⚠️ Error: {e}", reply_to_message_id=message.id)

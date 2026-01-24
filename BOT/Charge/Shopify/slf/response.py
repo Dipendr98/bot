@@ -74,8 +74,17 @@ def format_shopify_response(
         header = "CHARGED"
     # ERROR: System issues, not card-related
     elif any(x in response for x in [
-        "CAPTCHA", "HCAPTCHA", "RECAPTCHA", "EMPTY", "DEAD", "ERROR",
-        "TIMEOUT", "CONNECTION", "RATE_LIMIT", "SITE_ERROR", "BLOCKED", "PROXY"
+        # Captcha/Bot detection
+        "CAPTCHA", "HCAPTCHA", "RECAPTCHA", "CHALLENGE", "VERIFY",
+        # Site errors
+        "SITE_EMPTY", "SITE_HTML", "SITE_CAPTCHA", "SITE_HTTP", "SITE_CONNECTION",
+        "SITE_NO_PRODUCTS", "SITE_PRODUCTS_EMPTY", "SITE_INVALID_JSON", "SITE_EMPTY_JSON",
+        # Cart/Session errors
+        "CART_ERROR", "CART_HTML", "CART_INVALID", "CART_CREATION",
+        "SESSION_ERROR", "SESSION_ID", "SESSION_INVALID",
+        # Other system errors
+        "EMPTY", "DEAD", "ERROR", "TIMEOUT", "CONNECTION", "RATE_LIMIT",
+        "SITE_ERROR", "BLOCKED", "PROXY", "NO_AVAILABLE_PRODUCTS", "BUILD", "TAX"
     ]):
         status_flag = "Error ⚠️"
         header = "ERROR"

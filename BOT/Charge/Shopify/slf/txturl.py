@@ -166,7 +166,15 @@ async def txturl_handler(client: Client, message: Message):
             parse_mode=ParseMode.HTML
         )
     
-    # Save sites
+    # Save sites using unified site manager
+    from BOT.Charge.Shopify.slf.site_manager import add_sites_batch
+    sites_to_add = [
+        {"url": s["site"], "gateway": s["gate"], "price": s.get("price", "N/A")}
+        for s in supported_sites
+    ]
+    added_count = add_sites_batch(user_id, sites_to_add)
+    
+    # Also save to legacy storage for compatibility
     user_sites.extend(supported_sites)
     all_sites[user_id] = user_sites
     save_txt_sites(all_sites)
@@ -190,12 +198,16 @@ async def txturl_handler(client: Client, message: Message):
 
 @Client.on_message(filters.command("txtls"))
 async def txtls_handler(client: Client, message: Message):
-    """List user's TXT sites."""
+    """List user's TXT sites using unified site manager."""
     user_id = str(message.from_user.id)
     clickable_name = f"<a href='tg://user?id={user_id}'>{message.from_user.first_name}</a>"
     
-    all_sites = load_txt_sites()
-    user_sites = all_sites.get(user_id, [])
+    # Use unified site manager
+    from BOT.Charge.Shopify.slf.site_manager import get_user_sites
+    unified_sites = get_user_sites(user_id)
+    
+    # Convert to expected format
+    user_sites = [{"site": s.get("url"), "gate": s.get("gateway")} for s in unified_sites]
     
     if not user_sites:
         return await message.reply(

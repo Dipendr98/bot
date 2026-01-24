@@ -1,12 +1,13 @@
 """
 Professional Shopify Single Card Checker
 Handles /sh and /slf commands for checking cards on user's saved site.
-Uses the complete autoshopify checkout flow for real results.
+Uses site rotation for retry logic on captcha/errors.
 """
 
 import re
 import json
 import os
+import asyncio
 from time import time
 from datetime import datetime
 
@@ -19,6 +20,7 @@ from BOT.helper.antispam import can_run_command
 from BOT.gc.credit import has_credits, deduct_credit
 from BOT.Charge.Shopify.slf.api import autoshopify
 from BOT.Charge.Shopify.tls_session import TLSAsyncSession
+from BOT.Charge.Shopify.slf.site_manager import SiteRotator, get_user_sites, get_primary_site
 
 # Try to import BIN lookup
 try:
@@ -27,14 +29,8 @@ except ImportError:
     def get_bin_details(bin_number):
         return None
 
-SITES_PATH = "DATA/sites.json"
-TXT_SITES_PATH = "DATA/txtsite.json"
-
-# Private commands that should only work in DM - Only site management commands
-PRIVATE_ONLY_COMMANDS = ["addurl", "setpx", "remurl", "slfurl", "txturl"]
-
-# Maximum retries for CAPTCHA
-MAX_CAPTCHA_RETRIES = 3
+# Maximum retries with site rotation
+MAX_SITE_RETRIES = 5
 
 
 def extract_card(text: str):
@@ -43,34 +39,6 @@ def extract_card(text: str):
     if match:
         return match.groups()
     return None
-
-
-def get_user_site(user_id: str):
-    """Get user's saved site from sites.json or txtsite.json."""
-    try:
-        # First check sites.json
-        if os.path.exists(SITES_PATH):
-            with open(SITES_PATH, "r", encoding="utf-8") as f:
-                sites = json.load(f)
-            site_info = sites.get(str(user_id))
-            if site_info:
-                return site_info
-        
-        # Fallback to txtsite.json
-        if os.path.exists(TXT_SITES_PATH):
-            with open(TXT_SITES_PATH, "r", encoding="utf-8") as f:
-                txt_sites = json.load(f)
-            user_txt_sites = txt_sites.get(str(user_id), [])
-            if user_txt_sites and len(user_txt_sites) > 0:
-                first_site = user_txt_sites[0]
-                return {
-                    "site": first_site.get("site"),
-                    "gate": first_site.get("gate", "Shopify")
-                }
-        
-        return None
-    except Exception:
-        return None
 
 
 def determine_status(response: str) -> tuple:
@@ -93,10 +61,21 @@ def determine_status(response: str) -> tuple:
     ]):
         return "Charged 💎", "CHARGED", True
     
-    # Errors - System issues, not card-related
+    # Site/System Errors - These are NOT card issues, retry with different site or later
     if any(x in response_upper for x in [
-        "ERROR", "TIMEOUT", "CAPTCHA", "EMPTY", "DEAD", "TAX", "HCAPTCHA",
-        "CONNECTION", "RATE_LIMIT", "SITE_ERROR", "BLOCKED", "PROXY"
+        # Captcha/Bot detection
+        "CAPTCHA", "HCAPTCHA", "RECAPTCHA", "CHALLENGE", "VERIFY",
+        # Site errors
+        "SITE_EMPTY", "SITE_HTML", "SITE_CAPTCHA", "SITE_HTTP", "SITE_CONNECTION",
+        "SITE_NO_PRODUCTS", "SITE_PRODUCTS_EMPTY", "SITE_INVALID_JSON", "SITE_EMPTY_JSON",
+        # Cart/Session errors
+        "CART_ERROR", "CART_HTML", "CART_INVALID", "CART_CREATION",
+        "SESSION_ERROR", "SESSION_ID", "SESSION_INVALID",
+        # Other system errors
+        "ERROR", "TIMEOUT", "EMPTY", "DEAD", "CONNECTION", "RATE_LIMIT",
+        "BLOCKED", "PROXY", "NO_AVAILABLE_PRODUCTS", "BUILD",
+        # Tax and delivery issues
+        "TAX_ERROR", "DELIVERY_ERROR", "SHIPPING_ERROR"
     ]):
         return "Error ⚠️", "ERROR", False
     
@@ -233,7 +212,7 @@ async def check_group_command(message: Message) -> bool:
 async def handle_sh_command(client: Client, message: Message):
     """
     Handle /sh and /slf commands for Shopify card checking.
-    Uses the complete autoshopify checkout flow.
+    Uses site rotation for retry logic on captcha/errors.
     """
     try:
         if not message.from_user:
@@ -251,8 +230,6 @@ async def handle_sh_command(client: Client, message: Message):
                 parse_mode=ParseMode.HTML
             )
         
-        # Note: /sh works in groups now, only /addurl and /setpx are private-only
-        
         # Check credits
         if not has_credits(user_id):
             return await message.reply(
@@ -264,14 +241,16 @@ async def handle_sh_command(client: Client, message: Message):
                 parse_mode=ParseMode.HTML
             )
         
-        # Get user's site
-        user_site_info = get_user_site(user_id)
-        if not user_site_info:
+        # Initialize site rotator
+        rotator = SiteRotator(user_id, max_retries=MAX_SITE_RETRIES)
+        
+        if not rotator.has_sites():
             return await message.reply(
                 """<pre>Site Not Found ⚠️</pre>
 <b>Error:</b> <code>Please set a site first</code>
 
-Use <code>/addurl https://store.com</code> to add a Shopify site.""",
+Use <code>/addurl https://store.com</code> to add a Shopify site.
+Use <code>/txturl site1.com site2.com</code> for multiple sites.""",
                 reply_to_message_id=message.id,
                 parse_mode=ParseMode.HTML
             )
@@ -317,11 +296,9 @@ Use <code>/addurl https://store.com</code> to add a Shopify site.""",
                 parse_mode=ParseMode.HTML
             )
         
-        # Prepare card and site
+        # Prepare card
         card_num, mm, yy, cvv = extracted
         fullcc = f"{card_num}|{mm}|{yy}|{cvv}"
-        site = user_site_info['site']
-        gate = user_site_info.get('gate', 'Shopify')
         
         # Get user info
         user_data = users.get(user_id, {})
@@ -345,78 +322,115 @@ Use <code>/addurl https://store.com</code> to add a Shopify site.""",
         # Loading animation frames
         loading_frames = ["◐", "◓", "◑", "◒"]
         
+        # Get initial site
+        current_site = rotator.get_current_site()
+        site_url = current_site.get("url")
+        gate = current_site.get("gateway", "Shopify")
+        
         # Show processing message
         loading_msg = await message.reply(
             f"""<pre>Processing Request...</pre>
 ━ ━ ━ ━ ━ ━ ━ ━ ━ ━ ━ ━
 <b>• Card:</b> <code>{fullcc}</code>
 <b>• Gate:</b> <code>{gate}</code>
+<b>• Sites:</b> <code>{rotator.get_site_count()}</code>
 <b>• Status:</b> <i>Checking... {loading_frames[0]}</i>
 <b>• Retries:</b> <code>0</code>""",
             reply_to_message_id=message.id,
             parse_mode=ParseMode.HTML
         )
         
-        # Perform checkout using autoshopify with CAPTCHA retry
+        # Site rotation with retry logic
         result = None
         retry_count = 0
         frame_idx = 0
+        sites_tried = 0
         
-        while retry_count < MAX_CAPTCHA_RETRIES:
+        while retry_count < MAX_SITE_RETRIES:
             try:
                 # Update loading animation
                 frame_idx = (frame_idx + 1) % len(loading_frames)
+                sites_tried += 1
+                
+                # Get current site for this attempt
+                current_site = rotator.get_current_site()
+                if not current_site:
+                    break
+                
+                site_url = current_site.get("url")
+                gate = current_site.get("gateway", "Shopify")
+                
                 try:
                     await loading_msg.edit(
                         f"""<pre>Processing Request...</pre>
 ━ ━ ━ ━ ━ ━ ━ ━ ━ ━ ━ ━
 <b>• Card:</b> <code>{fullcc}</code>
+<b>• Site:</b> <code>{site_url[:30]}...</code>
 <b>• Gate:</b> <code>{gate}</code>
 <b>• Status:</b> <i>Checking... {loading_frames[frame_idx]}</i>
-<b>• Retries:</b> <code>{retry_count}</code>""",
+<b>• Retries:</b> <code>{retry_count}</code> | Sites: <code>{sites_tried}/{rotator.get_site_count()}</code>""",
                         parse_mode=ParseMode.HTML
                     )
                 except:
                     pass
                 
                 async with TLSAsyncSession(timeout_seconds=120, proxy=user_proxy) as session:
-                    result = await autoshopify(site, fullcc, session)
+                    result = await autoshopify(site_url, fullcc, session)
                 
-                # Check if CAPTCHA detected - retry if so
-                response_upper = str(result.get("Response", "")).upper()
-                if any(x in response_upper for x in ["CAPTCHA", "HCAPTCHA", "RECAPTCHA", "CHALLENGE"]):
+                response = str(result.get("Response", ""))
+                
+                # Check if this is a real response (not captcha/site error)
+                if rotator.is_real_response(response):
+                    # Mark site as successful and exit loop
+                    rotator.mark_current_success()
+                    break
+                
+                # Check if we should retry with another site
+                if rotator.should_retry(response):
                     retry_count += 1
-                    if retry_count < MAX_CAPTCHA_RETRIES:
+                    rotator.mark_current_failed()
+                    
+                    # Get next site
+                    next_site = rotator.get_next_site()
+                    if next_site and retry_count < MAX_SITE_RETRIES:
                         try:
                             await loading_msg.edit(
-                                f"""<pre>CAPTCHA Detected - Retrying...</pre>
+                                f"""<pre>Rotating Site - Retrying...</pre>
 ━ ━ ━ ━ ━ ━ ━ ━ ━ ━ ━ ━
 <b>• Card:</b> <code>{fullcc}</code>
-<b>• Gate:</b> <code>{gate}</code>
-<b>• Status:</b> <i>Retrying... {loading_frames[frame_idx]}</i>
-<b>• Retries:</b> <code>{retry_count}/{MAX_CAPTCHA_RETRIES}</code>""",
+<b>• Response:</b> <code>{response[:30]}...</code>
+<b>• Status:</b> <i>Switching site... {loading_frames[frame_idx]}</i>
+<b>• Retries:</b> <code>{retry_count}/{MAX_SITE_RETRIES}</code>""",
                                 parse_mode=ParseMode.HTML
                             )
                         except:
                             pass
-                        import asyncio
-                        await asyncio.sleep(2)  # Brief pause before retry
+                        await asyncio.sleep(1.5)
                         continue
-                break  # Exit loop if not CAPTCHA
+                    else:
+                        # No more sites or max retries reached
+                        break
+                else:
+                    # Not a retry-worthy response, just break
+                    break
                 
             except Exception as e:
                 result = {
                     "Response": f"ERROR: {str(e)[:60]}",
                     "Status": False,
-                    "Gateway": "Unknown",
+                    "Gateway": gate,
                     "Price": "0.00",
                     "cc": fullcc
                 }
-                break
+                retry_count += 1
+                next_site = rotator.get_next_site()
+                if not next_site or retry_count >= MAX_SITE_RETRIES:
+                    break
+                await asyncio.sleep(1)
         
         if result is None:
             result = {
-                "Response": "ERROR: MAX_RETRIES_EXCEEDED",
+                "Response": "ERROR: ALL_SITES_FAILED",
                 "Status": False,
                 "Gateway": "Unknown",
                 "Price": "0.00",

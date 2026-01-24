@@ -142,6 +142,44 @@ def get_proxy(user_id: int) -> str | None:
     except Exception:
         return None
 
+@Client.on_message(filters.command("setpx") & ~filters.private)
+async def setpx_group_redirect(client, message: Message):
+    """Redirect /setpx command in groups to private chat."""
+    from pyrogram.types import InlineKeyboardMarkup, InlineKeyboardButton
+    from pyrogram.enums import ParseMode
+    
+    try:
+        bot_info = await client.get_me()
+        bot_username = bot_info.username
+        bot_link = f"https://t.me/{bot_username}"
+    except:
+        bot_link = "https://t.me/"
+    
+    await message.reply(
+        f"""<pre>🔒 Private Command</pre>
+━━━━━━━━━━━━━━━
+<b>This command only works in private chat.</b>
+
+<b>Command:</b> <code>/setpx</code>
+<b>Purpose:</b> Set proxy for mass checking
+
+<b>How to use:</b>
+1️⃣ Click the button below
+2️⃣ Use <code>/setpx ip:port:user:pass</code> there
+
+<b>Why private?</b>
+• 🔐 Protects your proxy credentials
+• ⚡ Secure configuration
+━━━━━━━━━━━━━━━
+<i>Your data security is our priority!</i>""",
+        reply_to_message_id=message.id,
+        parse_mode=ParseMode.HTML,
+        reply_markup=InlineKeyboardMarkup([
+            [InlineKeyboardButton("📱 Open Private Chat", url=bot_link)]
+        ])
+    )
+
+
 @Client.on_message(filters.command("setpx") & filters.private)
 async def set_proxy(client, message: Message):
     """Set proxy for mass checking. Private chat only for security."""
