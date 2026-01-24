@@ -10,9 +10,9 @@ from pyrogram.enums import ChatType
 
 user_locks = {}
 
-@Client.on_message(filters.command("mbtcvv") | filters.regex(r"^\$mbtcvv(\s|$)"))
-async def handle_mbtcvv_command(client, message):
-    """Handle mass Braintree CVV check command: $mbtcvv with multiple cards"""
+@Client.on_message(filters.command("mbt") | filters.regex(r"^\$mbt(\s|$)"))
+async def handle_mbt_command(client, message):
+    """Handle mass Braintree CVV check command: /mbt with multiple cards"""
 
     user_id = str(message.from_user.id)
 
@@ -20,7 +20,7 @@ async def handle_mbtcvv_command(client, message):
     if user_id in user_locks:
         return await message.reply(
             "<pre>⚠️ Wait!</pre>\n"
-            "<b>Your previous</b> <code>$mbtcvv</code> <b>request is still processing.</b>\n"
+            "<b>Your previous</b> <code>/mbt</code> <b>request is still processing.</b>\n"
             "<b>Please wait until it finishes.</b>",
             reply_to_message_id=message.id
         )
