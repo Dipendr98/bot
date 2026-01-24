@@ -158,14 +158,20 @@ async def handle_mau_command(client: Client, message: Message):
             result, retries = await check_stripe_auth_with_retry(card)
             total_retries += retries
             
-            status_text, header, is_live = determine_status(result)
+            # Get status - prefer pre-computed if available
+            status_text = result.get("status_text")
+            header = result.get("header")
+            is_live = result.get("success", False)
             
-            # Count stats
-            if "Charged" in status_text:
+            if not status_text or not header:
+                status_text, header, is_live = determine_status(result)
+            
+            # Count stats based on header for accuracy
+            if header == "CHARGED":
                 charged_count += 1
-            elif "Approved" in status_text:
+            elif header == "CCN LIVE":
                 approved_count += 1
-            elif "Error" in status_text:
+            elif header == "ERROR":
                 error_count += 1
             else:
                 declined_count += 1
@@ -188,13 +194,17 @@ async def handle_mau_command(client: Client, message: Message):
                     bank = "N/A"
                     country = "N/A"
                 
+                # Clean up response for display
+                response_display = result.get('response', 'N/A').replace('_', ' ').title()[:50]
+                message_display = result.get('message', 'N/A')[:80]
+                
                 hit_message = f"""<b>[#StripeAuth] | {header}</b> ✦
 ━━━━━━━━━━━━━━━
 <b>[•] Card:</b> <code>{card}</code>
 <b>[•] Gateway:</b> <code>Stripe Auth</code>
 <b>[•] Status:</b> <code>{status_text}</code>
-<b>[•] Response:</b> <code>{result.get('response', 'N/A')}</code>
-<b>[•] Message:</b> <code>{result.get('message', 'N/A')}</code>
+<b>[•] Response:</b> <code>{response_display}</code>
+<b>[•] Message:</b> <code>{message_display}</code>
 <b>[•] Retries:</b> <code>{retries}</code>
 ━ ━ ━ ━ ━ ━ ━ ━ ━ ━ ━ ━ ━
 <b>[+] BIN:</b> <code>{cc_num[:6]}</code>
