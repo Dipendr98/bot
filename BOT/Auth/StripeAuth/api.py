@@ -1,25 +1,30 @@
 """
 Stripe Auth API Handler
-Professional Stripe authentication checks with site rotation and robust response parsing.
-Supports /au and /mau commands with accurate status detection.
+=======================
+Uses ONLY the external API for all /au and /mau card checks.
+API: https://dclub.site/apis/stripe/auth/st7.php?site={site}&cc={card}
+
+Features:
+- Site rotation on errors
+- Robust response parsing
+- Accurate CCN/Live detection
 """
 
 import httpx
 import asyncio
 import random
 import re
+import json
 from typing import Dict, Optional, Tuple, List
 
-# Primary Stripe Auth API endpoint
+# ==================== API CONFIGURATION ====================
+# This is the ONLY API used for /au and /mau commands
 API_URL = "https://dclub.site/apis/stripe/auth/st7.php"
 
-# Fallback API endpoints
-FALLBACK_APIS = [
-    "https://dclub.site/apis/stripe/auth/st7.php",
-]
-
-# Working sites for Stripe Auth - verified and active
+# Working sites for Stripe Auth - rotated on errors
 STRIPE_AUTH_SITES = [
+    # Primary sites
+    "havilahcastle.com",
     "shop-caymans.com",
     "shop.conequipmentparts.com",
     "sababa-shop.com",
@@ -46,7 +51,9 @@ STRIPE_AUTH_SITES = [
     "lolaandveranda.com",
 ]
 
-MAX_RETRIES = 3
+# Maximum retries with different sites
+MAX_RETRIES = 5
+REQUEST_TIMEOUT = 60
 
 # Response patterns for accurate classification
 CHARGED_PATTERNS = [
@@ -223,17 +230,18 @@ def classify_response(result: Dict) -> Tuple[str, str, bool]:
     return "Unknown ❓", "UNKNOWN", False
 
 
-async def check_stripe_auth(card: str, site: Optional[str] = None, timeout: int = 60) -> Dict:
+async def check_stripe_auth(card: str, site: Optional[str] = None) -> Dict:
     """
-    Check a card using the Stripe Auth API with robust response parsing.
+    Check a card using the Stripe Auth API.
+    
+    API Format: https://dclub.site/apis/stripe/auth/st7.php?site={site}&cc={card}
     
     Args:
         card: Card in format cc|mm|yy|cvv
-        site: Optional specific site to use (defaults to random)
-        timeout: Request timeout in seconds
+        site: Optional specific site to use (defaults to random from STRIPE_AUTH_SITES)
         
     Returns:
-        Dict with keys: response, status, message, success, site
+        Dict with keys: response, status, message, success, site, header, status_text
     """
     result = {
         "response": "UNKNOWN",
@@ -241,37 +249,45 @@ async def check_stripe_auth(card: str, site: Optional[str] = None, timeout: int 
         "message": "Unknown error",
         "success": False,
         "site": None,
-        "raw_response": ""
+        "raw_response": "",
+        "header": "UNKNOWN",
+        "status_text": "Unknown ❓"
     }
     
+    # Use provided site or get random one
     if not site:
         site = get_random_site()
     
     result["site"] = site
     
     try:
-        url = f"{API_URL}?site={site}&cc={card}"
+        # Build API URL - THIS IS THE ONLY API USED
+        api_url = f"{API_URL}?site={site}&cc={card}"
         
-        async with httpx.AsyncClient(timeout=timeout, follow_redirects=True) as client:
-            response = await client.get(url)
+        # Make request to external API
+        async with httpx.AsyncClient(timeout=REQUEST_TIMEOUT, follow_redirects=True) as client:
+            response = await client.get(api_url)
         
+        # Check HTTP status
         if response.status_code != 200:
             result["message"] = f"HTTP {response.status_code}"
             result["response"] = f"HTTP_{response.status_code}"
+            result["header"] = "ERROR"
+            result["status_text"] = "Error ⚠️"
             return result
         
-        # Get response text
+        # Get and store raw response
         response_text = response.text.strip()
         result["raw_response"] = response_text[:500]
         
-        # Parse the response
+        # Parse the API response
         parsed = parse_api_response(response_text)
         
         result["response"] = parsed["response"]
         result["status"] = parsed["status"]
         result["message"] = parsed["message"]
         
-        # Classify the response
+        # Classify the response for display
         status_text, header, is_live = classify_response(result)
         result["success"] = is_live
         result["status_text"] = status_text
@@ -282,22 +298,34 @@ async def check_stripe_auth(card: str, site: Optional[str] = None, timeout: int 
     except httpx.TimeoutException:
         result["message"] = "Request Timeout"
         result["response"] = "TIMEOUT"
+        result["header"] = "ERROR"
+        result["status_text"] = "Error ⚠️ (Timeout)"
         return result
     except httpx.ConnectError:
         result["message"] = "Connection Error"
         result["response"] = "CONNECTION_ERROR"
+        result["header"] = "ERROR"
+        result["status_text"] = "Error ⚠️ (Connection)"
         return result
     except Exception as e:
         result["message"] = f"Error: {str(e)[:40]}"
         result["response"] = "EXCEPTION"
+        result["header"] = "ERROR"
+        result["status_text"] = "Error ⚠️"
         return result
 
 
 async def check_stripe_auth_with_retry(card: str, max_retries: int = MAX_RETRIES) -> Tuple[Dict, int]:
     """
-    Check a card with intelligent retry logic using different sites.
-    Only retries on errors, not on real card responses.
+    Check a card with site rotation on errors.
     
+    Uses the external API: https://dclub.site/apis/stripe/auth/st7.php
+    Rotates through different sites if no valid response is received.
+    
+    Args:
+        card: Card in format cc|mm|yy|cvv
+        max_retries: Maximum number of site rotations
+        
     Returns:
         Tuple of (result_dict, retry_count)
     """
@@ -305,49 +333,54 @@ async def check_stripe_auth_with_retry(card: str, max_retries: int = MAX_RETRIES
     retry_count = 0
     last_result = None
     
-    while retry_count < max_retries:
-        # Get a random site we haven't tried
+    while retry_count <= max_retries:
+        # Get a site we haven't tried yet
         available_sites = [s for s in STRIPE_AUTH_SITES if s not in tried_sites]
-        if not available_sites:
-            available_sites = STRIPE_AUTH_SITES  # Reset if all tried
         
+        # If all sites tried, reset and continue
+        if not available_sites:
+            tried_sites.clear()
+            available_sites = STRIPE_AUTH_SITES
+        
+        # Pick random site
         site = random.choice(available_sites)
         tried_sites.add(site)
         
+        # Call the API
         result = await check_stripe_auth(card, site)
         last_result = result
         
-        # Get the classification
-        status_text, header, is_live = classify_response(result)
+        # Get the header (CCN LIVE, DECLINED, ERROR, UNKNOWN)
+        header = result.get("header", "UNKNOWN")
         
-        # If we got a real response (success or decline), don't retry
-        if is_live or header == "DECLINED":
+        # If we got a REAL response (live or declined), return immediately
+        if header in ["CCN LIVE", "CHARGED", "DECLINED"]:
             return result, retry_count
         
-        # Check if we should retry based on error patterns
-        response_upper = result.get("response", "").upper()
-        message_upper = result.get("message", "").upper()
-        combined = f"{response_upper} {message_upper}"
+        # Check if we should retry (only on errors/unknown)
+        if header in ["ERROR", "UNKNOWN"]:
+            retry_count += 1
+            
+            if retry_count <= max_retries:
+                # Wait before trying another site
+                await asyncio.sleep(0.5 + random.uniform(0, 0.5))
+                continue
         
-        should_retry = any(pattern in combined for pattern in ERROR_PATTERNS)
-        
-        # Also retry on unknown responses
-        if header == "UNKNOWN":
-            should_retry = True
-        
-        if not should_retry:
-            return result, retry_count
-        
-        retry_count += 1
-        if retry_count < max_retries:
-            await asyncio.sleep(0.5 + random.uniform(0, 0.5))
+        # For any other response, return as-is
+        return result, retry_count
+    
+    # All retries exhausted
+    if last_result:
+        last_result["message"] = f"All {max_retries} sites tried - {last_result.get('message', 'No valid response')}"
     
     return last_result or {
         "response": "MAX_RETRIES",
         "status": "Error",
-        "message": "All retries failed",
+        "message": f"All {max_retries} sites failed",
         "success": False,
-        "site": None
+        "site": None,
+        "header": "ERROR",
+        "status_text": "Error ⚠️"
     }, retry_count
 
 

@@ -1,6 +1,10 @@
 """
 Stripe Auth Single Card Checker
+===============================
 Handles /au command for Stripe authentication checks.
+
+Uses ONLY the external API: https://dclub.site/apis/stripe/auth/st7.php
+All checks are done via this API with site rotation on errors.
 """
 
 import re
@@ -14,6 +18,8 @@ from pyrogram.enums import ParseMode, ChatType
 from BOT.helper.start import load_users
 from BOT.helper.antispam import can_run_command
 from BOT.gc.credit import has_credits, deduct_credit
+
+# Import ONLY the external API functions - no other checking logic is used
 from BOT.Auth.StripeAuth.api import check_stripe_auth_with_retry, determine_status
 
 # Try to import BIN lookup
