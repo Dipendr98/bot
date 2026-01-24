@@ -18,7 +18,7 @@ from pyrogram.enums import ParseMode, ChatType
 from BOT.helper.start import load_users
 from BOT.helper.antispam import can_run_command
 from BOT.gc.credit import has_credits, deduct_credit
-from BOT.Charge.Shopify.slf.api import autoshopify
+from BOT.Charge.Shopify.slf.api import autoshopify, autoshopify_with_captcha_retry
 from BOT.Charge.Shopify.tls_session import TLSAsyncSession
 from BOT.Charge.Shopify.slf.site_manager import SiteRotator, get_user_sites, get_primary_site
 
@@ -398,7 +398,8 @@ Use <code>/txturl site1.com site2.com</code> for multiple sites.""",
                     pass
                 
                 async with TLSAsyncSession(timeout_seconds=120, proxy=user_proxy) as session:
-                    result = await autoshopify(site_url, fullcc, session)
+                    # Use captcha-aware wrapper with 3 internal retries per site
+                    result = await autoshopify_with_captcha_retry(site_url, fullcc, session, max_captcha_retries=3)
                 
                 response = str(result.get("Response", ""))
                 
