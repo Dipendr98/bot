@@ -51,29 +51,49 @@ def extract_cards_from_text(text: str):
 
 def get_status_flag(raw_response: str) -> str:
     """Determine proper status flag from response."""
-    response_upper = raw_response.upper() if raw_response else ""
+    response_upper = str(raw_response).upper() if raw_response else ""
     
-    # Errors first
+    # Errors first - Site/System issues
     if any(x in response_upper for x in [
+        # Captcha/Bot detection
+        "CAPTCHA", "HCAPTCHA", "RECAPTCHA", "CHALLENGE", "VERIFY",
+        # Site errors
+        "SITE_EMPTY", "SITE_HTML", "SITE_CAPTCHA", "SITE_HTTP", "SITE_CONNECTION",
+        "SITE_NO_PRODUCTS", "SITE_PRODUCTS_EMPTY", "SITE_INVALID_JSON", "SITE_EMPTY_JSON",
+        # Cart/Session errors
+        "CART_ERROR", "CART_HTML", "CART_INVALID", "CART_CREATION",
+        "SESSION_ERROR", "SESSION_ID", "SESSION_INVALID",
+        # Other system errors
         "CONNECTION", "RATE LIMIT", "PRODUCT ID", "SITE NOT FOUND",
-        "TIMEOUT", "FAILED", "CAPTCHA", "HCAPTCHA", "ERROR"
+        "TIMEOUT", "FAILED", "ERROR", "BLOCKED", "PROXY", "DEAD", "EMPTY",
+        "NO_AVAILABLE_PRODUCTS", "BUILD", "TAX", "DELIVERY"
     ]):
         return "Error ⚠️"
     
     # Charged
     if any(x in response_upper for x in [
-        "ORDER_PLACED", "THANK YOU", "SUCCESS", "CHARGED"
+        "ORDER_PLACED", "THANK YOU", "SUCCESS", "CHARGED", "COMPLETE"
     ]):
         return "Charged 💎"
     
     # CCN/Live
     if any(x in response_upper for x in [
-        "3DS", "INCORRECT_CVC", "INVALID_CVC", "INSUFFICIENT_FUNDS",
-        "INCORRECT_ZIP", "INCORRECT_ADDRESS", "MISMATCHED"
+        "3DS", "3D_SECURE", "AUTHENTICATION_REQUIRED",
+        "INCORRECT_CVC", "INVALID_CVC", "CVV_MISMATCH",
+        "INSUFFICIENT_FUNDS", "INCORRECT_ZIP", "INCORRECT_ADDRESS",
+        "MISMATCHED", "INCORRECT_PIN"
     ]):
         return "Approved ✅"
     
     # Declined
+    if any(x in response_upper for x in [
+        "CARD_DECLINED", "DECLINED", "GENERIC_DECLINE", "DO_NOT_HONOR",
+        "INVALID_ACCOUNT", "EXPIRED", "CARD_NOT_SUPPORTED", "TRY_AGAIN",
+        "PROCESSING_ERROR", "PICKUP", "LOST", "STOLEN", "FRAUD",
+        "RESTRICTED", "REVOKED", "INVALID_NUMBER", "NO_SUCH_CARD"
+    ]):
+        return "Declined ❌"
+    
     return "Declined ❌"
 
 def get_user_site_info(user_id):

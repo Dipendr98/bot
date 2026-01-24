@@ -26,22 +26,34 @@ def get_status_flag(raw_response):
     - Declined ❌: Card is dead/blocked/expired
     - Error ⚠️: System/Site errors
     """
+    response_upper = str(raw_response).upper() if raw_response else ""
+    
     # Check for system errors first
-    if any(error_keyword in raw_response for error_keyword in [
+    if any(error_keyword in response_upper for error_keyword in [
+        # Captcha/Bot detection
+        "CAPTCHA", "HCAPTCHA", "RECAPTCHA", "CHALLENGE", "VERIFY",
+        # Site errors
+        "SITE_EMPTY", "SITE_HTML", "SITE_CAPTCHA", "SITE_HTTP", "SITE_CONNECTION",
+        "SITE_NO_PRODUCTS", "SITE_PRODUCTS_EMPTY", "SITE_INVALID_JSON", "SITE_EMPTY_JSON",
+        # Cart/Session errors
+        "CART_ERROR", "CART_HTML", "CART_INVALID", "CART_CREATION",
+        "SESSION_ERROR", "SESSION_ID", "SESSION_INVALID",
+        # Other system errors
         "CONNECTION FAILED", "IP RATE LIMIT", "PRODUCT ID", "SITE NOT FOUND",
-        "REQUEST TIMEOUT", "REQUEST FAILED", "SITE | CARD ERROR", "CAPTCHA", 
-        "HCAPTCHA", "ERROR", "BLOCKED", "PROXY"
+        "REQUEST TIMEOUT", "REQUEST FAILED", "SITE | CARD ERROR",
+        "ERROR", "BLOCKED", "PROXY", "TIMEOUT", "DEAD", "EMPTY",
+        "NO_AVAILABLE_PRODUCTS", "BUILD", "TAX", "DELIVERY"
     ]):
         return "Error ⚠️"
     
     # Charged - Payment completed
-    elif any(keyword in raw_response for keyword in [
+    elif any(keyword in response_upper for keyword in [
         "ORDER_PLACED", "THANK YOU", "SUCCESS", "CHARGED", "COMPLETE"
     ]):
         return "Charged 💎"
     
     # Approved/CCN - Card is valid, CVV/Address issue
-    elif any(keyword in raw_response for keyword in [
+    elif any(keyword in response_upper for keyword in [
         "3D CC", "3DS", "3D_SECURE", "AUTHENTICATION_REQUIRED",
         "MISMATCHED_BILLING", "MISMATCHED_PIN", "MISMATCHED_ZIP", "MISMATCHED_BILL",
         "INCORRECT_CVC", "INVALID_CVC", "CVV_MISMATCH",
@@ -51,7 +63,7 @@ def get_status_flag(raw_response):
         return "Approved ✅"
     
     # Declined - Card is dead/blocked/expired
-    elif any(keyword in raw_response for keyword in [
+    elif any(keyword in response_upper for keyword in [
         "CARD_DECLINED", "DECLINED", "GENERIC_DECLINE", "DO_NOT_HONOR",
         "INVALID_ACCOUNT", "EXPIRED", "CARD_NOT_SUPPORTED", "TRY_AGAIN",
         "PROCESSING_ERROR", "PICKUP", "LOST", "STOLEN", "FRAUD",

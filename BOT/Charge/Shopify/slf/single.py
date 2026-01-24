@@ -93,10 +93,21 @@ def determine_status(response: str) -> tuple:
     ]):
         return "Charged 💎", "CHARGED", True
     
-    # Errors - System issues, not card-related
+    # Site/System Errors - These are NOT card issues, retry with different site or later
     if any(x in response_upper for x in [
-        "ERROR", "TIMEOUT", "CAPTCHA", "EMPTY", "DEAD", "TAX", "HCAPTCHA",
-        "CONNECTION", "RATE_LIMIT", "SITE_ERROR", "BLOCKED", "PROXY"
+        # Captcha/Bot detection
+        "CAPTCHA", "HCAPTCHA", "RECAPTCHA", "CHALLENGE", "VERIFY",
+        # Site errors
+        "SITE_EMPTY", "SITE_HTML", "SITE_CAPTCHA", "SITE_HTTP", "SITE_CONNECTION",
+        "SITE_NO_PRODUCTS", "SITE_PRODUCTS_EMPTY", "SITE_INVALID_JSON", "SITE_EMPTY_JSON",
+        # Cart/Session errors
+        "CART_ERROR", "CART_HTML", "CART_INVALID", "CART_CREATION",
+        "SESSION_ERROR", "SESSION_ID", "SESSION_INVALID",
+        # Other system errors
+        "ERROR", "TIMEOUT", "EMPTY", "DEAD", "CONNECTION", "RATE_LIMIT",
+        "BLOCKED", "PROXY", "NO_AVAILABLE_PRODUCTS", "BUILD",
+        # Tax and delivery issues
+        "TAX_ERROR", "DELIVERY_ERROR", "SHIPPING_ERROR"
     ]):
         return "Error ⚠️", "ERROR", False
     
