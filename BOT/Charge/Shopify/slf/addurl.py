@@ -561,9 +561,9 @@ Use <code>/addurl https://store.com</code> to add a Shopify site.""",
     )
 
 
-@Client.on_message(filters.command(["delsite", "removesite", "clearsite"]) & filters.private)
+@Client.on_message(filters.command(["delsite", "removesite", "clearsite", "remurl"]) & filters.private)
 async def delete_site_handler(client: Client, message: Message):
-    """Delete user's saved site."""
+    """Delete user's saved site. Also handles /remurl."""
     user_id = str(message.from_user.id)
     
     try:
