@@ -38,8 +38,8 @@ def extract_cards(text: str):
     return re.findall(r'(\d{12,19}\|\d{1,2}\|\d{2,4}\|\d{3,4})', text)
 
 
-@Client.on_message(filters.command(["mau", "massauth"]) | filters.regex(r"^\.mau(\s|$)"))
-async def handle_mau_command(client: Client, message: Message):
+@Client.on_message(filters.command(["mstripeauth", "msauth"]) | filters.regex(r"^\.msauth(\s|$)"))
+async def handle_mstripeauth_command(client: Client, message: Message):
     """
     Handle /mau command for mass Stripe Auth checking.
     """
