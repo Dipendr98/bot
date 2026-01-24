@@ -33,7 +33,7 @@ def extract_card(text: str):
 
 
 def format_response(fullcc: str, result: dict, user_info: dict, time_taken: float, retry_count: int = 0) -> str:
-    """Format the Stripe Auth response in professional style."""
+    """Format the Stripe Auth response in professional style with accurate status display."""
     parts = fullcc.split("|")
     cc = parts[0] if len(parts) > 0 else "Unknown"
     
@@ -41,7 +41,17 @@ def format_response(fullcc: str, result: dict, user_info: dict, time_taken: floa
     message = result.get("message", "Unknown")
     site = result.get("site", "Unknown")
     
-    status_text, header, is_live = determine_status(result)
+    # Use the pre-computed status if available, otherwise determine
+    status_text = result.get("status_text")
+    header = result.get("header")
+    is_live = result.get("success", False)
+    
+    if not status_text or not header:
+        status_text, header, is_live = determine_status(result)
+    
+    # Clean up response for display
+    response_display = response.replace("_", " ").title() if response else "Unknown"
+    message_display = message[:100] if message else "Unknown"
     
     # BIN lookup
     bin_data = get_bin_details(cc[:6]) if get_bin_details else None
@@ -63,15 +73,24 @@ def format_response(fullcc: str, result: dict, user_info: dict, time_taken: floa
         country = "N/A"
         country_flag = "🏳️"
     
-    retry_line = f"\n<b>[•] Retries:</b> <code>{retry_count}</code>" if retry_count > 0 else ""
+    # Build additional info lines
+    extra_lines = []
+    if retry_count > 0:
+        extra_lines.append(f"<b>[•] Retries:</b> <code>{retry_count}</code>")
+    if site and site != "Unknown":
+        # Show site in a shortened format
+        site_display = site[:30] + "..." if len(site) > 30 else site
+        extra_lines.append(f"<b>[•] Site:</b> <code>{site_display}</code>")
+    
+    extra_section = "\n" + "\n".join(extra_lines) if extra_lines else ""
     
     return f"""<b>[#StripeAuth] | {header}</b> ✦
 ━━━━━━━━━━━━━━━
 <b>[•] Card:</b> <code>{fullcc}</code>
 <b>[•] Gateway:</b> <code>Stripe Auth</code>
 <b>[•] Status:</b> <code>{status_text}</code>
-<b>[•] Response:</b> <code>{response}</code>
-<b>[•] Message:</b> <code>{message}</code>{retry_line}
+<b>[•] Response:</b> <code>{response_display}</code>
+<b>[•] Message:</b> <code>{message_display}</code>{extra_section}
 ━ ━ ━ ━ ━ ━ ━ ━ ━ ━ ━ ━ ━
 <b>[+] BIN:</b> <code>{bin_number}</code>
 <b>[+] Info:</b> <code>{vendor} - {card_type} - {level}</code>

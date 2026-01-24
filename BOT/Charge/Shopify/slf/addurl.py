@@ -1,6 +1,14 @@
 """
-Professional Shopify Site URL Handler
-Robust site validation, gateway detection, and management for Shopify checkers.
+Professional Shopify Site URL Handler (Unified)
+Robust site validation with lowest product parsing for /addurl and /txturl commands.
+Works in both private chats and groups.
+
+Features:
+- Lowest product price detection
+- Gateway detection
+- Test check before saving
+- Unified site storage
+- Group and private chat support
 """
 
 import os
@@ -9,36 +17,54 @@ import time
 import asyncio
 import re
 import random
+import hashlib
 from urllib.parse import urlparse
 from typing import Optional, Dict, Any, Tuple, List
 
 from pyrogram import Client, filters
 from pyrogram.types import Message, InlineKeyboardMarkup, InlineKeyboardButton
-from pyrogram.enums import ParseMode
+from pyrogram.enums import ParseMode, ChatType
 
 from BOT.Charge.Shopify.tls_session import TLSAsyncSession
 from BOT.tools.proxy import get_proxy
 from BOT.helper.start import load_users
 
-# File paths
+# Import unified site manager
+from BOT.Charge.Shopify.slf.site_manager import (
+    add_site_for_user,
+    add_sites_batch,
+    get_primary_site,
+    get_user_sites,
+)
+
+# Paths
 SITES_PATH = "DATA/sites.json"
 TXT_SITES_PATH = "DATA/txtsite.json"
-
-# User agents pool for realistic requests
-USER_AGENTS = [
-    "Mozilla/5.0 (Windows NT 10.0; Win64; x64) AppleWebKit/537.36 (KHTML, like Gecko) Chrome/120.0.0.0 Safari/537.36",
-    "Mozilla/5.0 (Macintosh; Intel Mac OS X 10_15_7) AppleWebKit/537.36 (KHTML, like Gecko) Chrome/120.0.0.0 Safari/537.36",
-    "Mozilla/5.0 (Linux; Android 14; Pixel 8) AppleWebKit/537.36 (KHTML, like Gecko) Chrome/120.0.0.0 Mobile Safari/537.36",
-    "Mozilla/5.0 (Windows NT 10.0; Win64; x64; rv:121.0) Gecko/20100101 Firefox/121.0",
-    "Mozilla/5.0 (iPhone; CPU iPhone OS 17_2 like Mac OS X) AppleWebKit/605.1.15 (KHTML, like Gecko) Version/17.2 Mobile/15E148 Safari/604.1",
-]
 
 # Timeout configurations
 FAST_TIMEOUT = 15
 STANDARD_TIMEOUT = 30
 MAX_RETRIES = 2
 
-# Gateway identifiers
+# Currency symbols mapping
+CURRENCY_SYMBOLS = {
+    'USD': '$', 'EUR': '€', 'GBP': '£', 'JPY': '¥', 'CNY': '¥',
+    'INR': '₹', 'AUD': 'A$', 'CAD': 'C$', 'CHF': 'CHF', 'SGD': 'S$',
+    'NZD': 'NZ$', 'MXN': 'MX$', 'BRL': 'R$', 'ZAR': 'R', 'AED': 'د.إ',
+    'SEK': 'kr', 'NOK': 'kr', 'DKK': 'kr', 'PLN': 'zł', 'THB': '฿',
+    'IDR': 'Rp', 'MYR': 'RM', 'PHP': '₱', 'HKD': 'HK$', 'KRW': '₩',
+    'TRY': '₺', 'RUB': '₽', 'ILS': '₪', 'CZK': 'Kč', 'HUF': 'Ft'
+}
+
+# User agents pool
+USER_AGENTS = [
+    "Mozilla/5.0 (Windows NT 10.0; Win64; x64) AppleWebKit/537.36 (KHTML, like Gecko) Chrome/120.0.0.0 Safari/537.36",
+    "Mozilla/5.0 (Macintosh; Intel Mac OS X 10_15_7) AppleWebKit/537.36 (KHTML, like Gecko) Chrome/120.0.0.0 Safari/537.36",
+    "Mozilla/5.0 (Linux; Android 14; Pixel 8) AppleWebKit/537.36 (KHTML, like Gecko) Chrome/120.0.0.0 Mobile Safari/537.36",
+    "Mozilla/5.0 (Windows NT 10.0; Win64; x64; rv:121.0) Gecko/20100101 Firefox/121.0",
+]
+
+# Gateway patterns
 GATEWAY_PATTERNS = {
     "Shopify Payments": ["shopify payments", "normal"],
     "Stripe": ["stripe"],
@@ -54,13 +80,8 @@ GATEWAY_PATTERNS = {
 
 
 def normalize_url(url: str) -> str:
-    """
-    Normalize and clean URL to standard format.
-    Handles various input formats: domain only, with/without protocol, with paths.
-    """
+    """Normalize and clean URL to standard format."""
     url = url.strip().lower()
-    
-    # Remove trailing slashes
     url = url.rstrip('/')
     
     # Remove common path suffixes
@@ -72,15 +93,28 @@ def normalize_url(url: str) -> str:
     if not url.startswith(('http://', 'https://')):
         url = f"https://{url}"
     
-    # Parse and reconstruct to get clean domain
     try:
         parsed = urlparse(url)
         domain = parsed.netloc or parsed.path.split('/')[0]
-        # Remove any port numbers for cleaner URL
         domain = domain.split(':')[0]
         return f"https://{domain}"
     except Exception:
         return url
+
+
+def clean_domain(domain: str) -> str:
+    """Clean and validate domain format."""
+    domain = domain.replace('https://', '').replace('http://', '').strip('/')
+    domain = domain.split('/')[0]
+    domain = domain.lower()
+    
+    if not domain or len(domain) < 3:
+        raise ValueError("Domain too short")
+    
+    if not re.match(r'^[a-zA-Z0-9]([a-zA-Z0-9\-\.]{0,61}[a-zA-Z0-9])?(\.[a-zA-Z]{2,})+$', domain):
+        raise ValueError("Invalid domain format")
+    
+    return domain
 
 
 def get_random_headers() -> Dict[str, str]:
@@ -110,14 +144,12 @@ def detect_gateway(page_content: str) -> str:
     """Detect payment gateway from page content."""
     content_lower = page_content.lower()
     
-    # Try to extract gateway name from Shopify checkout
     gateway = extract_between(page_content, 'extensibilityDisplayName&quot;:&quot;', '&quot')
     if gateway:
         if gateway == "Shopify Payments":
             return "Normal"
         return gateway
     
-    # Fallback to pattern matching
     for gateway_name, patterns in GATEWAY_PATTERNS.items():
         for pattern in patterns:
             if pattern in content_lower:
@@ -126,42 +158,218 @@ def detect_gateway(page_content: str) -> str:
     return "Unknown"
 
 
-def get_min_price_product(products_data: list) -> Optional[Tuple[int, float]]:
-    """
-    Find the cheapest available product from products.json data.
-    Returns (product_id, price) or None.
-    """
-    products = {}
-    
-    for product in products_data:
-        variants = product.get("variants", [])
-        for variant in variants:
-            try:
-                product_id = variant.get("id")
-                available = variant.get("available", False)
-                price = float(variant.get("price", 0))
-                
-                # Skip free or unavailable products
-                if price < 0.10 or not available:
-                    continue
-                
-                products[product_id] = price
-            except (ValueError, TypeError):
-                continue
-    
-    if products:
-        min_id = min(products, key=products.get)
-        return min_id, products[min_id]
-    
+def get_currency_symbol(code: str) -> str:
+    """Get currency symbol for code."""
+    return CURRENCY_SYMBOLS.get(code.upper(), f"{code} ")
+
+
+async def fetch_with_retry(
+    session: TLSAsyncSession,
+    url: str,
+    max_retries: int = 3,
+    timeout: int = FAST_TIMEOUT
+) -> Optional[Any]:
+    """Fetch URL with exponential backoff retry."""
+    for attempt in range(max_retries):
+        try:
+            response = await asyncio.wait_for(
+                session.get(url, headers=get_random_headers(), follow_redirects=True),
+                timeout=timeout
+            )
+            if response.status_code == 200:
+                return response
+            elif response.status_code == 429:
+                wait_time = min(2 ** attempt, 10)
+                await asyncio.sleep(wait_time)
+            else:
+                return None
+        except asyncio.TimeoutError:
+            if attempt < max_retries - 1:
+                await asyncio.sleep(2 ** attempt)
+        except Exception:
+            return None
     return None
 
 
-async def validate_shopify_site(url: str, session: TLSAsyncSession) -> Dict[str, Any]:
+async def get_store_info(session: TLSAsyncSession, base_url: str) -> Dict[str, str]:
+    """Extract store currency and country."""
+    try:
+        response = await fetch_with_retry(session, base_url)
+        if not response:
+            return {'currency': 'USD', 'country': 'US'}
+        
+        text = response.text
+        
+        currency = 'USD'
+        currency_patterns = [
+            r'Shopify\.currency\s*=\s*["\']([A-Z]{3})["\']',
+            r'"currency"\s*:\s*"([A-Z]{3})"',
+            r'window\.Currency\s*=\s*["\']([A-Z]{3})["\']',
+            r'data-currency=["\']([A-Z]{3})["\']'
+        ]
+        
+        for pattern in currency_patterns:
+            match = re.search(pattern, text, re.IGNORECASE)
+            if match:
+                currency = match.group(1).upper()
+                break
+        
+        country = 'US'
+        country_patterns = [
+            r'Shopify\.country\s*=\s*["\']([A-Z]{2})["\']',
+            r'"country_code"\s*:\s*"([A-Z]{2})"',
+            r'data-country=["\']([A-Z]{2})["\']'
+        ]
+        
+        for pattern in country_patterns:
+            match = re.search(pattern, text, re.IGNORECASE)
+            if match:
+                country = match.group(1).upper()
+                break
+        
+        return {'currency': currency, 'country': country}
+        
+    except Exception:
+        return {'currency': 'USD', 'country': 'US'}
+
+
+def find_lowest_variant(product: Dict) -> Optional[Dict]:
+    """Find lowest priced available variant."""
+    try:
+        variants = product.get('variants', [])
+        if not variants:
+            return None
+        
+        # Filter available variants
+        available_variants = [v for v in variants if v.get('available', False)]
+        candidates = available_variants if available_variants else variants
+        
+        valid_variants = []
+        for variant in candidates:
+            try:
+                price_str = variant.get('price', '0')
+                price = float(price_str) if price_str else 0.0
+                if price > 0:
+                    valid_variants.append((price, variant))
+            except (ValueError, TypeError):
+                continue
+        
+        if not valid_variants:
+            return None
+        
+        lowest_price, lowest_variant = min(valid_variants, key=lambda x: x[0])
+        return lowest_variant
+        
+    except Exception:
+        return None
+
+
+async def fetch_products(session: TLSAsyncSession, base_url: str, max_pages: int = 3) -> List[Dict]:
+    """Fetch products from multiple pages concurrently."""
+    products_limit = 100
+    
+    async def fetch_page(page: int) -> List[Dict]:
+        url = f"{base_url}/products.json?limit={products_limit}&page={page}"
+        response = await fetch_with_retry(session, url)
+        
+        if not response:
+            return []
+        
+        try:
+            raw = response.content.decode("utf-8", errors="ignore")
+            
+            if raw.lstrip().startswith("<"):
+                return []
+            
+            data = json.loads(raw)
+            products = data.get("products", [])
+            
+            return products if isinstance(products, list) else []
+            
+        except Exception:
+            return []
+    
+    tasks = [fetch_page(page) for page in range(1, max_pages + 1)]
+    results = await asyncio.gather(*tasks, return_exceptions=True)
+    
+    all_products = []
+    for result in results:
+        if isinstance(result, list):
+            all_products.extend(result)
+    
+    return all_products
+
+
+async def find_lowest_product(session: TLSAsyncSession, base_url: str) -> Optional[Dict]:
     """
-    Validate if a URL is a working Shopify store.
+    Find the lowest priced product from a Shopify store.
     
     Returns:
-        Dict with keys: valid, url, gateway, price, error
+        Dict with product info or None if not found
+    """
+    try:
+        # Fetch store info and products
+        store_info = await get_store_info(session, base_url)
+        products = await fetch_products(session, base_url)
+        
+        if not products:
+            return None
+        
+        # Find product with lowest price
+        lowest_price = float('inf')
+        lowest_product = None
+        lowest_variant = None
+        
+        for product in products:
+            variant = find_lowest_variant(product)
+            if variant:
+                price = float(variant.get('price', 0))
+                if 0 < price < lowest_price:
+                    lowest_price = price
+                    lowest_product = product
+                    lowest_variant = variant
+        
+        if not lowest_product or not lowest_variant:
+            return None
+        
+        currency = store_info.get('currency', 'USD')
+        currency_symbol = get_currency_symbol(currency)
+        
+        return {
+            'success': True,
+            'domain': base_url.replace('https://', ''),
+            'product': {
+                'id': lowest_product.get('id'),
+                'title': lowest_product.get('title', 'N/A')[:200],
+                'handle': lowest_product.get('handle', ''),
+                'url': f"{base_url}/products/{lowest_product.get('handle', '')}",
+            },
+            'variant': {
+                'id': lowest_variant.get('id'),
+                'title': lowest_variant.get('title', 'Default')[:100],
+                'available': lowest_variant.get('available', False),
+            },
+            'pricing': {
+                'price': round(lowest_price, 2),
+                'currency_code': currency,
+                'currency_symbol': currency_symbol,
+                'formatted_price': f"{currency_symbol}{lowest_price:.2f}",
+            },
+            'checkout': {
+                'direct_url': f"{base_url}/cart/{lowest_variant.get('id')}:1",
+            },
+        }
+        
+    except Exception:
+        return None
+
+
+async def validate_and_parse_site(url: str, session: TLSAsyncSession) -> Dict[str, Any]:
+    """
+    Validate if a URL is a working Shopify store and parse lowest product.
+    
+    Returns:
+        Dict with validation result and product info
     """
     result = {
         "valid": False,
@@ -170,108 +378,75 @@ async def validate_shopify_site(url: str, session: TLSAsyncSession) -> Dict[str,
         "price": "N/A",
         "error": None,
         "product_id": None,
+        "product_title": None,
+        "currency": "USD",
     }
     
     try:
         normalized_url = normalize_url(url)
         result["url"] = normalized_url
         
-        headers = get_random_headers()
+        # Find lowest product
+        product_info = await find_lowest_product(session, normalized_url)
         
-        # Step 1: Check products.json endpoint (Shopify signature)
-        products_url = f"{normalized_url}/products.json"
-        
-        try:
-            response = await asyncio.wait_for(
-                session.get(products_url, headers=headers, follow_redirects=True),
-                timeout=FAST_TIMEOUT
-            )
-        except asyncio.TimeoutError:
-            result["error"] = "Timeout"
-            return result
-        
-        # Check if response is valid JSON
-        try:
-            data = response.json()
-        except (json.JSONDecodeError, ValueError):
-            result["error"] = "Not Shopify"
-            return result
-        
-        # Verify it has products structure
-        products = data.get("products", [])
-        if not products:
-            result["error"] = "No Products"
-            return result
-        
-        # Step 2: Find cheapest available product
-        product_info = get_min_price_product(products)
         if not product_info:
-            result["error"] = "No Available Products"
+            result["error"] = "No Products Found"
             return result
         
-        product_id, price = product_info
-        result["product_id"] = product_id
-        result["price"] = f"{price:.2f}"
+        result["product_id"] = product_info['variant']['id']
+        result["product_title"] = product_info['product']['title'][:50]
+        result["price"] = str(product_info['pricing']['price'])
+        result["currency"] = product_info['pricing']['currency_code']
+        result["formatted_price"] = product_info['pricing']['formatted_price']
         
-        # Step 3: Quick checkout page check for gateway detection
+        # Try to detect gateway
         try:
-            # Get site access token for cart creation
-            home_response = await asyncio.wait_for(
-                session.get(normalized_url, headers=headers, follow_redirects=True),
-                timeout=FAST_TIMEOUT
-            )
-            
-            site_key = extract_between(home_response.text, '"accessToken":"', '"')
-            
-            if site_key:
-                # Create cart to get checkout URL
-                cart_headers = {
-                    **headers,
-                    'content-type': 'application/json',
-                    'origin': normalized_url,
-                    'x-shopify-storefront-access-token': site_key,
-                }
+            home_response = await fetch_with_retry(session, normalized_url, timeout=FAST_TIMEOUT)
+            if home_response:
+                site_key = extract_between(home_response.text, '"accessToken":"', '"')
                 
-                cart_payload = {
-                    'query': 'mutation cartCreate($input:CartInput!){result:cartCreate(input:$input){cart{id checkoutUrl}errors:userErrors{message}}}',
-                    'variables': {
-                        'input': {
-                            'lines': [{
-                                'merchandiseId': f'gid://shopify/ProductVariant/{product_id}',
-                                'quantity': 1,
-                            }],
+                if site_key:
+                    # Try to create cart for gateway detection
+                    cart_headers = {
+                        **get_random_headers(),
+                        'content-type': 'application/json',
+                        'origin': normalized_url,
+                        'x-shopify-storefront-access-token': site_key,
+                    }
+                    
+                    cart_payload = {
+                        'query': 'mutation cartCreate($input:CartInput!){result:cartCreate(input:$input){cart{id checkoutUrl}errors:userErrors{message}}}',
+                        'variables': {
+                            'input': {
+                                'lines': [{
+                                    'merchandiseId': f'gid://shopify/ProductVariant/{result["product_id"]}',
+                                    'quantity': 1,
+                                }],
+                            },
                         },
-                    },
-                }
-                
-                cart_response = await asyncio.wait_for(
-                    session.post(
-                        f'{normalized_url}/api/unstable/graphql.json',
-                        params={'operation_name': 'cartCreate'},
-                        headers=cart_headers,
-                        json=cart_payload,
-                        follow_redirects=True
-                    ),
-                    timeout=STANDARD_TIMEOUT
-                )
-                
-                cart_data = cart_response.json()
-                checkout_url = cart_data.get("data", {}).get("result", {}).get("cart", {}).get("checkoutUrl")
-                
-                if checkout_url:
-                    # Fetch checkout page for gateway detection
-                    checkout_response = await asyncio.wait_for(
-                        session.get(checkout_url, headers=headers, follow_redirects=True),
+                    }
+                    
+                    cart_response = await asyncio.wait_for(
+                        session.post(
+                            f'{normalized_url}/api/unstable/graphql.json',
+                            params={'operation_name': 'cartCreate'},
+                            headers=cart_headers,
+                            json=cart_payload,
+                            follow_redirects=True
+                        ),
                         timeout=STANDARD_TIMEOUT
                     )
                     
-                    result["gateway"] = detect_gateway(checkout_response.text)
-            else:
-                # No site key found, try basic detection
-                result["gateway"] = "Normal"
-                
+                    cart_data = cart_response.json()
+                    checkout_url = cart_data.get("data", {}).get("result", {}).get("cart", {}).get("checkoutUrl")
+                    
+                    if checkout_url:
+                        checkout_response = await fetch_with_retry(session, checkout_url, timeout=STANDARD_TIMEOUT)
+                        if checkout_response:
+                            result["gateway"] = detect_gateway(checkout_response.text)
+                else:
+                    result["gateway"] = "Normal"
         except Exception:
-            # Gateway detection failed, but site is still valid Shopify
             result["gateway"] = "Normal"
         
         result["valid"] = True
@@ -283,25 +458,15 @@ async def validate_shopify_site(url: str, session: TLSAsyncSession) -> Dict[str,
 
 
 async def validate_sites_batch(urls: List[str], user_proxy: Optional[str] = None) -> List[Dict[str, Any]]:
-    """
-    Validate multiple Shopify sites concurrently.
-    
-    Args:
-        urls: List of URLs to validate
-        user_proxy: Optional user proxy string
-        
-    Returns:
-        List of validation results
-    """
+    """Validate multiple Shopify sites concurrently."""
     results = []
     
     async with TLSAsyncSession(timeout_seconds=STANDARD_TIMEOUT) as session:
-        # Process sites concurrently in batches for efficiency
-        batch_size = 5  # Process 5 sites at a time
+        batch_size = 5
         
         for i in range(0, len(urls), batch_size):
             batch = urls[i:i + batch_size]
-            tasks = [validate_shopify_site(url, session) for url in batch]
+            tasks = [validate_and_parse_site(url, session) for url in batch]
             batch_results = await asyncio.gather(*tasks, return_exceptions=True)
             
             for url, result in zip(batch, batch_results):
@@ -319,75 +484,37 @@ async def validate_sites_batch(urls: List[str], user_proxy: Optional[str] = None
     return results
 
 
-def save_site_for_user(user_id: str, site: str, gateway: str) -> bool:
+def save_site_for_user_unified(user_id: str, site: str, gateway: str, price: str = "N/A") -> bool:
     """Save a site for a user using unified site manager."""
-    from BOT.Charge.Shopify.slf.site_manager import add_site_for_user
-    # Extract price from gateway string if present
-    price = "N/A"
-    if "$" in gateway:
-        try:
-            price = gateway.split("$")[1].split()[0]
-        except:
-            pass
-    return add_site_for_user(user_id, site, gateway, price, set_primary=True)
+    gate_name = f"Shopify {gateway} ${price}" if price != "N/A" else f"Shopify {gateway}"
+    return add_site_for_user(user_id, site, gate_name, price, set_primary=True)
 
 
 def get_user_current_site(user_id: str) -> Optional[Dict[str, str]]:
     """Get user's currently saved site using unified site manager."""
-    from BOT.Charge.Shopify.slf.site_manager import get_primary_site
     site = get_primary_site(user_id)
     if site:
         return {
             "site": site.get("url"),
-            "gate": site.get("gateway")
+            "gate": site.get("gateway"),
+            "price": site.get("price", "N/A")
         }
     return None
 
 
-@Client.on_message(filters.command(["addurl", "slfurl", "seturl"]) & ~filters.private)
-async def addurl_group_redirect(client: Client, message: Message):
-    """Redirect /addurl command in groups to private chat."""
-    try:
-        bot_info = await client.get_me()
-        bot_username = bot_info.username
-        bot_link = f"https://t.me/{bot_username}"
-    except:
-        bot_link = "https://t.me/"
-    
-    await message.reply(
-        f"""<pre>🔒 Private Command</pre>
-━━━━━━━━━━━━━━━
-<b>This command only works in private chat.</b>
+# ==================== COMMAND HANDLERS ====================
 
-<b>Command:</b> <code>/addurl</code>
-<b>Purpose:</b> Add Shopify sites for checking
-
-<b>How to use:</b>
-1️⃣ Click the button below
-2️⃣ Use <code>/addurl site.com</code> there
-
-<b>Why private?</b>
-• 🔐 Protects your site data
-• ⚡ Personal site management
-━━━━━━━━━━━━━━━
-<i>Your data security is our priority!</i>""",
-        reply_to_message_id=message.id,
-        parse_mode=ParseMode.HTML,
-        reply_markup=InlineKeyboardMarkup([
-            [InlineKeyboardButton("📱 Open Private Chat", url=bot_link)]
-        ])
-    )
-
-
-@Client.on_message(filters.command(["addurl", "slfurl", "seturl"]) & filters.private)
+@Client.on_message(filters.command(["addurl", "slfurl", "seturl"]))
 async def add_site_handler(client: Client, message: Message):
     """
     Handle /addurl command to add and validate Shopify sites.
+    Works in both private chats and groups.
+    Parses lowest product and validates before saving.
     
     Usage:
         /addurl https://example.myshopify.com
         /addurl example.com
-        /addurl site1.com site2.com site3.com  (multiple sites)
+        /addurl site1.com site2.com site3.com (multiple sites)
     """
     user_id = str(message.from_user.id)
     user_name = message.from_user.first_name
@@ -399,7 +526,8 @@ async def add_site_handler(client: Client, message: Message):
         return await message.reply(
             """<pre>Access Denied 🚫</pre>
 <b>You must register first using</b> <code>/register</code> <b>command.</b>""",
-            reply_to_message_id=message.id
+            reply_to_message_id=message.id,
+            parse_mode=ParseMode.HTML
         )
     
     # Get URLs from command
@@ -407,28 +535,31 @@ async def add_site_handler(client: Client, message: Message):
     
     # Also support reply to message containing URLs
     if not args and message.reply_to_message and message.reply_to_message.text:
-        # Extract URLs from replied message
         url_pattern = r'https?://[^\s<>"{}|\\^`\[\]]+'
         args = re.findall(url_pattern, message.reply_to_message.text)
         if not args:
-            # Try to find domain-like patterns
             domain_pattern = r'(?:[a-zA-Z0-9](?:[a-zA-Z0-9\-]{0,61}[a-zA-Z0-9])?\.)+[a-zA-Z]{2,}'
             args = re.findall(domain_pattern, message.reply_to_message.text)
     
     if not args:
         return await message.reply(
-            """<pre>Usage Guide 📖</pre>
-<b>Add a Shopify site for card checking:</b>
+            """<pre>📖 Add Site Guide</pre>
+━━━━━━━━━━━━━━━
+<b>Add a Shopify site for checking:</b>
 
-<code>/addurl https://example.myshopify.com</code>
-<code>/addurl example.com</code>
+<code>/addurl https://store.myshopify.com</code>
+<code>/addurl store.com</code>
 <code>/addurl site1.com site2.com</code> <i>(multiple)</i>
 
 <b>After adding:</b> Use <code>/sh</code> or <code>/slf</code> to check cards
 
 <b>Other Commands:</b>
 • <code>/mysite</code> - View your current site
-• <code>/delsite</code> - Remove your site""",
+• <code>/txturl</code> - Add multiple sites
+• <code>/txtls</code> - List all your sites
+• <code>/delsite</code> - Remove your site
+━━━━━━━━━━━━━━━
+<i>Works in groups & private chats!</i>""",
             reply_to_message_id=message.id,
             parse_mode=ParseMode.HTML
         )
@@ -444,7 +575,7 @@ async def add_site_handler(client: Client, message: Message):
         f"""<pre>🔍 Validating Shopify Sites...</pre>
 ━━━━━━━━━━━━━
 <b>Sites:</b> <code>{total_urls}</code>
-<b>Status:</b> <i>Checking...</i>""",
+<b>Status:</b> <i>Parsing lowest products...</i>""",
         reply_to_message_id=message.id,
         parse_mode=ParseMode.HTML
     )
@@ -453,7 +584,7 @@ async def add_site_handler(client: Client, message: Message):
         # Get user's proxy if set
         user_proxy = get_proxy(int(user_id))
         
-        # Validate all sites
+        # Validate all sites with lowest product parsing
         results = await validate_sites_batch(urls, user_proxy)
         
         # Separate valid and invalid sites
@@ -463,10 +594,9 @@ async def add_site_handler(client: Client, message: Message):
         time_taken = round(time.time() - start_time, 2)
         
         if not valid_sites:
-            # No valid sites found
             error_lines = []
-            for site in invalid_sites[:5]:  # Show first 5 errors
-                error_lines.append(f"• <code>{site['url']}</code> → {site.get('error', 'Invalid')}")
+            for site in invalid_sites[:5]:
+                error_lines.append(f"• <code>{site['url'][:40]}</code> → {site.get('error', 'Invalid')}")
             
             error_text = "\n".join(error_lines)
             
@@ -482,7 +612,7 @@ async def add_site_handler(client: Client, message: Message):
 <b>Tips:</b>
 • Ensure the site is a Shopify store
 • Check if the store has available products
-• Try with full URL: https://store.myshopify.com
+• Try with full URL: https://store.com
 ━━━━━━━━━━━━━
 ⏱️ <b>Time:</b> <code>{time_taken}s</code>""",
                 parse_mode=ParseMode.HTML
@@ -493,10 +623,11 @@ async def add_site_handler(client: Client, message: Message):
         site_url = primary_site["url"]
         gateway = primary_site["gateway"]
         price = primary_site["price"]
-        gate_name = f"Shopify {gateway} ${price}"
+        product_title = primary_site.get("product_title", "N/A")
+        formatted_price = primary_site.get("formatted_price", f"${price}")
         
         # Save the primary site
-        saved = save_site_for_user(user_id, site_url, gate_name)
+        saved = save_site_for_user_unified(user_id, site_url, gateway, price)
         
         # Build response
         response_lines = [
@@ -504,11 +635,12 @@ async def add_site_handler(client: Client, message: Message):
             "━━━━━━━━━━━━━"
         ]
         
-        # Primary site info
+        # Primary site info with product details
         response_lines.extend([
             f"[⌯] <b>Site:</b> <code>{site_url}</code>",
             f"[⌯] <b>Gateway:</b> <code>{gateway}</code>",
-            f"[⌯] <b>Price:</b> <code>${price}</code>",
+            f"[⌯] <b>Lowest Price:</b> <code>{formatted_price}</code>",
+            f"[⌯] <b>Product:</b> <code>{product_title}...</code>",
             f"[⌯] <b>Status:</b> <code>Active ✓</code>",
         ])
         
@@ -516,8 +648,9 @@ async def add_site_handler(client: Client, message: Message):
         if len(valid_sites) > 1:
             response_lines.append("")
             response_lines.append(f"<b>Other Valid Sites ({len(valid_sites) - 1}):</b>")
-            for site in valid_sites[1:5]:  # Show up to 4 more
-                response_lines.append(f"• <code>{site['url']}</code> ({site['gateway']})")
+            for site in valid_sites[1:5]:
+                price_display = site.get("formatted_price", f"${site.get('price', 'N/A')}")
+                response_lines.append(f"• <code>{site['url'][:35]}</code> [{price_display}]")
         
         # Show failed sites count
         if invalid_sites:
@@ -535,7 +668,7 @@ async def add_site_handler(client: Client, message: Message):
         buttons = InlineKeyboardMarkup([
             [
                 InlineKeyboardButton("✓ Check Card", callback_data="show_check_help"),
-                InlineKeyboardButton("📋 My Site", callback_data="show_my_site")
+                InlineKeyboardButton("📋 My Sites", callback_data="show_my_sites")
             ]
         ])
         
@@ -561,7 +694,7 @@ async def add_site_handler(client: Client, message: Message):
 
 @Client.on_message(filters.command(["mysite", "getsite", "siteinfo"]))
 async def my_site_handler(client: Client, message: Message):
-    """Show user's currently saved site."""
+    """Show user's currently saved primary site."""
     user_id = str(message.from_user.id)
     
     site_info = get_user_current_site(user_id)
@@ -576,13 +709,20 @@ Use <code>/addurl https://store.com</code> to add a Shopify site.""",
             parse_mode=ParseMode.HTML
         )
     
+    # Get all sites count
+    all_sites = get_user_sites(user_id)
+    total_count = len(all_sites)
+    
     await message.reply(
-        f"""<pre>Your Site Info 📋</pre>
+        f"""<pre>Your Primary Site 📋</pre>
 ━━━━━━━━━━━━━
 [⌯] <b>Site:</b> <code>{site_info.get('site', 'N/A')}</code>
 [⌯] <b>Gateway:</b> <code>{site_info.get('gate', 'Unknown')}</code>
+[⌯] <b>Price:</b> <code>${site_info.get('price', 'N/A')}</code>
 ━━━━━━━━━━━━━
-<b>Commands:</b> <code>/sh</code> or <code>/slf</code> to check cards""",
+<b>Total Sites:</b> <code>{total_count}</code>
+<b>Commands:</b> <code>/sh</code> or <code>/slf</code> to check cards
+<b>List All:</b> <code>/txtls</code>""",
         reply_to_message_id=message.id,
         parse_mode=ParseMode.HTML
     )
@@ -590,7 +730,7 @@ Use <code>/addurl https://store.com</code> to add a Shopify site.""",
 
 @Client.on_message(filters.command(["delsite", "removesite", "clearsite", "remurl"]))
 async def delete_site_handler(client: Client, message: Message):
-    """Delete user's saved site. Also handles /remurl."""
+    """Delete user's saved site."""
     user_id = str(message.from_user.id)
     
     try:
@@ -605,7 +745,7 @@ async def delete_site_handler(client: Client, message: Message):
                     json.dump(all_sites, f, indent=4)
                 
                 return await message.reply(
-                    "<pre>Site Removed ✅</pre>\n<b>Your site has been deleted successfully.</b>",
+                    "<pre>Site Removed ✅</pre>\n<b>Your primary site has been deleted.</b>",
                     reply_to_message_id=message.id,
                     parse_mode=ParseMode.HTML
                 )
@@ -624,7 +764,8 @@ async def delete_site_handler(client: Client, message: Message):
         )
 
 
-# Callback query handlers for buttons
+# ==================== CALLBACK HANDLERS ====================
+
 @Client.on_callback_query(filters.regex("^show_check_help$"))
 async def show_check_help_callback(client, callback_query):
     """Show card checking help."""
@@ -652,28 +793,55 @@ Reply to a message containing a card with <code>/sh</code>
     )
 
 
+@Client.on_callback_query(filters.regex("^show_my_sites$"))
+async def show_my_sites_callback(client, callback_query):
+    """Show user's all sites."""
+    user_id = str(callback_query.from_user.id)
+    sites = get_user_sites(user_id)
+    
+    if not sites:
+        await callback_query.answer("❌ No sites saved!", show_alert=True)
+        return
+    
+    # Build sites list
+    lines = ["<pre>📋 Your Sites</pre>", "━━━━━━━━━━━━━"]
+    
+    for i, site in enumerate(sites[:10], 1):
+        is_primary = "⭐" if site.get("is_primary") else ""
+        url = site.get("url", "N/A")[:35]
+        lines.append(f"{i}. {is_primary}<code>{url}</code>")
+    
+    if len(sites) > 10:
+        lines.append(f"\n<i>...and {len(sites) - 10} more</i>")
+    
+    lines.append("━━━━━━━━━━━━━")
+    lines.append(f"<b>Total:</b> <code>{len(sites)}</code> sites")
+    
+    await callback_query.answer()
+    await callback_query.message.reply(
+        "\n".join(lines),
+        parse_mode=ParseMode.HTML
+    )
+
+
 @Client.on_callback_query(filters.regex("^show_my_site$"))
 async def show_my_site_callback(client, callback_query):
-    """Show user's site via callback with detailed popup."""
+    """Show user's primary site."""
     user_id = str(callback_query.from_user.id)
     site_info = get_user_current_site(user_id)
     
     if site_info:
-        site_url = site_info.get('site', 'N/A')
-        gateway = site_info.get('gate', 'Unknown')
-        
-        # Show detailed popup
         await callback_query.answer(
-            f"📋 YOUR SITE INFO\n\n"
-            f"🌐 Site: {site_url[:40]}...\n"
-            f"⚡ Gate: {gateway[:30]}\n\n"
+            f"📋 YOUR SITE\n\n"
+            f"🌐 {site_info.get('site', 'N/A')[:40]}\n"
+            f"⚡ {site_info.get('gate', 'Unknown')[:30]}\n\n"
             f"Use /sh to check cards!",
             show_alert=True
         )
     else:
         await callback_query.answer(
             "❌ No site saved!\n\n"
-            "Use /addurl https://store.com to add a Shopify site.",
+            "Use /addurl to add a site.",
             show_alert=True
         )
 
