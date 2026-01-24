@@ -1,25 +1,80 @@
 from pyrogram import Client, filters
 from pyrogram.types import Message
+from pyrogram.enums import ParseMode
 from BOT.Charge.Shopify.slf.slf import check_card
-from BOT.helper.permissions import check_private_access, load_allowed_groups, is_premium_user
+from BOT.helper.permissions import check_private_access, is_premium_user
 from BOT.tools.proxy import get_proxy
+from BOT.helper.start import load_users
 import json
 import re
 import asyncio
 import time
 
+# Try to import BIN lookup
+try:
+    from TOOLS.getbin import get_bin_details
+except ImportError:
+    def get_bin_details(bin_number):
+        return None
+
+
 def extract_cards_from_text(text: str):
-    pattern = r'(\d{13,16})[^0-9]*(\d{1,2})[^0-9]*(\d{2,4})[^0-9]*(\d{3,4})'
-    found = re.findall(pattern, text)
+    """Extract cards from text in various formats."""
+    # Standard format: cc|mm|yy|cvv
+    pattern1 = r'(\d{13,19})\|(\d{1,2})\|(\d{2,4})\|(\d{3,4})'
+    found = re.findall(pattern1, text)
+    
+    if found:
+        cleaned = []
+        for card in found:
+            cc, mm, yy, cvv = card
+            mm = mm.zfill(2)
+            if len(yy) == 2:
+                yy = "20" + yy
+            cleaned.append(f"{cc}|{mm}|{yy}|{cvv}")
+        return list(dict.fromkeys(cleaned))
+    
+    # Alternative format with various separators
+    pattern2 = r'(\d{13,16})[^0-9]*(\d{1,2})[^0-9]*(\d{2,4})[^0-9]*(\d{3,4})'
+    found = re.findall(pattern2, text)
     cleaned = []
 
     for card in found:
         cc, mm, yy, cvv = card
         mm = mm.zfill(2)
-        yy = "20" + yy if len(yy) == 2 else yy
+        if len(yy) == 2:
+            yy = "20" + yy
         cleaned.append(f"{cc}|{mm}|{yy}|{cvv}")
 
     return list(dict.fromkeys(cleaned))
+
+
+def get_status_flag(raw_response: str) -> str:
+    """Determine proper status flag from response."""
+    response_upper = raw_response.upper() if raw_response else ""
+    
+    # Errors first
+    if any(x in response_upper for x in [
+        "CONNECTION", "RATE LIMIT", "PRODUCT ID", "SITE NOT FOUND",
+        "TIMEOUT", "FAILED", "CAPTCHA", "HCAPTCHA", "ERROR"
+    ]):
+        return "Error ⚠️"
+    
+    # Charged
+    if any(x in response_upper for x in [
+        "ORDER_PLACED", "THANK YOU", "SUCCESS", "CHARGED"
+    ]):
+        return "Charged 💎"
+    
+    # CCN/Live
+    if any(x in response_upper for x in [
+        "3DS", "INCORRECT_CVC", "INVALID_CVC", "INSUFFICIENT_FUNDS",
+        "INCORRECT_ZIP", "INCORRECT_ADDRESS", "MISMATCHED"
+    ]):
+        return "Approved ✅"
+    
+    # Declined
+    return "Declined ❌"
 
 def get_user_site_info(user_id):
     try:
@@ -39,44 +94,54 @@ def get_site_and_gate(user_id, index):
 
 @Client.on_message(filters.command("tsh") & filters.reply)
 async def tsh_handler(client: Client, m: Message):
-    if not m.reply_to_message.document:
-        return await m.reply("Reply to a valid text file containing cards.")
+    """Handle /tsh command for TXT sites checking."""
+    
+    # Check if user is registered
+    users = load_users()
+    user_id = str(m.from_user.id)
+    
+    if user_id not in users:
+        return await m.reply(
+            """<pre>Access Denied 🚫</pre>
+<b>You must register first using</b> <code>/register</code> <b>command.</b>""",
+            parse_mode=ParseMode.HTML
+        )
+    
+    # Get cards from reply
+    cards = []
+    
+    if m.reply_to_message.document:
+        # Download and read file
+        file = await m.reply_to_message.download()
+        with open(file, "r", encoding="utf-8", errors="ignore") as f:
+            text = f.read()
+        cards = extract_cards_from_text(text)
+    elif m.reply_to_message.text:
+        # Extract from text
+        cards = extract_cards_from_text(m.reply_to_message.text)
+    
+    if not cards:
+        return await m.reply(
+            "<pre>No Cards Found ❌</pre>\n<b>Reply to a file or message containing cards.</b>",
+            parse_mode=ParseMode.HTML
+        )
 
-    file = await m.reply_to_message.download()
-    with open(file, "r", encoding="utf-8", errors="ignore") as f:
-        text = f.read()
-
-    cards = extract_cards_from_text(text)
     total_cards = len(cards)
-
-    if total_cards == 0:
-        return await m.reply("No valid cards found in the file.")
-
     if total_cards > 500:
         cards = cards[:500]
-    total_cards = len(cards)
+        total_cards = len(cards)
 
-    user_id = m.from_user.id
     user = m.from_user
-    sites = get_user_site_info(user_id)
+    sites = get_user_site_info(int(user_id))
 
     if not sites:
-        return await m.reply("❌ No sites configured. Use /txturl to add sites.")
-
-    if not await is_premium_user(m):
-        return
-
-    if not await check_private_access(m):
-        return
-
-    proxy = get_proxy(user_id)
-    if proxy == None:
         return await m.reply(
-            "<pre>Proxy Error ❗️</pre>\n"
-            "<b>~ Message :</b> <code>You Have To Add Proxy For Mass checking</code>\n"
-            "<b>~ Command  →</b> <b>/setpx</b>\n",
-            reply_to_message_id=m.id
+            "<pre>No Sites Found ❌</pre>\n<b>Use <code>/txturl site.com</code> to add sites.</b>",
+            parse_mode=ParseMode.HTML
         )
+
+    # Proxy is optional now
+    proxy = get_proxy(int(user_id))
 
     site, gate = get_site_and_gate(user_id, 0)
 
@@ -151,48 +216,49 @@ async def tsh_handler(client: Client, m: Message):
                         return
 
 
-            # Check for system errors first
-            if any(error_keyword in raw_response for error_keyword in [
-                "Connection Failed", "IP Rate Limit", "Product ID", "Site Not Found",
-                "Request Timeout", "Request Failed", "Site | Card Error"
-            ]):
-                status_flag = "Error ⚠️"
-                async with lock:
-                    error_count += 1
-            # decide if card should be reported
-            elif "ORDER_PLACED" in raw_response or "Thank You" in raw_response:
-                status_flag = "Charged 💎"
-                async with lock:
+            # Get proper status flag
+            status_flag = get_status_flag(raw_response)
+            
+            # Count statistics
+            async with lock:
+                if "Charged" in status_flag:
                     charged_count += 1
-            elif any(keyword in raw_response for keyword in [
-                "3D CC", "MISMATCHED_BILLING", "MISMATCHED_PIN", "MISMATCHED_ZIP", "INSUFFICIENT_FUNDS",
-                "INVALID_CVC", "INCORRECT_CVC", "3DS_REQUIRED", "MISMATCHED_BILL", "3D_AUTHENTICATION",
-                "INCORRECT_ZIP", "INCORRECT_ADDRESS", "CARD_DECLINED", "GENERIC_DECLINE", "DO_NOT_HONOR",
-                "INVALID_ACCOUNT", "EXPIRED_CARD", "PROCESSING_ERROR", "CARD_NOT_SUPPORTED",
-                "TRY_AGAIN_LATER", "AUTHENTICATION_REQUIRED", "PICKUP_CARD", "LOST_CARD", "STOLEN_CARD"
-            ]):
-                status_flag = "Approved ❎"
-                async with lock:
+                elif "Approved" in status_flag:
                     approved_count += 1
-            else:
-                status_flag = "Declined ❌"
-                async with lock:
+                elif "Error" in status_flag:
+                    error_count += 1
+                else:
                     dead_count += 1
+            
+            # Get BIN info
+            cc = card.split("|")[0] if "|" in card else card
+            try:
+                bin_data = get_bin_details(cc[:6])
+                if bin_data:
+                    bin_info = f"{bin_data.get('vendor', 'N/A')} - {bin_data.get('type', 'N/A')}"
+                    country = f"{bin_data.get('country', 'N/A')} {bin_data.get('flag', '')}"
+                else:
+                    bin_info = "N/A"
+                    country = "N/A"
+            except:
+                bin_info = "N/A"
+                country = "N/A"
 
-            message = (
-                f"<b>#AutoShopify | Sync ✦[SELF TEXT]</b>\n"
-                f"━━━━━━━━━━━━━\n"
-                f"<b>⌁ Card:</b> <code>{card}</code>\n"
-                f"<b>⌁ Status:</b> <code>{status_flag}</code>\n"
-                f"<b>⌁ Response:</b> <code>{raw_response}</code>\n"
-                f"<b>⌁ Gateway:</b> <code>{gate}</code>\n"
-                f"━━━━━━━━━━━━━\n"
-                f"[•] Checked By: {user.mention}\n"
-                f"[•] T/t: <code>{elapsed:.2f}</code> | P/x: <code>[Live👌🏻]</code>"
-            )
+            message = f"""<b>[#Shopify] | TXT CHECK ✦</b>
+━━━━━━━━━━━━━━━
+<b>[•] Card:</b> <code>{card}</code>
+<b>[•] Gateway:</b> <code>{gate}</code>
+<b>[•] Status:</b> <code>{status_flag}</code>
+<b>[•] Response:</b> <code>{raw_response}</code>
+━ ━ ━ ━ ━ ━ ━ ━ ━ ━ ━ ━ ━
+<b>[+] BIN:</b> <code>{cc[:6]}</code> | <code>{bin_info}</code>
+<b>[+] Country:</b> <code>{country}</code>
+━ ━ ━ ━ ━ ━ ━ ━ ━ ━ ━ ━ ━
+<b>[ﾒ] Checked By:</b> {user.mention}
+<b>[ﾒ] Time:</b> <code>{elapsed:.2f}s</code>"""
 
-            if status_flag in ["Charged 💎", "Approved ❎"]:
-                await m.reply(message)
+            if status_flag in ["Charged 💎", "Approved ✅"]:
+                await m.reply(message, parse_mode=ParseMode.HTML)
 
 
     tasks = [asyncio.create_task(process_card(i, card)) for i, card in enumerate(cards)]
@@ -202,16 +268,17 @@ async def tsh_handler(client: Client, m: Message):
 
     total_time = time.time() - start_time
 
-    summary_text = (
-        f"<b>✅ Summary of Check</b>\n"
-        f"━━━━━━━━━━━━━\n"
-        f"⊙ <b>Total:</b> <code>{total_cards}</code>\n"
-        f"⊙ <b>Charged 💎:</b> <code>{charged_count}</code>\n"
-        f"⊙ <b>Approved ❎:</b> <code>{approved_count}</code>\n"
-        f"⊙ <b>Declined ❌:</b> <code>{dead_count}</code>\n"
-        f"⊙ <b>Errors ⚠️:</b> <code>{error_count}</code>\n"
-        f"━━━━━━━━━━━━━\n"
-        f"⌛ <b>Time Taken:</b> <code>{total_time:.2f}s</code>"
-    )
+    summary_text = f"""<b>[#Shopify] | TXT CHECK COMPLETED ✦</b>
+━━━━━━━━━━━━━━━
+🟢 <b>Total CC</b>     : <code>{total_cards}</code>
+💎 <b>Charged</b>     : <code>{charged_count}</code>
+✅ <b>Approved</b>    : <code>{approved_count}</code>
+❌ <b>Declined</b>    : <code>{dead_count}</code>
+⚠️ <b>Errors</b>      : <code>{error_count}</code>
+━ ━ ━ ━ ━ ━ ━ ━ ━ ━ ━ ━ ━
+<b>[ﾒ] Checked By:</b> {user.mention}
+<b>[ϟ] Dev:</b> <a href="https://t.me/Chr1shtopher">Chr1shtopher</a>
+━━━━━━━━━━━━━━━
+<b>[ﾒ] Time:</b> <code>{total_time:.2f}s</code>"""
 
-    await m.reply_to_message.reply(summary_text)
+    await m.reply_to_message.reply(summary_text, parse_mode=ParseMode.HTML)

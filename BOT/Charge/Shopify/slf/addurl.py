@@ -532,7 +532,7 @@ async def add_site_handler(client: Client, message: Message):
         )
 
 
-@Client.on_message(filters.command(["mysite", "getsite", "siteinfo"]) & filters.private)
+@Client.on_message(filters.command(["mysite", "getsite", "siteinfo"]))
 async def my_site_handler(client: Client, message: Message):
     """Show user's currently saved site."""
     user_id = str(message.from_user.id)
@@ -561,7 +561,7 @@ Use <code>/addurl https://store.com</code> to add a Shopify site.""",
     )
 
 
-@Client.on_message(filters.command(["delsite", "removesite", "clearsite", "remurl"]) & filters.private)
+@Client.on_message(filters.command(["delsite", "removesite", "clearsite", "remurl"]))
 async def delete_site_handler(client: Client, message: Message):
     """Delete user's saved site. Also handles /remurl."""
     user_id = str(message.from_user.id)

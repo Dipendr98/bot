@@ -83,14 +83,17 @@ async def start_command(client: Client, message: Message):
         await message.reply("This command can only be used by users, not channels or anonymous admins.")
         return
 
-    # New loading animation: "Hello !"
-    animated_texts = ["H", "He", "Hel", "Hell", "Hello", "Hello !", "Hello !"]
+    # Loading animation: "Hello !!"
+    animated_texts = ["[", "[H", "[He", "[Hel", "[Hell", "[Hello", "[Hello !", "[Hello !!]"]
 
-    sent = await message.reply("<pre>H</pre>", quote=True)
+    sent = await message.reply("<pre>[</pre>", quote=True)
 
     for text in animated_texts[1:]:
-        await asyncio.sleep(0.15)
-        await sent.edit_text(f"<pre>{text}</pre>")
+        await asyncio.sleep(0.12)
+        try:
+            await sent.edit_text(f"<pre>{text}</pre>")
+        except:
+            pass
 
     # User's display name
     name = message.from_user.first_name
@@ -342,18 +345,17 @@ async def handle_callbacks(client, callback_query):
 
     elif data == "auth":
         auth_text = """<pre>#Christopher 〔AUTH GATES〕</pre>
-━ ━ ━ ━ ━━━ ━ ━ ━ ━
-⟐ <b>Name</b>: <code>Braintree Auth</code>
-⟐ <b>Command</b>: <code>/b3 cc|mes|ano|cvv</code>
-⟐ <b>Status</b>: <code>Active ✅</code>
-═══════════════════
-⟐ <b>Name</b>: <code>Stripe Auth</code>
-⟐ <b>Command</b>: <code>/au cc|mes|ano|cvv</code>
-⟐ <b>Status</b>: <code>Active ✅</code>
-━ ━ ━ ━ ━━━ ━ ━ ━ ━
-⟐ <b>Mass Cmd</b>: <code>/mau cc|mes|ano|cvv</code>
-⟐ <b>Limit</b>: <code>Plan Based</code>
-⟐ <b>Status: Active ✅</b>
+━━━━━━━━━━━━━━━
+<b>⚡ Braintree Auth:</b>
+⟐ <code>/b3 cc|mm|yy|cvv</code> - Single
+⟐ <b>Status:</b> <code>Active ✅</code>
+━━━━━━━━━━━━━━━
+<b>⚡ Stripe Auth:</b>
+⟐ <code>/au cc|mm|yy|cvv</code> - Single
+⟐ <code>/mau</code> - Mass (Reply)
+⟐ <b>Status:</b> <code>Active ✅</code>
+━━━━━━━━━━━━━━━
+<b>Note:</b> Works in groups & private
 """
         auth_buttons = InlineKeyboardMarkup([
             [
@@ -417,16 +419,25 @@ async def handle_callbacks(client, callback_query):
 
     elif data == "auto":
         auto_text = """<pre>#Christopher 〔Self Shopify〕</pre>
-━ ━ ━ ━ ━━━ ━ ━ ━ ━
-⟐ <b>/addurl</b>: <code>Add Site (Private Only)</code>
-⟐ <b>/remurl</b>: <code>Remove Saved Site</code>
-⟐ <b>/setpx</b>: <code>Set Proxy (Private Only)</code>
-⟐ <b>Status: Active ✅</b>
-━ ━ ━ ━ ━━━ ━ ━ ━ ━
-⟐ <b>Single</b>: <code>/sh cc|mes|ano|cvv</code>
-⟐ <b>Mass</b>: <code>/msh cc|mes|ano|cvv</code>
-⟐ <b>TXT Sites</b>: <code>/tsh cc|mes|ano|cvv</code>
-⟐ <b>Status: Active ✅</b>
+━━━━━━━━━━━━━━━
+<b>📋 Site Management:</b>
+⟐ <code>/addurl site.com</code> - Add Site (Private)
+⟐ <code>/txturl site.com</code> - Add TXT Site (Private)
+⟐ <code>/txtls</code> - View TXT Sites
+⟐ <code>/mysite</code> - View Current Site
+⟐ <code>/remurl</code> - Remove Site
+━━━━━━━━━━━━━━━
+<b>⚡ Check Commands:</b>
+⟐ <code>/sh cc|mm|yy|cvv</code> - Single Check
+⟐ <code>/msh</code> - Mass Check (Reply)
+⟐ <code>/tsh</code> - TXT Sites Check (Reply)
+━━━━━━━━━━━━━━━
+<b>🔧 Proxy:</b>
+⟐ <code>/setpx proxy</code> - Set Proxy (Private)
+⟐ <code>/getpx</code> - View Proxy
+⟐ <code>/delpx</code> - Delete Proxy
+━━━━━━━━━━━━━━━
+<b>Status: Active ✅</b>
 """
         auto_buttons = InlineKeyboardMarkup([
             [
@@ -444,14 +455,15 @@ async def handle_callbacks(client, callback_query):
 
     elif data == "stripe":
         stripe_text = """<pre>#Christopher 〔Stripe $20 Charge〕</pre>
-━ ━ ━ ━ ━━━ ━ ━ ━ ━
-⟐ <b>Name</b>: <code>Stripe $20 Balliante</code>
-⟐ <b>Command</b>: <code>/st cc|mes|ano|cvv</code>
-⟐ <b>Status: Active ✅</b>
-━ ━ ━ ━ ━━━ ━ ━ ━ ━
-⟐ <b>Mass Cmd</b>: <code>/mst cc|mes|ano|cvv</code>
-⟐ <b>Limit</b>: <code>As Per User's Plan</code>
-⟐ <b>Status: Active ✅</b>
+━━━━━━━━━━━━━━━
+<b>⚡ Stripe $20 Charge:</b>
+⟐ <code>/st cc|mm|yy|cvv</code> - Single
+⟐ <code>/mst</code> - Mass (Reply)
+━━━━━━━━━━━━━━━
+<b>Limit:</b> <code>As Per Plan</code>
+<b>Status:</b> <code>Active ✅</code>
+━━━━━━━━━━━━━━━
+<b>Note:</b> Works in groups & private
 """
         stripe_buttons = InlineKeyboardMarkup([
             [
@@ -491,16 +503,26 @@ async def handle_callbacks(client, callback_query):
 
     elif data == "tools":
         tools_text = """<pre>#Christopher 〔TOOLS〕</pre>
-━ ━ ━ ━ ━━━ ━ ━ ━ ━
-⟐ <b>Proxy</b>: <code>/setpx proxy</code> (Private)
-⟐ <b>Delete Proxy</b>: <code>/delpx</code>
-⟐ <b>View Proxy</b>: <code>/getpx</code>
-═══════════════════
-⟐ <b>BIN Lookup</b>: <code>/bin xxxxxx</code>
-⟐ <b>Card Generator</b>: <code>/gen bin|mm|yy|amount</code>
-⟐ <b>Fake Identity</b>: <code>/fake [country]</code>
-═══════════════════
-⟐ <b>Status</b>: <code>Active ✅</code>
+━━━━━━━━━━━━━━━
+<b>🔧 Proxy Management:</b>
+⟐ <code>/setpx proxy</code> - Set Proxy (Private)
+⟐ <code>/getpx</code> - View Your Proxy
+⟐ <code>/delpx</code> - Delete Proxy
+━━━━━━━━━━━━━━━
+<b>🔍 Lookup Tools:</b>
+⟐ <code>/bin 543210</code> - BIN Lookup
+⟐ <code>/mbin bin1 bin2</code> - Mass BIN
+━━━━━━━━━━━━━━━
+<b>🎲 Generators:</b>
+⟐ <code>/gen bin|mm|yy|cvv|amt</code> - Card Gen
+⟐ <code>/fake [country]</code> - Fake Identity
+━━━━━━━━━━━━━━━
+<b>📊 Other:</b>
+⟐ <code>/ping</code> - Bot Latency
+⟐ <code>/info</code> - Your Info
+⟐ <code>/plans</code> - View Plans
+━━━━━━━━━━━━━━━
+<b>Status: Active ✅</b>
 """
         tools_buttons = InlineKeyboardMarkup([
             [

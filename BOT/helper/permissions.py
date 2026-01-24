@@ -9,10 +9,10 @@ GROUPS_FILE = "DATA/groups.json"
 OWNER_ID = 6891929831  # Owner user ID
 
 # Commands that require private chat - Only site/proxy management
+# All other commands work everywhere (group + private)
 PRIVATE_ONLY_COMMANDS = [
-    "addurl", "slfurl", "seturl", "txturl",  # Site adding
-    "setpx",  # Proxy adding
-    "remurl", "delsite", "removesite", "clearsite"  # Site removal
+    "addurl", "slfurl", "seturl",  # Site adding
+    "setpx",  # Proxy adding (security sensitive)
 ]
 
 

@@ -158,8 +158,7 @@ async def set_proxy(client, message: Message):
 
 <b>Example:</b>
 <code>/setpx 192.168.1.1:8080:user:pass</code>
-━━━━━━━━━━━━━
-<b>Note:</b> Use rotating/residential proxy for best results.""",
+━━━━━━━━━━━━━""",
             quote=True
         )
 
@@ -180,22 +179,50 @@ async def set_proxy(client, message: Message):
 
     msg = await message.reply("<pre>Validating Proxy 🔘</pre>", quote=True)
 
-    ip1, err1 = await get_ip(proxy_url)
-    await asyncio.sleep(2)
-    ip2, err2 = await get_ip(proxy_url)
+    # Test proxy connection - only need to verify it works
+    ip, err = await get_ip(proxy_url)
 
-    if not ip1 or not ip2:
-        err_msg = err1 or err2 or "Unknown error"
-        return await msg.edit(f"<pre>Connection Failure ❌</pre>\n<b>~ Error :</b> <code>{err_msg}</code>")
+    if not ip:
+        err_msg = err or "Unknown error"
+        return await msg.edit(
+            f"""<pre>Connection Failure ❌</pre>
+━━━━━━━━━━━━━
+<b>Error:</b> <code>{err_msg[:100]}</code>
+━━━━━━━━━━━━━
+<b>Tips:</b>
+• Check if proxy is active
+• Verify credentials are correct
+• Try a different proxy"""
+        )
 
-    if ip1 == ip2:
-        return await msg.edit(f"<pre>Proxy Risk ⚠️</pre>\n<b>Message :</b> <code>Provided Proxy Seems To be Risky</code>\n<b>Try Rotating|Residential Proxy</b>")
-
-    # Save or Replace proxy for user
+    # Save proxy for user - accept all live proxies
     data[user_id] = proxy_url
     save_proxies(data)
 
-    await msg.edit(f"<pre>Proxy saved successfully! ✅</pre>")
+    # Get proxy info for display
+    try:
+        proxy_clean = proxy_url.replace("http://", "").replace("https://", "")
+        if "@" in proxy_clean:
+            creds, hostport = proxy_clean.split("@")
+            host = hostport.split(":")[0]
+            port = hostport.split(":")[1] if ":" in hostport else "N/A"
+        else:
+            host = proxy_clean.split(":")[0]
+            port = proxy_clean.split(":")[1] if ":" in proxy_clean else "N/A"
+    except:
+        host = "N/A"
+        port = "N/A"
+
+    await msg.edit(
+        f"""<pre>Proxy Saved ✅</pre>
+━━━━━━━━━━━━━
+<b>[•] Host:</b> <code>{host}</code>
+<b>[•] Port:</b> <code>{port}</code>
+<b>[•] IP:</b> <code>{ip}</code>
+<b>[•] Status:</b> <code>Active ✓</code>
+━━━━━━━━━━━━━
+<b>Ready for mass checking!</b>"""
+    )
 
 @Client.on_message(filters.command("delpx"))
 async def delete_proxy(client, message: Message):

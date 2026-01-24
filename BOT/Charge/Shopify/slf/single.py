@@ -125,7 +125,7 @@ def determine_status(response: str) -> tuple:
     return "Declined ❌", "RESULT", False
 
 
-def format_response(fullcc: str, result: dict, user_info: dict, time_taken: float) -> str:
+def format_response(fullcc: str, result: dict, user_info: dict, time_taken: float, retry_count: int = 0, has_proxy: bool = False) -> str:
     """Format the checkout response in the original professional style."""
     parts = fullcc.split("|")
     cc = parts[0] if len(parts) > 0 else "Unknown"
@@ -157,10 +157,14 @@ def format_response(fullcc: str, result: dict, user_info: dict, time_taken: floa
         country = "N/A"
         country_flag = "🏳️"
     
-    # Build bill line if receipt exists
+    # Build optional lines
     bill_line = ""
     if receipt_id:
         bill_line = f"\n<b>[•] Bill:</b> <code>{receipt_id}</code>"
+    
+    retry_line = f"\n<b>[•] Retries:</b> <code>{retry_count}</code>" if retry_count > 0 else ""
+    
+    proxy_status = "Live ⚡️" if has_proxy else "None"
     
     # Build message in original format
     return f"""<b>[#Shopify] | {header}</b> ✦
@@ -168,7 +172,7 @@ def format_response(fullcc: str, result: dict, user_info: dict, time_taken: floa
 <b>[•] Card:</b> <code>{fullcc}</code>
 <b>[•] Gateway:</b> <code>Shopify {gateway} ${price}</code>
 <b>[•] Status:</b> <code>{status_text}</code>
-<b>[•] Response:</b> <code>{response}</code>{bill_line}
+<b>[•] Response:</b> <code>{response}</code>{retry_line}{bill_line}
 ━ ━ ━ ━ ━ ━ ━ ━ ━ ━ ━ ━ ━
 <b>[+] BIN:</b> <code>{bin_number}</code>
 <b>[+] Info:</b> <code>{vendor} - {card_type} - {level}</code>
@@ -178,7 +182,7 @@ def format_response(fullcc: str, result: dict, user_info: dict, time_taken: floa
 <b>[ﾒ] Checked By:</b> {user_info['profile']} [<code>{user_info['plan']} {user_info['badge']}</code>]
 <b>[ϟ] Dev:</b> <a href="https://t.me/Chr1shtopher">Chr1shtopher</a>
 ━━━━━━━━━━━━━━━
-<b>[ﾒ] Time:</b> <code>{time_taken}s</code> | <b>Proxy:</b> <code>Live ⚡️</code>"""
+<b>[ﾒ] Time:</b> <code>{time_taken}s</code> | <b>Proxy:</b> <code>{proxy_status}</code>"""
 
 
 async def check_group_command(message: Message) -> bool:
@@ -329,17 +333,6 @@ Use <code>/addurl https://store.com</code> to add a Shopify site.""",
         
         start_time = time()
         
-        # Show processing message
-        loading_msg = await message.reply(
-            f"""<pre>Processing Request...</pre>
-━ ━ ━ ━ ━ ━ ━ ━ ━ ━ ━ ━
-<b>• Card:</b> <code>{fullcc}</code>
-<b>• Gate:</b> <code>{gate}</code>
-<b>• Status:</b> <i>Checking...</i>""",
-            reply_to_message_id=message.id,
-            parse_mode=ParseMode.HTML
-        )
-        
         # Get user's proxy
         try:
             from BOT.tools.proxy import get_proxy
@@ -347,12 +340,45 @@ Use <code>/addurl https://store.com</code> to add a Shopify site.""",
         except:
             user_proxy = None
         
+        has_proxy = user_proxy is not None
+        
+        # Loading animation frames
+        loading_frames = ["◐", "◓", "◑", "◒"]
+        
+        # Show processing message
+        loading_msg = await message.reply(
+            f"""<pre>Processing Request...</pre>
+━ ━ ━ ━ ━ ━ ━ ━ ━ ━ ━ ━
+<b>• Card:</b> <code>{fullcc}</code>
+<b>• Gate:</b> <code>{gate}</code>
+<b>• Status:</b> <i>Checking... {loading_frames[0]}</i>
+<b>• Retries:</b> <code>0</code>""",
+            reply_to_message_id=message.id,
+            parse_mode=ParseMode.HTML
+        )
+        
         # Perform checkout using autoshopify with CAPTCHA retry
         result = None
         retry_count = 0
+        frame_idx = 0
         
         while retry_count < MAX_CAPTCHA_RETRIES:
             try:
+                # Update loading animation
+                frame_idx = (frame_idx + 1) % len(loading_frames)
+                try:
+                    await loading_msg.edit(
+                        f"""<pre>Processing Request...</pre>
+━ ━ ━ ━ ━ ━ ━ ━ ━ ━ ━ ━
+<b>• Card:</b> <code>{fullcc}</code>
+<b>• Gate:</b> <code>{gate}</code>
+<b>• Status:</b> <i>Checking... {loading_frames[frame_idx]}</i>
+<b>• Retries:</b> <code>{retry_count}</code>""",
+                        parse_mode=ParseMode.HTML
+                    )
+                except:
+                    pass
+                
                 async with TLSAsyncSession(timeout_seconds=120, proxy=user_proxy) as session:
                     result = await autoshopify(site, fullcc, session)
                 
@@ -361,14 +387,18 @@ Use <code>/addurl https://store.com</code> to add a Shopify site.""",
                 if any(x in response_upper for x in ["CAPTCHA", "HCAPTCHA", "RECAPTCHA", "CHALLENGE"]):
                     retry_count += 1
                     if retry_count < MAX_CAPTCHA_RETRIES:
-                        await loading_msg.edit(
-                            f"""<pre>CAPTCHA Detected - Retrying...</pre>
+                        try:
+                            await loading_msg.edit(
+                                f"""<pre>CAPTCHA Detected - Retrying...</pre>
 ━ ━ ━ ━ ━ ━ ━ ━ ━ ━ ━ ━
 <b>• Card:</b> <code>{fullcc}</code>
 <b>• Gate:</b> <code>{gate}</code>
-<b>• Retry:</b> <code>{retry_count}/{MAX_CAPTCHA_RETRIES}</code>""",
-                            parse_mode=ParseMode.HTML
-                        )
+<b>• Status:</b> <i>Retrying... {loading_frames[frame_idx]}</i>
+<b>• Retries:</b> <code>{retry_count}/{MAX_CAPTCHA_RETRIES}</code>""",
+                                parse_mode=ParseMode.HTML
+                            )
+                        except:
+                            pass
                         import asyncio
                         await asyncio.sleep(2)  # Brief pause before retry
                         continue
@@ -395,8 +425,8 @@ Use <code>/addurl https://store.com</code> to add a Shopify site.""",
         
         time_taken = round(time() - start_time, 2)
         
-        # Format response
-        final_message = format_response(fullcc, result, user_info, time_taken)
+        # Format response with retry count
+        final_message = format_response(fullcc, result, user_info, time_taken, retry_count, has_proxy)
         
         buttons = InlineKeyboardMarkup([
             [
