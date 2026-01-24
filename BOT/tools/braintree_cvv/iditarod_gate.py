@@ -305,6 +305,13 @@ def run_iditarod_check(
                             "expirationMonth": mes,
                             "expirationYear": yy,
                             "cvv": cvv,
+                            "billingAddress": {
+                                "postalCode": "10001",
+                                "streetAddress": "123 Main St",
+                                "locality": "New York",
+                                "region": "NY",
+                                "countryCodeAlpha2": "US",
+                            },
                         },
                         "options": {"validate": False},
                     }
