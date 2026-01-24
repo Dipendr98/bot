@@ -10,9 +10,9 @@ import asyncio
 from concurrent.futures import ThreadPoolExecutor
 from typing import Optional
 
-from BOT.tools.braintree_cvv.iditarod_gate import run_iditarod_check
+from BOT.tools.braintree_cvv.iditarod_gate import run_iditarod_check_parallel
 
-executor = ThreadPoolExecutor(max_workers=10)
+executor = ThreadPoolExecutor(max_workers=16)
 
 
 def check_braintree_cvv_sync(
@@ -23,14 +23,14 @@ def check_braintree_cvv_sync(
     proxy: Optional[str] = None,
 ) -> dict:
     """
-    Braintree CVV check via Iditarod.com (account rotation, add payment method).
-    Retries without proxy on proxy/connection errors.
+    Braintree CVV check via Iditarod.com (parallel all-accounts, add payment method).
+    Uses multi-thread across all accounts; retries without proxy on proxy/connection errors.
     """
-    result = run_iditarod_check(card, mes, ano, cvv, proxy)
+    result = run_iditarod_check_parallel(card, mes, ano, cvv, proxy)
     if result.get("status") == "error" and proxy:
         resp = (result.get("response") or "").lower()
         if "proxy" in resp or "connection" in resp or "timeout" in resp:
-            result = run_iditarod_check(card, mes, ano, cvv, None)
+            result = run_iditarod_check_parallel(card, mes, ano, cvv, None)
     return result
 
 

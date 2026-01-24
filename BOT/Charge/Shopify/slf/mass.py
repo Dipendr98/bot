@@ -13,6 +13,7 @@ from pyrogram.enums import ChatType, ParseMode
 from BOT.Charge.Shopify.slf.api import autoshopify, autoshopify_with_captcha_retry
 from BOT.Charge.Shopify.tls_session import TLSAsyncSession
 from BOT.Charge.Shopify.slf.site_manager import SiteRotator, get_user_sites
+from BOT.Charge.Shopify.slf.single import check_card_all_sites_parallel
 from BOT.helper.start import load_users
 from BOT.tools.proxy import get_proxy
 from BOT.helper.permissions import check_private_access
@@ -299,7 +300,8 @@ async def mslf_handler(client, message):
 ━━━━━━━━━━━━━━━
 <b>[⚬] Gateway:</b> <code>{gateway}</code>
 <b>[⚬] Cards:</b> <code>{card_count}</code>
-<b>[⚬] Sites:</b> <code>{site_count}</code> (rotation enabled)
+<b>[⚬] Sites:</b> <code>{site_count}</code>
+<b>[⚬] Threads:</b> <code>{site_count}</code> (parallel)
 <b>[⚬] Status:</b> <code>Processing Request...</code>
 ━━━━━━━━━━━━━━━
 <b>[⚬] Checked By:</b> {checked_by} [<code>{plan} {badge}</code>]""",
@@ -379,8 +381,6 @@ async def mslf_handler(client, message):
         # )
 
         start_time = time.time()
-
-        # Statistics counters
         total_cc = len(all_cards)
         approved_count = 0
         declined_count = 0
@@ -390,14 +390,16 @@ async def mslf_handler(client, message):
         processed_count = 0
         total_retries = 0
 
-        # Process cards one by one with site rotation
         for idx, card in enumerate(all_cards, start=1):
+            try:
+                result, retries = await check_card_all_sites_parallel(user_id, card, proxy)
+                raw_response = str(result.get("Response", "UNKNOWN"))
+                used_site = result.get("Gateway")
+            except Exception as e:
+                raw_response, used_site, retries = f"ERROR: {str(e)[:40]}", None, 0
             processed_count = idx
-            
-            # Check card with site rotation
-            raw_response, used_site, retries = await check_card_with_rotation(user_id, card, proxy)
             total_retries += retries
-            
+
             status_flag = get_status_flag((raw_response or "").upper())
             response_upper = (raw_response or "").upper()
             
@@ -464,7 +466,7 @@ async def mslf_handler(client, message):
                     pass
             
             # Update progress every 3 cards or on last card
-            if idx % 3 == 0 or idx == total_cc:
+            if processed_count % 3 == 0 or processed_count == total_cc:
                 try:
                     await loader_msg.edit(
                         f"""<pre>✦ [#MSH] | Mass Shopify Check</pre>

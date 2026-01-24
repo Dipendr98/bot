@@ -3,6 +3,7 @@ from pyrogram import Client, filters
 from time import time
 import asyncio
 from BOT.tools.braintree_cvv.api import async_check_braintree_cvv
+from BOT.tools.braintree_cvv.iditarod_gate import IDITAROD_ACCOUNTS
 from BOT.tools.proxy import get_proxy
 from BOT.helper.start import load_users
 from BOT.helper.permissions import check_private_access, is_premium_user
@@ -113,12 +114,15 @@ async def handle_mbt_command(client, message):
 
         gateway = "M-Braintree CVV Auth [Iditarod]"
         checked_by = f"<a href='tg://user?id={message.from_user.id}'>{message.from_user.first_name}</a>"
+        total_cc = len(all_cards)
+        mbt_threads = min(len(IDITAROD_ACCOUNTS), max(1, total_cc))
 
         # Send loading message
         loader_msg = await message.reply(
-            f"""<pre>✦ Sync | {gateway}</pre>
+            f"""<pre>✦ Parallel | {gateway}</pre>
 <b>[⚬] Gateway -</b> <b>{gateway}</b>
-<b>[⚬] CC Amount : {len(all_cards)}</b>
+<b>[⚬] CC Amount :</b> <code>{total_cc}</code>
+<b>[⚬] Threads :</b> <code>{mbt_threads}</code>
 <b>[⚬] Checked By :</b> {checked_by} [<code>{plan} {badge}</code>]
 <b>[⚬] Status :</b> <code>Processing Request..!</code>
 """,
@@ -132,36 +136,36 @@ async def handle_mbt_command(client, message):
         except Exception:
             user_proxy = None
 
-        total_cc = len(all_cards)
         approved_count = 0
         declined_count = 0
         error_count = 0
         processed_count = 0
 
         for idx, fullcc in enumerate(all_cards, start=1):
-            card, mes, ano, cvv = fullcc.split("|")
-            result = await async_check_braintree_cvv(card, mes, ano, cvv, user_proxy)
-
+            parts = fullcc.split("|")
+            card, mes, ano, cvv = parts[0], parts[1], parts[2], parts[3]
+            try:
+                result = await async_check_braintree_cvv(card, mes, ano, cvv, user_proxy)
+            except Exception as e:
+                result = {"status": "error", "response": str(e)[:50]}
             status = result.get("status", "error")
             response = result.get("response", "Unknown error")
 
-            # Categorize result
             if status == "approved":
                 status_flag = "CVV VALID ✅"
                 approved_count += 1
             elif status == "ccn":
                 status_flag = "CCN LIVE ⚡"
-                approved_count += 1  # Count as live
+                approved_count += 1
             elif status == "declined":
                 status_flag = "DECLINED ❌"
                 declined_count += 1
             else:
                 status_flag = "ERROR ⚠️"
                 error_count += 1
+            processed_count = idx
 
-            processed_count += 1
-            
-            # Get BIN info
+            card = fullcc.split("|")[0] if "|" in fullcc else fullcc
             try:
                 from TOOLS.getbin import get_bin_details
                 bin_data = get_bin_details(card[:6])
@@ -171,7 +175,7 @@ async def handle_mbt_command(client, message):
                 else:
                     bin_info = "N/A"
                     country_info = "N/A"
-            except:
+            except Exception:
                 bin_info = "N/A"
                 country_info = "N/A"
 
@@ -181,17 +185,20 @@ async def handle_mbt_command(client, message):
 <b>[+] BIN:</b> <code>{card[:6]}</code> | <code>{bin_info}</code> | <code>{country_info}</code>
 ━ ━ ━ ━ ━ ━━━ ━ ━ ━ ━ ━""")
 
-            # Update after each card with progress (show last 10)
-            ongoing_result = "\n".join(final_results[-10:])
-            await loader_msg.edit(
-                f"""<pre>✦ Sync | {gateway}</pre>
+            if processed_count % 3 == 0 or processed_count == total_cc:
+                ongoing_result = "\n".join(final_results[-10:])
+                try:
+                    await loader_msg.edit(
+                        f"""<pre>✦ Parallel | {gateway}</pre>
 {ongoing_result}
 <b>💬 Progress :</b> <code>{processed_count}/{total_cc}</code>
 <b>[⚬] Checked By :</b> {checked_by} [<code>{plan} {badge}</code>]
 <b>[⚬] Dev :</b> <a href="https://t.me/Chr1shtopher">Christopher</a>
 """,
-                disable_web_page_preview=True
-            )
+                        disable_web_page_preview=True
+                    )
+                except Exception:
+                    pass
 
         end_time = time()
         timetaken = round(end_time - start_time, 2)

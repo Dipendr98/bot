@@ -9,6 +9,7 @@ from pyrogram.enums import ParseMode
 from BOT.Charge.Shopify.slf.api import autoshopify, autoshopify_with_captcha_retry
 from BOT.Charge.Shopify.tls_session import TLSAsyncSession
 from BOT.Charge.Shopify.slf.site_manager import SiteRotator, get_user_sites
+from BOT.Charge.Shopify.slf.single import check_card_all_sites_parallel
 from BOT.helper.permissions import check_private_access
 from BOT.tools.proxy import get_proxy
 from BOT.helper.start import load_users
@@ -240,7 +241,8 @@ async def tsh_handler(client: Client, m: Message):
         f"""<pre>✦ [#TSH] | TXT Shopify Check</pre>
 ━━━━━━━━━━━━━
 <b>⊙ Total CC:</b> <code>{total_cards}</code>
-<b>⊙ Sites:</b> <code>{site_count}</code> (rotation enabled)
+<b>⊙ Sites:</b> <code>{site_count}</code> (parallel)
+<b>⊙ Threads:</b> <code>{site_count}</code>
 <b>⊙ Status:</b> <code>Preparing...</code>
 ━━━━━━━━━━━━━
 <b>[ﾒ] Checked By:</b> {user.mention}"""
@@ -255,14 +257,15 @@ async def tsh_handler(client: Client, m: Message):
     captcha_count = 0
     total_retries = 0
 
-    # Process cards sequentially for site rotation
     for idx, card in enumerate(cards, start=1):
+        try:
+            result, retries = await check_card_all_sites_parallel(user_id, card, proxy)
+            raw_response = str(result.get("Response", "UNKNOWN"))
+        except Exception as e:
+            raw_response, retries = f"ERROR: {str(e)[:40]}", 0
         checked_count = idx
-        
-        # Check card with site rotation
-        raw_response, retries, used_site = await check_card_with_rotation(user_id, card, proxy)
         total_retries += retries
-        
+
         response_upper = (raw_response or "").upper()
         status_flag = get_status_flag(response_upper)
         
@@ -327,7 +330,7 @@ async def tsh_handler(client: Client, m: Message):
                 pass
         
         # Update progress every 5 cards
-        if idx % 5 == 0 or idx == total_cards:
+        if checked_count % 5 == 0 or checked_count == total_cards:
             elapsed = time.time() - start_time
             try:
                 await status_msg.edit_text(

