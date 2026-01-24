@@ -47,6 +47,7 @@ def _is_valid_shopify_response(rotator: SiteRotator, resp: str) -> bool:
     invalid = (
         "CAPTCHA" in u or "HCAPTCHA" in u or "SITE_" in u or "CART_" in u or "SESSION_" in u
         or "ERROR" in u or "TIMEOUT" in u or "CONNECTION" in u or "JSON" in u or "HTTP" in u
+        or "CHECKOUT_" in u or "NEGOTIATE_" in u
     )
     return not invalid
 
@@ -192,6 +193,8 @@ def determine_status(response: str) -> tuple:
         # Cart/Session errors
         "CART_ERROR", "CART_HTML", "CART_INVALID", "CART_CREATION",
         "SESSION_ERROR", "SESSION_ID", "SESSION_INVALID",
+        # Checkout/Negotiate errors
+        "CHECKOUT_", "NEGOTIATE_",
         # Other system errors
         "ERROR", "TIMEOUT", "EMPTY", "DEAD", "CONNECTION", "RATE_LIMIT",
         "BLOCKED", "PROXY", "NO_AVAILABLE_PRODUCTS", "BUILD",

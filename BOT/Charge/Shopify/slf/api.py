@@ -101,6 +101,20 @@ def capture(data, first, last):
   except ValueError:
       return
 
+
+def _capture_multi(data: str, *pairs) -> Optional[str]:
+    """Try multiple (first, last) patterns; return first non-empty match."""
+    if not data:
+        return None
+    for first, last in pairs:
+        try:
+            v = capture(data, first, last)
+            if v and str(v).strip():
+                return v.strip()
+        except Exception:
+            pass
+    return None
+
 def _products_from_json_text(text: str):
     """Parse products from raw /products.json text. Returns (product_id, price) or raises ValueError."""
     if not text or not text.strip():
@@ -434,57 +448,124 @@ async def autoshopify(url, card, session):
         }
 
         request = await session.get(checkout_url, headers=headers, params=params, follow_redirects=True, timeout=20)
-        
 
-        paymentMethodIdentifier = capture(request.text,"paymentMethodIdentifier&quot;:&quot;","&quot")
-        stable_id = capture(request.text,"stableId&quot;:&quot;","&quot")
-        queue_token = capture(request.text,"queueToken&quot;:&quot;","&quot")
-        currencyCode = capture(request.text,"currencyCode&quot;:&quot;","&quot")
-
-        try:
-            # countryCode = capture(request.text, '&quot;shippingCountries&quot;:[{&quot;value&quot;:&quot;', '&quot')
-            countryCode = capture(request.text,"countryCode&quot;:&quot;","&quot")
-        except:
-            countryCode = capture(request.text,"countryCode&quot;:&quot;","&quot")
-
-        x_checkout_one_session_token = capture(request.text,'serialized-session-token" content="&quot;','&quot')
-        token = capture(request.text,'serialized-source-token" content="&quot;','&quot')
-        # web_build = capture(request.text, 'sha&quot;:&quot;', '&quot;')
-        # match = re.search(r'<meta name="serialized-client-bundle-info" content="(.*?)"/>', request.text)
-        # if match:
-        #     content = match.group(1)
-        #     content = html.unescape(content) 
-        #     print(content)
-        #     try:
-        #         data = json.loads(content)
-        #         web_build = data.get("sha")
-        #         # return web_build
-        #     except:
-        #         web_build = capture(request.text,'serialized-client-bundle-info" content="{&quot;browsers&quot;:&quot;latest&quot;,&quot;format&quot;:&quot;es&quot;,&quot;locale&quot;:&quot;en&quot;,&quot;sha&quot;:&quot;',
-        #         '&quot;'
-        #         # return web_build
-        #     )
-        # else:
-        web_build = 'a5ffb15727136fbf537411f8d32d7c41fb371075'
-            # return web_build
-        
-        if not web_build:
+        checkout_sc = getattr(request, "status_code", 0)
+        if checkout_sc != 200:
             output.update({
-                "Response": "Build Empty",
+                "Response": f"CHECKOUT_HTTP_{checkout_sc}",
                 "Status": False,
             })
-            print(json.dumps(output))
             return output
 
-        tax1 = capture(request.text,"totalTaxAndDutyAmount&quot;:{&quot;value&quot;:{&quot;amount&quot;:&quot;","&quot")
-        gateway = capture(request.text,'extensibilityDisplayName&quot;:&quot;','&quot')
+        checkout_text = request.text if request.text else ""
+        checkout_lower = checkout_text.lower()
+
+        if checkout_text.strip().startswith("<"):
+            if any(x in checkout_lower for x in ["captcha", "hcaptcha", "recaptcha", "challenge", "verify"]):
+                output.update({"Response": "HCAPTCHA_DETECTED", "Status": False})
+                return output
+            if "serialized-session-token" not in checkout_text and "serialized-source-token" not in checkout_text:
+                output.update({"Response": "CHECKOUT_HTML_ERROR", "Status": False})
+                return output
+
+        try:
+            paymentMethodIdentifier = _capture_multi(
+                checkout_text,
+                ('paymentMethodIdentifier&quot;:&quot;', '&quot'),
+                ('paymentMethodIdentifier":"', '"'),
+            ) or capture(checkout_text, "paymentMethodIdentifier&quot;:&quot;", "&quot")
+        except Exception:
+            paymentMethodIdentifier = None
+        try:
+            stable_id = _capture_multi(
+                checkout_text,
+                ('stableId&quot;:&quot;', '&quot'),
+                ('stableId":"', '"'),
+            ) or capture(checkout_text, "stableId&quot;:&quot;", "&quot")
+        except Exception:
+            stable_id = None
+        try:
+            queue_token = _capture_multi(
+                checkout_text,
+                ('queueToken&quot;:&quot;', '&quot'),
+                ('queueToken":"', '"'),
+            ) or capture(checkout_text, "queueToken&quot;:&quot;", "&quot")
+        except Exception:
+            queue_token = None
+        try:
+            currencyCode = _capture_multi(
+                checkout_text,
+                ('currencyCode&quot;:&quot;', '&quot'),
+                ('currencyCode":"', '"'),
+            ) or capture(checkout_text, "currencyCode&quot;:&quot;", "&quot")
+        except Exception:
+            currencyCode = None
+
+        try:
+            countryCode = capture(checkout_text, "countryCode&quot;:&quot;", "&quot") or capture(checkout_text, 'countryCode":"', '"')
+        except Exception:
+            countryCode = currencyCode
+
+        x_checkout_one_session_token = _capture_multi(
+            checkout_text,
+            ('serialized-session-token" content="&quot;', '&quot'),
+            ('serialized-session-token" content="', '"'),
+            ('serialized-session-token&quot; content=&quot;&quot;', '&quot;'),
+        )
+        token = _capture_multi(
+            checkout_text,
+            ('serialized-source-token" content="&quot;', '&quot'),
+            ('serialized-source-token" content="', '"'),
+            ('serialized-source-token&quot; content=&quot;&quot;', '&quot;'),
+        )
+
+        web_build = None
+        try:
+            match = re.search(r'"sha"\s*:\s*"([a-fA-F0-9]{40})"', checkout_text)
+            if match:
+                web_build = match.group(1)
+            if not web_build:
+                match = re.search(r'sha&quot;:&quot;([a-fA-F0-9]{40})&quot;', checkout_text)
+                if match:
+                    web_build = match.group(1)
+            if not web_build:
+                web_build = capture(checkout_text, 'serialized-client-bundle-info" content="{&quot;browsers&quot;:&quot;latest&quot;,&quot;format&quot;:&quot;es&quot;,&quot;locale&quot;:&quot;en&quot;,&quot;sha&quot;:&quot;', '&quot;')
+        except Exception:
+            pass
+        if not web_build or not str(web_build).strip():
+            web_build = "a5ffb15727136fbf537411f8d32d7c41fb371075"
+
+        if not x_checkout_one_session_token or not token or not queue_token or not stable_id:
+            missing = []
+            if not x_checkout_one_session_token:
+                missing.append("session_token")
+            if not token:
+                missing.append("source_token")
+            if not queue_token:
+                missing.append("queue_token")
+            if not stable_id:
+                missing.append("stable_id")
+            output.update({
+                "Response": f"CHECKOUT_TOKENS_MISSING ({','.join(missing)})",
+                "Status": False,
+            })
+            return output
+
+        try:
+            tax1 = capture(checkout_text, "totalTaxAndDutyAmount&quot;:{&quot;value&quot;:{&quot;amount&quot;:&quot;", "&quot")
+        except Exception:
+            tax1 = None
+        try:
+            gateway = _capture_multi(checkout_text, ('extensibilityDisplayName&quot;:&quot;', '&quot'), ('extensibilityDisplayName":"', '"')) or capture(checkout_text, 'extensibilityDisplayName&quot;:&quot;', '&quot')
+        except Exception:
+            gateway = None
         if gateway == "Shopify Payments":
             gateway = "Normal"
         elif gateway:
             gateway = gateway
         else:
             gateway = "Unknown"
-        DMT = capture(request.text, 'deliveryMethodTypes&quot;:[&quot;', '&quot;],&quot;')
+        DMT = capture(checkout_text, 'deliveryMethodTypes&quot;:[&quot;', '&quot;],&quot;')
 
         addr = pick_addr(url, cc=currencyCode, rc=countryCode)
         # print(addr["postalCode"])
@@ -741,19 +822,35 @@ async def autoshopify(url, card, session):
             'operationName': 'Proposal',
         }
 
-        request = await session.post(f'{url}/checkouts/unstable/graphql', params=params, headers=headers, json=json_data, timeout=20)
+        proposal1 = await session.post(f'{url}/checkouts/unstable/graphql', params=params, headers=headers, json=json_data, timeout=20)
 
-        match = re.search(r'"totalTaxAndDutyAmount"\s*:\s*{[^}]*"value"\s*:\s*{[^}]*"amount"\s*:\s*"([\d.]+)"', request.text)
+        p1_sc = getattr(proposal1, "status_code", 0)
+        p1_text = (proposal1.text or "").strip()
+        if p1_sc != 200:
+            output.update({
+                "Response": f"NEGOTIATE_HTTP_{p1_sc}",
+                "Status": False,
+            })
+            return output
+        if p1_text.startswith("<"):
+            if any(x in p1_text.lower() for x in ["captcha", "hcaptcha", "recaptcha"]):
+                output.update({"Response": "HCAPTCHA_DETECTED", "Status": False})
+                return output
+            output.update({"Response": "NEGOTIATE_HTML_ERROR", "Status": False})
+            return output
 
+        match = re.search(r'"totalTaxAndDutyAmount"\s*:\s*{[^}]*"value"\s*:\s*{[^}]*"amount"\s*:\s*"([\d.]+)"', p1_text)
         if not match:
-            match = re.search(r'"totalAmountIncludedInTarget"\s*:\s*{[^}]*"value"\s*:\s*{[^}]*"amount"\s*:\s*"([\d.]+)"', request.text)
-
-        tax2 = float(match.group(1)) if match else 0.0
+            match = re.search(r'"totalAmountIncludedInTarget"\s*:\s*{[^}]*"value"\s*:\s*{[^}]*"amount"\s*:\s*"([\d.]+)"', p1_text)
+        try:
+            tax2 = float(match.group(1)) if match else (float(tax1) if tax1 else 0.0)
+        except (TypeError, ValueError):
+            tax2 = 0.0
 
         if not DMT:
-            matches = re.findall(r'"deliveryMethodTypes"\s*:\s*\[(.*?)\]', request.text)
+            matches = re.findall(r'"deliveryMethodTypes"\s*:\s*\[(.*?)\]', p1_text)
             DMT = matches[0] if matches else 'SHIPPING'
-            DMT = DMT.replace('"', '')
+            DMT = DMT.replace('"', '') if DMT else 'SHIPPING'
             # print(DMT)
 
         # print(f"Delivery Methods : {DMT}")
@@ -951,32 +1048,53 @@ async def autoshopify(url, card, session):
             'operationName': 'Proposal',
         }
         
-        for _ in range(3):
-            request = await session.post(f'{url}/checkouts/unstable/graphql', params=params, headers=headers, json=json_data, timeout=20)
-            # print(request)
-            if "signedHandle" in request.text:
+        request = None
+        for attempt in range(4):
+            req = await session.post(f'{url}/checkouts/unstable/graphql', params=params, headers=headers, json=json_data, timeout=25)
+            req_text = (req.text or "").strip()
+            req_sc = getattr(req, "status_code", 0)
+
+            if req_sc != 200:
+                if attempt < 3 and req_sc in (429, 502, 503, 504):
+                    await asyncio.sleep(1.0 + attempt * 0.5)
+                    continue
+                output.update({"Response": f"NEGOTIATE_HTTP_{req_sc}", "Status": False})
+                return output
+
+            if req_text.startswith("<"):
+                if any(x in req_text.lower() for x in ["captcha", "hcaptcha", "recaptcha"]):
+                    output.update({"Response": "HCAPTCHA_DETECTED", "Status": False})
+                    return output
+                output.update({"Response": "NEGOTIATE_HTML_ERROR", "Status": False})
+                return output
+
+            if "signedHandle" in req_text:
+                request = req
                 break
-            else:
-                continue
+
+            try:
+                data = req.json()
+                res = (data.get("data") or {}).get("session") or {}
+                neg = (res.get("negotiate") or {}).get("result") or {}
+                if neg.get("__typename") == "Throttled":
+                    poll_ms = (neg.get("pollAfter") or 0)
+                    if poll_ms and poll_ms < 10000:
+                        await asyncio.sleep(poll_ms / 1000.0)
+                    else:
+                        await asyncio.sleep(1.5 + attempt * 0.5)
+                else:
+                    await asyncio.sleep(1.0 + attempt * 0.5)
+            except Exception:
+                await asyncio.sleep(1.0 + attempt * 0.5)
+            request = req
+
+        if request is None:
+            output.update({"Response": "NEGOTIATE_NO_RESPONSE", "Status": False})
+            return output
 
         # Parse negotiate response with error handling
         try:
             negotiate_text = request.text if request.text else ""
-            
-            # Check for HTML/captcha
-            if negotiate_text.strip().startswith("<"):
-                if any(x in negotiate_text.lower() for x in ["captcha", "hcaptcha", "recaptcha"]):
-                    output.update({
-                        "Response": "HCAPTCHA_DETECTED",
-                        "Status": False,
-                    })
-                    return output
-                output.update({
-                    "Response": "NEGOTIATE_HTML_ERROR",
-                    "Status": False,
-                })
-                return output
-            
             negotiate_data = request.json()
             seller_proposal = negotiate_data["data"]["session"]["negotiate"]["result"]["sellerProposal"]
             seller = seller_proposal["delivery"]["deliveryLines"][0]["availableDeliveryStrategies"][0]
