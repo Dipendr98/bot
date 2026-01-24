@@ -36,6 +36,27 @@ except ImportError:
 logger = logging.getLogger(__name__)
 
 
+def _log_output_to_terminal(output: dict) -> None:
+    """Print check result to terminal in compact key-value format (Gateway, Price, ReceiptId, Response, Status, cc)."""
+    gate = output.get("Gateway", "Unknown")
+    price = output.get("Price", "0.00")
+    rid = output.get("ReceiptId")
+    resp = output.get("Response", "UNKNOWN")
+    status = output.get("Status", False)
+    cc = output.get("cc", "")
+    lines = [
+        f"Gateway: {gate}",
+        f"Price: {price}",
+    ]
+    if rid:
+        lines.append(f"ReceiptId: {rid}")
+    lines.append(f"Response: {resp} Status: {str(status).lower()}")
+    if cc:
+        lines.append(f"cc: {cc}")
+    print("\n".join(lines))
+    print()
+
+
 def get_proxy():
     host, port, user, password = "ipv6-residential-bridge.bytezero.io", "1111", "0gzKNdn7m1-country-US", "8%2HUKRlNsR1"
     return f"http://{user}:{password}@{host}:{port}"
@@ -245,6 +266,7 @@ async def autoshopify(url, card, session):
     output = {
         "Response": "UNKNOWN ERROR",
         "Status": False,
+        "cc": card,
     }
     start = time.time()
     getua = get_random_user_agent()
@@ -290,6 +312,7 @@ async def autoshopify(url, card, session):
                     "Response": "SITE_CONNECTION_ERROR",
                     "Status": False,
                 })
+                _log_output_to_terminal(output)
                 return output
 
             sc = getattr(request, "status_code", 0)
@@ -304,6 +327,7 @@ async def autoshopify(url, card, session):
                 "Response": f"SITE_HTTP_{sc}",
                 "Status": False,
             })
+            _log_output_to_terminal(output)
             return output
         
         # Parse products with detailed error handling; cloudscraper fallback on captcha
@@ -320,10 +344,12 @@ async def autoshopify(url, card, session):
                     pass
             if not product_id:
                 output.update({"Response": error_msg, "Status": False})
+                _log_output_to_terminal(output)
                 return output
         
         if not product_id:
             output.update({"Response": "NO_AVAILABLE_PRODUCTS", "Status": False})
+            _log_output_to_terminal(output)
             return output
 
         try:
@@ -333,7 +359,7 @@ async def autoshopify(url, card, session):
                 "Response": "SITE DEAD",
                 "Status": False,
             })
-            print(json.dumps(output))
+            _log_output_to_terminal(output)
             return output
 
         site_key = capture(request.text,'"accessToken":"','"')
@@ -393,11 +419,13 @@ async def autoshopify(url, card, session):
                         "Response": "HCAPTCHA_DETECTED",
                         "Status": False,
                     })
+                    _log_output_to_terminal(output)
                     return output
                 output.update({
                     "Response": "CART_HTML_ERROR",
                     "Status": False,
                 })
+                _log_output_to_terminal(output)
                 return output
             
             response_data = response.json()
@@ -409,6 +437,7 @@ async def autoshopify(url, card, session):
                     "Response": f"CART_ERROR: {error_msg[:50]}",
                     "Status": False,
                 })
+                _log_output_to_terminal(output)
                 return output
             
             checkout_url = response_data["data"]["result"]["cart"]["checkoutUrl"]
@@ -417,12 +446,14 @@ async def autoshopify(url, card, session):
                 "Response": "CART_INVALID_JSON",
                 "Status": False,
             })
+            _log_output_to_terminal(output)
             return output
         except (KeyError, TypeError) as e:
             output.update({
                 "Response": "CART_CREATION_FAILED",
                 "Status": False,
             })
+            _log_output_to_terminal(output)
             return output
 
 
@@ -455,6 +486,7 @@ async def autoshopify(url, card, session):
                 "Response": f"CHECKOUT_HTTP_{checkout_sc}",
                 "Status": False,
             })
+            _log_output_to_terminal(output)
             return output
 
         checkout_text = request.text if request.text else ""
@@ -463,9 +495,11 @@ async def autoshopify(url, card, session):
         if checkout_text.strip().startswith("<"):
             if any(x in checkout_lower for x in ["captcha", "hcaptcha", "recaptcha", "challenge", "verify"]):
                 output.update({"Response": "HCAPTCHA_DETECTED", "Status": False})
+                _log_output_to_terminal(output)
                 return output
             if "serialized-session-token" not in checkout_text and "serialized-source-token" not in checkout_text:
                 output.update({"Response": "CHECKOUT_HTML_ERROR", "Status": False})
+                _log_output_to_terminal(output)
                 return output
 
         try:
@@ -549,6 +583,7 @@ async def autoshopify(url, card, session):
                 "Response": f"CHECKOUT_TOKENS_MISSING ({','.join(missing)})",
                 "Status": False,
             })
+            _log_output_to_terminal(output)
             return output
 
         try:
@@ -618,11 +653,13 @@ async def autoshopify(url, card, session):
                         "Response": f"SESSION_ERROR: {str(error_msg)[:50]}",
                         "Status": False,
                     })
+                    _log_output_to_terminal(output)
                     return output
                 output.update({
                     "Response": "SESSION_ID_MISSING",
                     "Status": False,
                 })
+                _log_output_to_terminal(output)
                 return output
             sessionid = session_response["id"]
         except json.JSONDecodeError:
@@ -630,6 +667,7 @@ async def autoshopify(url, card, session):
                 "Response": "SESSION_INVALID_JSON",
                 "Status": False,
             })
+            _log_output_to_terminal(output)
             return output
         # print(f"PAY ID{paymentMethodIdentifier}\nSTABLE ID{stable_id}\nQUTTA TOKEN{queue_token}\nXcheckout :{x_checkout_one_session_token}\ntoken {token}\nmc build{web_build}\nsusion id{sessionid}\nCurrency Code: {currencyCode}\nCountry Code:{countryCode}\nRaw Tax: {tax1}\nGate: {gateway}")
 
@@ -831,12 +869,15 @@ async def autoshopify(url, card, session):
                 "Response": f"NEGOTIATE_HTTP_{p1_sc}",
                 "Status": False,
             })
+            _log_output_to_terminal(output)
             return output
         if p1_text.startswith("<"):
             if any(x in p1_text.lower() for x in ["captcha", "hcaptcha", "recaptcha"]):
                 output.update({"Response": "HCAPTCHA_DETECTED", "Status": False})
+                _log_output_to_terminal(output)
                 return output
             output.update({"Response": "NEGOTIATE_HTML_ERROR", "Status": False})
+            _log_output_to_terminal(output)
             return output
 
         match = re.search(r'"totalTaxAndDutyAmount"\s*:\s*{[^}]*"value"\s*:\s*{[^}]*"amount"\s*:\s*"([\d.]+)"', p1_text)
@@ -1059,13 +1100,16 @@ async def autoshopify(url, card, session):
                     await asyncio.sleep(1.0 + attempt * 0.5)
                     continue
                 output.update({"Response": f"NEGOTIATE_HTTP_{req_sc}", "Status": False})
+                _log_output_to_terminal(output)
                 return output
 
             if req_text.startswith("<"):
                 if any(x in req_text.lower() for x in ["captcha", "hcaptcha", "recaptcha"]):
                     output.update({"Response": "HCAPTCHA_DETECTED", "Status": False})
+                    _log_output_to_terminal(output)
                     return output
                 output.update({"Response": "NEGOTIATE_HTML_ERROR", "Status": False})
+                _log_output_to_terminal(output)
                 return output
 
             if "signedHandle" in req_text:
@@ -1090,6 +1134,7 @@ async def autoshopify(url, card, session):
 
         if request is None:
             output.update({"Response": "NEGOTIATE_NO_RESPONSE", "Status": False})
+            _log_output_to_terminal(output)
             return output
 
         # Parse negotiate response with error handling
@@ -1112,12 +1157,14 @@ async def autoshopify(url, card, session):
                 "Response": "NEGOTIATE_INVALID_JSON",
                 "Status": False,
             })
+            _log_output_to_terminal(output)
             return output
         except (KeyError, TypeError, IndexError) as e:
             output.update({
                 "Response": "DELIVERY_ERROR",
                 "Status": False,
             })
+            _log_output_to_terminal(output)
             return output
         if not handle:
             output.update({
@@ -1126,7 +1173,7 @@ async def autoshopify(url, card, session):
                 "Gateway": gateway,
                 "Price": total,
             })
-            print(json.dumps(output))
+            _log_output_to_terminal(output)
             return output
 
         # print(f"Handle: {handle}\nAmount: {amount}\nTotal Price: {total}")
@@ -1632,7 +1679,7 @@ async def autoshopify(url, card, session):
                 "Gateway": gateway,
                 "Price": total,
             })
-            print(json.dumps(output))
+            _log_output_to_terminal(output)
             return output
 
         if "CAPTCHA_METADATA_MISSING" in request.text:
@@ -1642,7 +1689,7 @@ async def autoshopify(url, card, session):
                 "Gateway": gateway,
                 "Price": total,
             })
-            print(json.dumps(output))
+            _log_output_to_terminal(output)
             return output
 
         if "PAYMENTS_CREDIT_CARD_BASE_EXPIRED" in request.text:
@@ -1652,7 +1699,7 @@ async def autoshopify(url, card, session):
                 "Gateway": gateway,
                 "Price": total,
             })
-            print(json.dumps(output))
+            _log_output_to_terminal(output)
             return output
 
         if "PAYMENTS_CREDIT_CARD_BRAND_NOT_SUPPORTED" in request.text:
@@ -1662,7 +1709,7 @@ async def autoshopify(url, card, session):
                 "Gateway": gateway,
                 "Price": total,
             })
-            print(json.dumps(output))
+            _log_output_to_terminal(output)
             return output  
 
         if "PAYMENTS_CREDIT_CARD_NUMBER_INVALID_FORMAT" in request.text:
@@ -1672,7 +1719,7 @@ async def autoshopify(url, card, session):
                 "Gateway": gateway,
                 "Price": total,
             })
-            print(json.dumps(output))
+            _log_output_to_terminal(output)
             return output  
 
         # Parse submit response with error handling
@@ -1687,6 +1734,7 @@ async def autoshopify(url, card, session):
                         "Gateway": gateway,
                         "Price": total,
                     })
+                    _log_output_to_terminal(output)
                     return output
             
             jsun = request.json()
@@ -1697,7 +1745,7 @@ async def autoshopify(url, card, session):
                 "Gateway": gateway,
                 "Price": total,
             })
-            print(json.dumps(output))
+            _log_output_to_terminal(output)
             return output
         
         receipt = jsun.get("data", {}).get("submitForCompletion", {}).get("receipt", {})
@@ -1709,7 +1757,7 @@ async def autoshopify(url, card, session):
                 "Gateway": gateway,
                 "Price": total,
             })
-            print(json.dumps(output))
+            _log_output_to_terminal(output)
             return output
 
         # print(f"{receipt_id}")
@@ -1978,7 +2026,7 @@ async def autoshopify(url, card, session):
             "Status": False,
         })
 
-    print(json.dumps(output))
+    _log_output_to_terminal(output)
     return output
 
 
