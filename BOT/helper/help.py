@@ -44,6 +44,49 @@ async def help_callback(client: Client, callback_query: CallbackQuery):
     """Handle help menu navigation"""
 
     data = callback_query.data
+    
+    # Handle help_commands callback (from permissions.py)
+    if data == "help_commands":
+        await callback_query.answer()
+        commands_text = """<pre>📋 Available Commands</pre>
+━━━━━━━━━━━━━━━
+<b>🔐 Private Chat Commands:</b>
+• <code>/addurl</code> - Add Shopify site
+• <code>/mysite</code> - View your site
+• <code>/sh</code> - Check card on site
+• <code>/txturl</code> - Add multiple sites
+
+<b>⚡ Group Commands:</b>
+• <code>/sg</code> - Shopify charge
+• <code>/st</code> - Stripe charge
+• <code>/br</code> - Braintree check
+• <code>/bin</code> - BIN lookup
+
+<b>🔧 Tool Commands:</b>
+• <code>/fake</code> - Generate fake info
+• <code>/gen</code> - Generate cards
+• <code>/vbv</code> - VBV check
+• <code>/btcvv</code> - Braintree CVV
+
+<b>💎 Plan Commands:</b>
+• <code>/plans</code> - View plans
+• <code>/buy</code> - Purchase credits
+━━━━━━━━━━━━━━━
+<i>Use /help for full command list</i>"""
+        
+        buttons = InlineKeyboardMarkup([
+            [InlineKeyboardButton("🔙 Back", callback_data="help_main")],
+            [InlineKeyboardButton("❌ Close", callback_data="help_close")]
+        ])
+        
+        try:
+            await callback_query.message.edit_text(
+                commands_text,
+                reply_markup=buttons
+            )
+        except MessageNotModified:
+            pass
+        return
 
     if data == "help_close":
         try:

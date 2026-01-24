@@ -1,14 +1,29 @@
+"""
+Professional Stripe $20 Charge Handler
+Handles /st and $st commands for Stripe charge checking.
+"""
+
 import re
-from pyrogram import Client, filters
 from time import time
-from pyrogram.types import InlineKeyboardMarkup, InlineKeyboardButton
-from pyrogram.enums import ChatType
+from datetime import datetime
+
+from pyrogram import Client, filters
+from pyrogram.types import Message, InlineKeyboardMarkup, InlineKeyboardButton
+from pyrogram.enums import ParseMode, ChatType
+
 from BOT.helper.start import load_users
 from BOT.helper.antispam import can_run_command
 from BOT.helper.permissions import check_private_access, is_premium_user
 from BOT.Charge.Stripe.api import async_stripe_charge
 from BOT.Charge.Stripe.response import format_stripe_charge_response
 from BOT.gc.credit import has_credits, deduct_credit
+
+# Try to import BIN lookup
+try:
+    from TOOLS.getbin import get_bin_details
+except ImportError:
+    def get_bin_details(bin_number):
+        return None
 
 
 def extract_card(text):
@@ -23,20 +38,27 @@ def extract_card(text):
 async def handle_stripe_charge(client, message):
     """
     Handle /st command for Stripe $20 Charge
-
+    Professional implementation with BIN billing.
+    
     Usage: /st cc|mm|yy|cvv
     Example: /st 4405639706340195|03|2029|734
     """
     try:
+        if not message.from_user:
+            return
+        
         # Load users and check registration
         users = load_users()
         user_id = str(message.from_user.id)
 
         if user_id not in users:
             return await message.reply(
-                """<pre>Access Denied 🚫</pre>
-<b>You have to register first using</b> <code>/register</code> <b>command.</b>""",
-                reply_to_message_id=message.id
+                """<pre>🚫 Access Denied</pre>
+━━━━━━━━━━━━━━━
+<b>You must register first!</b>
+Use <code>/register</code> to create your account.""",
+                reply_to_message_id=message.id,
+                parse_mode=ParseMode.HTML
             )
 
         # Check private access
@@ -50,12 +72,12 @@ async def handle_stripe_charge(client, message):
         # Check credits
         if not has_credits(user_id):
             return await message.reply(
-                """<pre>Notification ❗️</pre>
-<b>Message :</b> <code>You Have Insufficient Credits</code>
-<b>Get Credits To Use</b>
-━━━━━━━━━━━━━
-<b>Type <code>/buy</code> to get Credits.</b>""",
-                reply_to_message_id=message.id
+                """<pre>💳 Insufficient Credits</pre>
+━━━━━━━━━━━━━━━
+<b>You have no credits remaining.</b>
+Use <code>/buy</code> to purchase credits.""",
+                reply_to_message_id=message.id,
+                parse_mode=ParseMode.HTML
             )
 
         # Extract card from command or replied message
@@ -67,32 +89,39 @@ async def handle_stripe_charge(client, message):
 
         if not target_text:
             return await message.reply(
-                f"""<pre>CC Not Found ❌</pre>
-<b>Error:</b> <code>No CC Found in your input</code>
+                """<pre>❌ Card Not Found</pre>
+━━━━━━━━━━━━━━━
+<b>No card detected in your input!</b>
+
 <b>Usage:</b> <code>/st cc|mm|yy|cvv</code>
 <b>Example:</b> <code>/st 4405639706340195|03|2029|734</code>""",
-                reply_to_message_id=message.id
+                reply_to_message_id=message.id,
+                parse_mode=ParseMode.HTML
             )
 
         extracted = extract_card(target_text)
         if not extracted:
             return await message.reply(
-                f"""<pre>Invalid Format ❌</pre>
-<b>Error:</b> <code>Send CC in Correct Format</code>
-<b>Usage:</b> <code>/st cc|mm|yy|cvv</code>
-<b>Example:</b> <code>/st 4405639706340195|03|2029|734</code>""",
-                reply_to_message_id=message.id
+                """<pre>❌ Invalid Format</pre>
+━━━━━━━━━━━━━━━
+<b>Card format is incorrect!</b>
+
+<b>Format:</b> <code>cc|mm|yy|cvv</code>
+<b>Example:</b> <code>/st 4405639706340195|03|29|734</code>""",
+                reply_to_message_id=message.id,
+                parse_mode=ParseMode.HTML
             )
 
         # Check antispam
         allowed, wait_time = can_run_command(user_id, users)
         if not allowed:
             return await message.reply(
-                f"""<pre>Antispam Detected ⚠️</pre>
-<b>Message:</b> <code>You are detected as spamming</code>
-<code>Try after {wait_time}s to use me again</code> <b>OR</b>
-<code>Reduce Antispam Time /buy Using Paid Plan</code>""",
-                reply_to_message_id=message.id
+                f"""<pre>⏳ Antispam Active</pre>
+━━━━━━━━━━━━━━━
+<b>Please wait before checking again.</b>
+<b>Try again in:</b> <code>{wait_time}s</code>""",
+                reply_to_message_id=message.id,
+                parse_mode=ParseMode.HTML
             )
 
         card, mes, ano, cvv = extracted
@@ -102,27 +131,17 @@ async def handle_stripe_charge(client, message):
 
         # Show processing message
         loading_msg = await message.reply(
-            "<pre>Processing Your Request..!</pre>",
-            reply_to_message_id=message.id
-        )
-
-        await loading_msg.edit(
-            f"<pre>Processing Stripe $20 Charge..!</pre>\n"
-            f"━ ━ ━ ━ ━ ━ ━ ━ ━ ━ ━ ━\n"
-            f"• <b>Card -</b> <code>{fullcc}</code>\n"
-            f"• <b>Gate -</b> <code>Stripe Balliante $20</code>\n"
-            f"• <b>Status -</b> <code>Charging...</code>"
+            f"""<pre>🔄 Processing...</pre>
+━━━━━━━━━━━━━━━
+<b>Card:</b> <code>{fullcc}</code>
+<b>Gate:</b> <code>Stripe $20 Charge</code>
+<b>Status:</b> <i>Charging...</i>""",
+            reply_to_message_id=message.id,
+            parse_mode=ParseMode.HTML
         )
 
         # Check card using Stripe charge
         result = await async_stripe_charge(card, mes, ano, cvv)
-
-        await loading_msg.edit(
-            f"<pre>Processed ✔️</pre>\n"
-            f"━ ━ ━ ━ ━ ━ ━ ━ ━ ━ ━ ━\n"
-            f"• <b>Card -</b> <code>{fullcc}</code>\n"
-            f"• <b>Gate -</b> <code>Stripe Balliante $20</code>"
-        )
 
         # Format response
         user_data = users[user_id]
@@ -139,19 +158,39 @@ async def handle_stripe_charge(client, message):
 
         final_msg = format_stripe_charge_response(fullcc, result, start_time, user_info)
 
-        # Add buttons
-        buttons = InlineKeyboardMarkup([
-            [
-                InlineKeyboardButton("Support", url="https://t.me/Chr1shtopher"),
-                InlineKeyboardButton("Plans", callback_data="plans_info")
-            ]
-        ])
+        # Create buttons based on result
+        status = result.get("status", "error")
+        response_msg = result.get("response", "")
+        
+        if status == "approved":
+            if "PAYMENT_SUCCESSFUL" in response_msg or "CHARGED" in response_msg:
+                buttons = InlineKeyboardMarkup([
+                    [
+                        InlineKeyboardButton("💎 Charged!", callback_data="charged_info"),
+                        InlineKeyboardButton("Support", url="https://t.me/Chr1shtopher")
+                    ]
+                ])
+            else:
+                buttons = InlineKeyboardMarkup([
+                    [
+                        InlineKeyboardButton("✅ CCN Live", callback_data="ccn_info"),
+                        InlineKeyboardButton("Support", url="https://t.me/Chr1shtopher")
+                    ]
+                ])
+        else:
+            buttons = InlineKeyboardMarkup([
+                [
+                    InlineKeyboardButton("🔄 Try Another", callback_data="try_another"),
+                    InlineKeyboardButton("Support", url="https://t.me/Chr1shtopher")
+                ]
+            ])
 
         # Send final response
         await loading_msg.edit(
             final_msg,
             reply_markup=buttons,
-            disable_web_page_preview=True
+            disable_web_page_preview=True,
+            parse_mode=ParseMode.HTML
         )
 
         # Deduct credit
@@ -163,7 +202,15 @@ async def handle_stripe_charge(client, message):
         print(f"Error in /st: {e}")
         import traceback
         traceback.print_exc()
-        await message.reply(
-            "<code>Internal Error Occurred. Try again later.</code>",
-            reply_to_message_id=message.id
-        )
+        try:
+            await message.reply(
+                f"""<pre>⚠️ Error Occurred</pre>
+━━━━━━━━━━━━━━━
+<code>{str(e)[:100]}</code>
+
+<i>Please try again or contact support.</i>""",
+                reply_to_message_id=message.id,
+                parse_mode=ParseMode.HTML
+            )
+        except:
+            pass

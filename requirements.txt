@@ -12,3 +12,4 @@ reportlab
 cloudscraper
 fake-useragent
 faker
+aiohttp
