@@ -31,6 +31,8 @@ except ImportError:
 
 # Maximum retries with site rotation
 MAX_SITE_RETRIES = 5
+# Concurrent threads per card (10 parallel checks at a time; first valid wins)
+SH_CONCURRENT_THREADS = 10
 
 
 def _is_valid_shopify_response(rotator: SiteRotator, resp: str) -> bool:
@@ -81,9 +83,12 @@ async def check_card_all_sites_parallel(
         except Exception as e:
             return (url, gate, {"Response": f"ERROR: {str(e)[:50]}", "Status": False, "Gateway": gate, "Price": "0.00", "cc": fullcc})
 
+    # 10 threads per batch: cycle through sites so we always run SH_CONCURRENT_THREADS concurrent checks
+    task_sites = [sites[i % len(sites)] for i in range(SH_CONCURRENT_THREADS)]
+
     async def _run_parallel() -> tuple:
-        """Run parallel site checks; return (result_dict, gate_str, all_retryable). Valid result returns (res, gate, False)."""
-        ts = [asyncio.create_task(check_one(s)) for s in sites]
+        """Run 10 concurrent site checks; first valid wins. Return (result_dict, gate_str, all_retryable)."""
+        ts = [asyncio.create_task(check_one(s)) for s in task_sites]
         last_res = None
         last_gate = "Unknown"
         all_retryable = True
@@ -126,15 +131,19 @@ async def check_card_all_sites_parallel(
     last_gate = gate_str if isinstance(gate_str, str) else "Unknown"
     retry_count = 0
 
-    if all_retryable and last_res is not None and len(sites) > 1:
+    # Retry with another 10-thread batch until real response or max batches (captcha/site errors only)
+    max_batches = 3
+    for _ in range(max_batches - 1):
+        if not all_retryable or last_res is None:
+            break
         await asyncio.sleep(4)
-        res2, gate2, _ = await _run_parallel()
+        res2, gate2, all_retryable = await _run_parallel()
         if isinstance(res2, dict) and _is_valid_shopify_response(rotator, str((res2 or {}).get("Response", ""))):
             res2["Gateway"] = res2.get("Gateway") or (gate2 if isinstance(gate2, str) else "Unknown")
-            return (res2, 1)
+            return (res2, retry_count + 1)
         if res2 is not None:
             last_res, last_gate = res2, (gate2 if isinstance(gate2, str) else "Unknown")
-        retry_count = 1
+        retry_count += 1
 
     if last_res is not None:
         last_res["Gateway"] = last_gate
