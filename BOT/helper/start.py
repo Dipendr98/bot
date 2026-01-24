@@ -83,12 +83,13 @@ async def start_command(client: Client, message: Message):
         await message.reply("This command can only be used by users, not channels or anonymous admins.")
         return
 
-    animated_texts = ["〔", "〔C", "〔Ch", "〔Chr", "〔Chri", "〔Chris", "〔Christ〕"]
+    # New loading animation: "Hello !"
+    animated_texts = ["H", "He", "Hel", "Hell", "Hello", "Hello !", "Hello !"]
 
-    sent = await message.reply("<pre>〔</pre>", quote=True)
+    sent = await message.reply("<pre>H</pre>", quote=True)
 
     for text in animated_texts[1:]:
-        await asyncio.sleep(0.2)
+        await asyncio.sleep(0.15)
         await sent.edit_text(f"<pre>{text}</pre>")
 
     # User's display name
@@ -98,7 +99,7 @@ async def start_command(client: Client, message: Message):
     profile = f"<a href='tg://user?id={message.from_user.id}'>{name}</a>"
 
     final_text = f"""
-[<a href='https://t.me/xyz'>⛯</a>] <b>Christ | Version - 1.0</b>
+[<a href='https://t.me/Chr1shtopher'>⛯</a>] <b>Christopher | Version - 1.0</b>
 <pre>Constantly Upgrading...</pre>
 ━━━━━━━━━━━━━
 <b>Hello,</b> {profile}
@@ -285,7 +286,7 @@ async def handle_callbacks(client, callback_query):
 
     if data == "exit":
         try:
-            await callback_query.message.edit_text("<pre>Thanks For Using #Christ</pre>")
+            await callback_query.message.edit_text("<pre>Thanks For Using #Christopher</pre>")
         except MessageNotModified:
             pass
 
@@ -340,17 +341,17 @@ async def handle_callbacks(client, callback_query):
             pass
 
     elif data == "auth":
-        auth_text = """<pre>#Christ 〔AUTH GATES〕</pre>
+        auth_text = """<pre>#Christopher 〔AUTH GATES〕</pre>
 ━ ━ ━ ━ ━━━ ━ ━ ━ ━
-⟐ <b>Name</b>: <code>Braintree Auth HQ</code>
-⟐ <b>Command</b>: <code>$b3 cc|mes|ano|cvv</code>
+⟐ <b>Name</b>: <code>Braintree Auth</code>
+⟐ <b>Command</b>: <code>/b3 cc|mes|ano|cvv</code>
 ⟐ <b>Status</b>: <code>Active ✅</code>
 ═══════════════════
-⟐ <b>Name</b>: <code>Stripe Auth [EcologyJobs]</code>
-⟐ <b>Command</b>: <code>$au cc|mes|ano|cvv</code>
+⟐ <b>Name</b>: <code>Stripe Auth</code>
+⟐ <b>Command</b>: <code>/au cc|mes|ano|cvv</code>
 ⟐ <b>Status</b>: <code>Active ✅</code>
 ━ ━ ━ ━ ━━━ ━ ━ ━ ━
-⟐ <b>Mass Cmd</b>: <code>$mau cc|mes|ano|cvv</code>
+⟐ <b>Mass Cmd</b>: <code>/mau cc|mes|ano|cvv</code>
 ⟐ <b>Limit</b>: <code>Plan Based</code>
 ⟐ <b>Status: Active ✅</b>
 """
@@ -371,12 +372,8 @@ async def handle_callbacks(client, callback_query):
     elif data == "charge":
         charge_buttons = InlineKeyboardMarkup([
             [
-                InlineKeyboardButton("Shopify", callback_data="shopify"),
-                InlineKeyboardButton("[SELF SHOPIFY]", callback_data="auto")
-            ],
-            [
-                InlineKeyboardButton("Braintree", callback_data="braintree"),
-                InlineKeyboardButton("Stripe", callback_data="stripe")
+                InlineKeyboardButton("Shopify Self", callback_data="auto"),
+                InlineKeyboardButton("Stripe $20", callback_data="stripe")
             ],
             [
                 InlineKeyboardButton("Back", callback_data="gates"),
@@ -384,7 +381,7 @@ async def handle_callbacks(client, callback_query):
             ]
         ])
 
-        charge_text = "<pre>#Christ 〔 Charge 〕</pre>"
+        charge_text = "<pre>#Christopher 〔 Charge 〕</pre>"
 
         try:
             await callback_query.message.edit_text(
@@ -395,16 +392,13 @@ async def handle_callbacks(client, callback_query):
             pass
 
     elif data == "shopify":
-        shopify_text = """<pre>#Shopify 〔Charge〕</pre>
+        # Redirect to auto (self shopify) since we removed fixed shopify gates
+        shopify_text = """<pre>#Christopher 〔Self Shopify〕</pre>
 ━ ━ ━ ━ ━━━ ━ ━ ━ ━
-⟐ <b>Name</b>: <code>Shopify 1$</code>
-⟐ <b>Command</b>: <code>$sho cc|mes|ano|cvv</code>
-⟐ <b>Status: Active ✅</b>
-
-<pre>#Shopify 〔Charge〕</pre>
-━ ━ ━ ━ ━━━ ━ ━ ━ ━
-⟐ <b>Name</b>: <code>Shopify 1$</code>
-⟐ <b>Command</b>: <code>$sg cc|mes|ano|cvv</code>
+⟐ <b>Setup</b>: <code>/addurl https://store.com</code>
+⟐ <b>Check</b>: <code>/sh cc|mes|ano|cvv</code>
+⟐ <b>Mass</b>: <code>/msh cc|mes|ano|cvv</code>
+⟐ <b>TXT</b>: <code>/tsh cc|mes|ano|cvv</code>
 ⟐ <b>Status: Active ✅</b>
 """
         shopify_buttons = InlineKeyboardMarkup([
@@ -422,17 +416,16 @@ async def handle_callbacks(client, callback_query):
             pass
 
     elif data == "auto":
-        auto_text = """<pre>#SelfShopify 〔Charge〕</pre>
+        auto_text = """<pre>#Christopher 〔Self Shopify〕</pre>
 ━ ━ ━ ━ ━━━ ━ ━ ━ ━
-⟐ <b>$addurl</b>: <code>Add Site in Bot Private</code>
-⟐ <b>$sh</b>: <code>$sh cc|mes|ano|cvv [Free In Group]</code>
+⟐ <b>/addurl</b>: <code>Add Site (Private Only)</code>
+⟐ <b>/remurl</b>: <code>Remove Saved Site</code>
+⟐ <b>/setpx</b>: <code>Set Proxy (Private Only)</code>
 ⟐ <b>Status: Active ✅</b>
 ━ ━ ━ ━ ━━━ ━ ━ ━ ━
-⟐ <b>Mass Cmd</b>: <code>$msh cc|mes|ano|cvv</code>
-⟐ <b>Limit</b>: <code>9 ccs / Site / 15min</code>
-⟐ <b>Status: Active ✅</b>
-━ ━ ━ ━ ━━━ ━ ━ ━ ━
-⟐ <b>Mass Cmd</b>: <code>$tsh cc|mes|ano|cvv</code>
+⟐ <b>Single</b>: <code>/sh cc|mes|ano|cvv</code>
+⟐ <b>Mass</b>: <code>/msh cc|mes|ano|cvv</code>
+⟐ <b>TXT Sites</b>: <code>/tsh cc|mes|ano|cvv</code>
 ⟐ <b>Status: Active ✅</b>
 """
         auto_buttons = InlineKeyboardMarkup([
@@ -450,13 +443,13 @@ async def handle_callbacks(client, callback_query):
             pass
 
     elif data == "stripe":
-        stripe_text = """<pre>#Stripe 〔Charge〕</pre>
+        stripe_text = """<pre>#Christopher 〔Stripe $20 Charge〕</pre>
 ━ ━ ━ ━ ━━━ ━ ━ ━ ━
-⟐ <b>Name</b>: <code>Stripe 1$</code>
-⟐ <b>Command</b>: <code>$mag cc|mes|ano|cvv</code>
+⟐ <b>Name</b>: <code>Stripe $20 Balliante</code>
+⟐ <b>Command</b>: <code>/st cc|mes|ano|cvv</code>
 ⟐ <b>Status: Active ✅</b>
 ━ ━ ━ ━ ━━━ ━ ━ ━ ━
-⟐ <b>Mass Cmd</b>: <code>$mmag cc|mes|ano|cvv</code>
+⟐ <b>Mass Cmd</b>: <code>/mst cc|mes|ano|cvv</code>
 ⟐ <b>Limit</b>: <code>As Per User's Plan</code>
 ⟐ <b>Status: Active ✅</b>
 """
@@ -475,16 +468,16 @@ async def handle_callbacks(client, callback_query):
             pass
 
     elif data in ["braintree"]:
-        braintree_text = """<pre>#Braintree 〔Charge〕</pre>
+        braintree_text = """<pre>#Christopher 〔Braintree Auth〕</pre>
 ━ ━ ━ ━ ━━━ ━ ━ ━ ━
-⟐ <b>Name</b>: <code>Braintree 1$</code>
-⟐ <b>Command</b>: <code>/br cc|mes|ano|cvv</code>
+⟐ <b>Name</b>: <code>Braintree Auth</code>
+⟐ <b>Command</b>: <code>/b3 cc|mes|ano|cvv</code>
 ⟐ <b>Status: Active ✅</b>
 """
 
         braintree_buttons = InlineKeyboardMarkup([
             [
-                InlineKeyboardButton("Back", callback_data="charge"),
+                InlineKeyboardButton("Back", callback_data="gates"),
                 InlineKeyboardButton("Close", callback_data="exit")
             ]
         ])
@@ -497,41 +490,17 @@ async def handle_callbacks(client, callback_query):
             pass
 
     elif data == "tools":
-        tools_text = """<pre>#Christ 〔TOOLS〕</pre>
+        tools_text = """<pre>#Christopher 〔TOOLS〕</pre>
 ━ ━ ━ ━ ━━━ ━ ━ ━ ━
-⟐ <b>Name</b>: <code>BIN Lookup</code>
-⟐ <b>Command</b>: <code>/bin xxxxxx</code>
-⟐ <b>Status</b>: <code>Active ✅</code>
+⟐ <b>Proxy</b>: <code>/setpx proxy</code> (Private)
+⟐ <b>Delete Proxy</b>: <code>/delpx</code>
+⟐ <b>View Proxy</b>: <code>/getpx</code>
 ═══════════════════
-⟐ <b>Name</b>: <code>Mass BIN Lookup</code>
-⟐ <b>Command</b>: <code>/mbin bin1 bin2...</code>
-⟐ <b>Status</b>: <code>Active ✅</code>
+⟐ <b>BIN Lookup</b>: <code>/bin xxxxxx</code>
+⟐ <b>Card Generator</b>: <code>/gen bin|mm|yy|amount</code>
+⟐ <b>Fake Identity</b>: <code>/fake [country]</code>
 ═══════════════════
-⟐ <b>Name</b>: <code>Card Generator</code>
-⟐ <b>Command</b>: <code>/gen bin|mm|yy|cvv|amount</code>
 ⟐ <b>Status</b>: <code>Active ✅</code>
-═══════════════════
-⟐ <b>Name</b>: <code>Fake Identity Generator</code>
-⟐ <b>Command</b>: <code>/fake [country_code]</code>
-⟐ <b>Status</b>: <code>Active ✅</code>
-═══════════════════
-⟐ <b>Name</b>: <code>VBV (Verified by Visa)</code>
-⟐ <b>Command</b>: <code>$vbv cc|mes|ano|cvv</code>
-⟐ <b>Status</b>: <code>Active ✅</code>
-═══════════════════
-⟐ <b>Name</b>: <code>MBV (Mastercard SecureCode)</code>
-⟐ <b>Command</b>: <code>$mbv cc|mes|ano|cvv</code>
-⟐ <b>Status</b>: <code>Active ✅</code>
-═══════════════════
-⟐ <b>Name</b>: <code>Braintree CVV Auth</code>
-⟐ <b>Command</b>: <code>$btcvv cc|mes|ano|cvv</code>
-⟐ <b>Status</b>: <code>Active ✅</code>
-━ ━ ━ ━ ━━━ ━ ━ ━ ━
-⟐ <b>Mass VBV</b>: <code>$mvbv</code>
-⟐ <b>Mass MBV</b>: <code>$mmbv</code>
-⟐ <b>Mass Braintree CVV</b>: <code>$mbtcvv</code>
-⟐ <b>Limit</b>: <code>Plan Based</code>
-⟐ <b>Status: Active ✅</b>
 """
         tools_buttons = InlineKeyboardMarkup([
             [

@@ -8,10 +8,11 @@ from pyrogram.enums import ChatType, ParseMode
 GROUPS_FILE = "DATA/groups.json"
 OWNER_ID = 6891929831  # Owner user ID
 
-# Commands that require private chat
+# Commands that require private chat - Only site/proxy management
 PRIVATE_ONLY_COMMANDS = [
-    "sh", "slf", "addurl", "slfurl", "seturl", "mysite", "getsite", "siteinfo",
-    "delsite", "removesite", "clearsite", "txturl", "txtls", "rurl", "clearurl"
+    "addurl", "slfurl", "seturl", "txturl",  # Site adding
+    "setpx",  # Proxy adding
+    "remurl", "delsite", "removesite", "clearsite"  # Site removal
 ]
 
 

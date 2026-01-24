@@ -142,10 +142,26 @@ def get_proxy(user_id: int) -> str | None:
     except Exception:
         return None
 
-@Client.on_message(filters.command("setpx"))
+@Client.on_message(filters.command("setpx") & filters.private)
 async def set_proxy(client, message: Message):
+    """Set proxy for mass checking. Private chat only for security."""
     if len(message.command) < 2:
-        return await message.reply("<b>Format ❌:</b> `/setpx {proxy}`", quote=True)
+        return await message.reply(
+            """<pre>Proxy Setup 🔧</pre>
+━━━━━━━━━━━━━
+<b>Format:</b> <code>/setpx proxy</code>
+
+<b>Supported Formats:</b>
+• <code>ip:port:user:pass</code>
+• <code>user:pass@ip:port</code>
+• <code>http://user:pass@ip:port</code>
+
+<b>Example:</b>
+<code>/setpx 192.168.1.1:8080:user:pass</code>
+━━━━━━━━━━━━━
+<b>Note:</b> Use rotating/residential proxy for best results.""",
+            quote=True
+        )
 
     raw_proxy = message.text.split(maxsplit=1)[1].strip()
     proxy_url = normalize_proxy(raw_proxy)

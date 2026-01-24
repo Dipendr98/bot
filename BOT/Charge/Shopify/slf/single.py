@@ -30,8 +30,11 @@ except ImportError:
 SITES_PATH = "DATA/sites.json"
 TXT_SITES_PATH = "DATA/txtsite.json"
 
-# Private commands that should only work in DM
-PRIVATE_ONLY_COMMANDS = ["sh", "slf", "addurl", "slfurl", "mysite", "delsite", "txturl", "txtls", "rurl"]
+# Private commands that should only work in DM - Only site management commands
+PRIVATE_ONLY_COMMANDS = ["addurl", "setpx", "remurl", "slfurl", "txturl"]
+
+# Maximum retries for CAPTCHA
+MAX_CAPTCHA_RETRIES = 3
 
 
 def extract_card(text: str):
@@ -244,9 +247,7 @@ async def handle_sh_command(client: Client, message: Message):
                 parse_mode=ParseMode.HTML
             )
         
-        # Check if command is used in group
-        if not await check_group_command(message):
-            return
+        # Note: /sh works in groups now, only /addurl and /setpx are private-only
         
         # Check credits
         if not has_credits(user_id):
@@ -339,13 +340,53 @@ Use <code>/addurl https://store.com</code> to add a Shopify site.""",
             parse_mode=ParseMode.HTML
         )
         
-        # Perform checkout using autoshopify
+        # Get user's proxy
         try:
-            async with TLSAsyncSession(timeout_seconds=120) as session:
-                result = await autoshopify(site, fullcc, session)
-        except Exception as e:
+            from BOT.tools.proxy import get_proxy
+            user_proxy = get_proxy(int(user_id))
+        except:
+            user_proxy = None
+        
+        # Perform checkout using autoshopify with CAPTCHA retry
+        result = None
+        retry_count = 0
+        
+        while retry_count < MAX_CAPTCHA_RETRIES:
+            try:
+                async with TLSAsyncSession(timeout_seconds=120, proxy=user_proxy) as session:
+                    result = await autoshopify(site, fullcc, session)
+                
+                # Check if CAPTCHA detected - retry if so
+                response_upper = str(result.get("Response", "")).upper()
+                if any(x in response_upper for x in ["CAPTCHA", "HCAPTCHA", "RECAPTCHA", "CHALLENGE"]):
+                    retry_count += 1
+                    if retry_count < MAX_CAPTCHA_RETRIES:
+                        await loading_msg.edit(
+                            f"""<pre>CAPTCHA Detected - Retrying...</pre>
+━ ━ ━ ━ ━ ━ ━ ━ ━ ━ ━ ━
+<b>• Card:</b> <code>{fullcc}</code>
+<b>• Gate:</b> <code>{gate}</code>
+<b>• Retry:</b> <code>{retry_count}/{MAX_CAPTCHA_RETRIES}</code>""",
+                            parse_mode=ParseMode.HTML
+                        )
+                        import asyncio
+                        await asyncio.sleep(2)  # Brief pause before retry
+                        continue
+                break  # Exit loop if not CAPTCHA
+                
+            except Exception as e:
+                result = {
+                    "Response": f"ERROR: {str(e)[:60]}",
+                    "Status": False,
+                    "Gateway": "Unknown",
+                    "Price": "0.00",
+                    "cc": fullcc
+                }
+                break
+        
+        if result is None:
             result = {
-                "Response": f"ERROR: {str(e)[:60]}",
+                "Response": "ERROR: MAX_RETRIES_EXCEEDED",
                 "Status": False,
                 "Gateway": "Unknown",
                 "Price": "0.00",
