@@ -31,7 +31,12 @@ except ImportError:
 
 # Maximum retries with site rotation
 MAX_SITE_RETRIES = 5
-# Concurrent threads per card (10 parallel checks at a time; first valid wins)
+# Checks per site before rotating to next (professional site rotation)
+CHECKS_PER_SITE = 3
+# Delay (seconds) between attempts on same site; between site rotations
+DELAY_BETWEEN_ATTEMPTS = 2
+DELAY_BETWEEN_SITES = 1
+# Kept for /tsh mass-check display; /sh uses CHECKS_PER_SITE rotation
 SH_CONCURRENT_THREADS = 10
 
 
@@ -52,25 +57,43 @@ def _is_valid_shopify_response(rotator: SiteRotator, resp: str) -> bool:
     return not invalid
 
 
+def _ordered_sites_for_rotation(user_id: str):
+    """Return sites for /sh rotation: primary first, then rest. Active only."""
+    sites = get_user_sites(user_id)
+    sites = [s for s in sites if s.get("active", True)]
+    if not sites:
+        return []
+    primary = get_primary_site(user_id)
+    p_url = (primary.get("url") or "").lower().rstrip("/") if primary else ""
+    if not p_url:
+        return sites
+    for i, s in enumerate(sites):
+        if (s.get("url") or "").lower().rstrip("/") == p_url:
+            return [sites[i]] + [x for j, x in enumerate(sites) if j != i]
+    return sites
+
+
 async def check_card_all_sites_parallel(
     user_id: str,
     fullcc: str,
     proxy,
 ) -> tuple:
     """
-    Run Shopify check across all user sites in parallel.
-    First valid response wins; cancel remaining site-tasks, return result, then next CC.
-    Valid = proper decline/approved/charged/CCN. Invalid = captcha, HTTP, site, JSON errors.
+    Site rotation for /sh: 3 checks per site, then rotate to next.
+    Primary site first, then others. Valid response returns immediately.
+    Returns (result_dict, retry_count).
     """
-    sites = get_user_sites(user_id)
-    sites = [s for s in sites if s.get("active", True)]
-    if not sites:
+    ordered = _ordered_sites_for_rotation(user_id)
+    if not ordered:
         return (
             {"Response": "NO_SITES_CONFIGURED", "Status": False, "Gateway": "Unknown", "Price": "0.00", "cc": fullcc},
             0,
         )
 
     rotator = SiteRotator(user_id, max_retries=MAX_SITE_RETRIES)
+    retry_count = 0
+    last_res = None
+    last_gate = "Unknown"
 
     async def check_one(site_info: dict):
         url = site_info.get("url", "")
@@ -80,78 +103,37 @@ async def check_card_all_sites_parallel(
                 res = await autoshopify_with_captcha_retry(
                     url, fullcc, session, max_captcha_retries=7, proxy=proxy
                 )
-            return (url, gate, res)
+            return (gate, res)
         except Exception as e:
-            return (url, gate, {"Response": f"ERROR: {str(e)[:50]}", "Status": False, "Gateway": gate, "Price": "0.00", "cc": fullcc})
+            return (gate, {"Response": f"ERROR: {str(e)[:50]}", "Status": False, "Gateway": gate, "Price": "0.00", "cc": fullcc})
 
-    # 10 threads per batch: cycle through sites so we always run SH_CONCURRENT_THREADS concurrent checks
-    task_sites = [sites[i % len(sites)] for i in range(SH_CONCURRENT_THREADS)]
+    for site_info in ordered:
+        gate = site_info.get("gateway", "Shopify")
+        for attempt in range(CHECKS_PER_SITE):
+            g, res = await check_one(site_info)
+            gate = g
+            resp = str((res or {}).get("Response", ""))
+            last_res, last_gate = res, gate
 
-    async def _run_parallel() -> tuple:
-        """Run 10 concurrent site checks; first valid wins. Return (result_dict, gate_str, all_retryable)."""
-        ts = [asyncio.create_task(check_one(s)) for s in task_sites]
-        last_res = None
-        last_gate = "Unknown"
-        all_retryable = True
-        try:
-            while ts:
-                done, pending = await asyncio.wait(ts, return_when=asyncio.FIRST_COMPLETED)
-                for t in done:
-                    try:
-                        url, gate, res = t.result()
-                    except asyncio.CancelledError:
-                        continue
-                    except Exception as e:
-                        gate = "Unknown"
-                        res = {"Response": f"ERROR: {str(e)[:50]}", "Status": False, "Gateway": gate, "Price": "0.00", "cc": fullcc}
-                    resp = str((res or {}).get("Response", ""))
-                    last_res, last_gate = res, gate
-                    if _is_valid_shopify_response(rotator, resp):
-                        for p in pending:
-                            p.cancel()
-                        res["Gateway"] = gate
-                        return (res, gate, False)
-                    if not rotator.should_retry(resp):
-                        all_retryable = False
-                ts = list(pending)
-        except asyncio.CancelledError:
-            pass
-        for t in ts:
-            try:
-                t.cancel()
-            except Exception:
-                pass
-        return (last_res, last_gate, all_retryable)
+            if _is_valid_shopify_response(rotator, resp):
+                res["Gateway"] = gate
+                return (res, retry_count)
 
-    res, gate_str, all_retryable = await _run_parallel()
-    if isinstance(res, dict) and _is_valid_shopify_response(rotator, str((res or {}).get("Response", ""))):
-        res["Gateway"] = res.get("Gateway") or gate_str
-        return (res, 0)
+            if not rotator.should_retry(resp):
+                break
 
-    last_res = res
-    last_gate = gate_str if isinstance(gate_str, str) else "Unknown"
-    retry_count = 0
+            retry_count += 1
+            if attempt < CHECKS_PER_SITE - 1:
+                await asyncio.sleep(DELAY_BETWEEN_ATTEMPTS)
 
-    # Retry with another 10-thread batch until real response or max batches (captcha/site errors only)
-    max_batches = 3
-    for _ in range(max_batches - 1):
-        if not all_retryable or last_res is None:
-            break
-        await asyncio.sleep(4)
-        res2, gate2, all_retryable = await _run_parallel()
-        if isinstance(res2, dict) and _is_valid_shopify_response(rotator, str((res2 or {}).get("Response", ""))):
-            res2["Gateway"] = res2.get("Gateway") or (gate2 if isinstance(gate2, str) else "Unknown")
-            return (res2, retry_count + 1)
-        if res2 is not None:
-            last_res, last_gate = res2, (gate2 if isinstance(gate2, str) else "Unknown")
-        retry_count += 1
+        await asyncio.sleep(DELAY_BETWEEN_SITES)
 
     if last_res is not None:
         last_res["Gateway"] = last_gate
         return (last_res, retry_count)
     return (
         {"Response": "UNKNOWN", "Status": False, "Gateway": "Unknown", "Price": "0.00", "cc": fullcc},
-        0,
+        retry_count,
     )
 
 
@@ -516,22 +498,8 @@ Use <code>/txturl site1.com site2.com</code> for multiple sites.""",
         spinner_task = asyncio.create_task(spinner_loop())
         typing_task = asyncio.create_task(typing_loop())
 
-        SH_RETRY_ATTEMPTS = 3
-        result = None
-        retry_count = 0
         try:
-            for attempt in range(SH_RETRY_ATTEMPTS):
-                res, r = await check_card_all_sites_parallel(user_id, fullcc, user_proxy)
-                retry_count += r
-                resp = str((res or {}).get("Response", ""))
-                if _is_valid_shopify_response(rotator, resp):
-                    result = res
-                    break
-                if rotator.should_retry(resp) and attempt < SH_RETRY_ATTEMPTS - 1:
-                    await asyncio.sleep(1.5)
-                    continue
-                result = res
-                break
+            result, retry_count = await check_card_all_sites_parallel(user_id, fullcc, user_proxy)
         finally:
             spinner_task.cancel()
             typing_task.cancel()
