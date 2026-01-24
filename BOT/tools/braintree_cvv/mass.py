@@ -3,6 +3,7 @@ from pyrogram import Client, filters
 from time import time
 import asyncio
 from BOT.tools.braintree_cvv.api import async_check_braintree_cvv
+from BOT.tools.proxy import get_proxy
 from BOT.helper.start import load_users
 from BOT.helper.permissions import check_private_access, is_premium_user
 from BOT.gc.credit import deduct_credit_bulk
@@ -126,8 +127,11 @@ async def handle_mbt_command(client, message):
 
         start_time = time()
         final_results = []
+        try:
+            user_proxy = get_proxy(int(user_id))
+        except Exception:
+            user_proxy = None
 
-        # Statistics counters
         total_cc = len(all_cards)
         approved_count = 0
         declined_count = 0
@@ -136,9 +140,7 @@ async def handle_mbt_command(client, message):
 
         for idx, fullcc in enumerate(all_cards, start=1):
             card, mes, ano, cvv = fullcc.split("|")
-
-            # Note: Mass checker doesn't use proxy
-            result = await async_check_braintree_cvv(card, mes, ano, cvv)
+            result = await async_check_braintree_cvv(card, mes, ano, cvv, user_proxy)
 
             status = result.get("status", "error")
             response = result.get("response", "Unknown error")

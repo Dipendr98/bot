@@ -3,6 +3,7 @@ from pyrogram import Client, filters
 from time import time
 import asyncio
 from BOT.tools.braintree_cvv.api import async_check_braintree_cvv
+from BOT.tools.proxy import get_proxy
 from BOT.helper.start import load_users
 from BOT.helper.permissions import check_private_access, is_premium_user
 from BOT.gc.credit import deduct_credit
@@ -83,6 +84,11 @@ async def handle_bt_command(client, message):
             )
 
         card, mes, ano, cvv, proxy = card_data
+        if not proxy:
+            try:
+                proxy = get_proxy(int(user_id))
+            except Exception:
+                pass
 
         # Check credits
         available_credits = user_data["plan"].get("credits", 0)
