@@ -10,6 +10,7 @@ Features:
 - Group and private chat support
 """
 
+import io
 import os
 import json
 import time
@@ -383,22 +384,44 @@ async def txturl_handler(client: Client, message: Message):
             parse_mode=ParseMode.HTML
         )
     
-    # Collect URLs from multiple sources
+    # Collect URLs from multiple sources (text chat + TXT file)
     all_urls = []
     
     # 1. From command arguments
     args = message.command[1:]
     all_urls.extend(args)
     
-    # 2. From reply message
+    # 2. From reply: text message
     if message.reply_to_message and message.reply_to_message.text:
         reply_text = message.reply_to_message.text
         reply_urls = extract_urls_from_text(reply_text)
         all_urls.extend(reply_urls)
     
-    # 3. From multi-line input in the same message
-    if '\n' in message.text:
-        lines = message.text.split('\n')[1:]  # Skip first line (command)
+    # 3. From reply: TXT file (URLs loaded in file)
+    if message.reply_to_message and message.reply_to_message.document:
+        doc = message.reply_to_message.document
+        fname = (doc.file_name or "").lower()
+        if fname.endswith(".txt"):
+            path = None
+            try:
+                path = await client.download_media(message.reply_to_message)
+                if path and os.path.isfile(path):
+                    with open(path, "r", encoding="utf-8", errors="ignore") as f:
+                        content = f.read()
+                    file_urls = extract_urls_from_text(content)
+                    all_urls.extend(file_urls)
+            except Exception:
+                pass
+            finally:
+                if path and os.path.isfile(path):
+                    try:
+                        os.remove(path)
+                    except Exception:
+                        pass
+    
+    # 4. From multi-line input in the same message
+    if message.text and '\n' in message.text:
+        lines = message.text.split('\n')[1:]
         for line in lines:
             line_urls = extract_urls_from_text(line)
             all_urls.extend(line_urls)
@@ -423,12 +446,16 @@ async def txturl_handler(client: Client, message: Message):
 
 <code>/txturl site1.com site2.com site3.com</code>
 
-<b>Or reply to a message containing URLs:</b>
-Reply to list of URLs with <code>/txturl</code>
+<b>Reply to a message with URLs:</b>
+Reply to text containing URLs with <code>/txturl</code>
+
+<b>Reply to a TXT file:</b>
+Upload a .txt with URLs, then reply with <code>/txturl</code>
 
 <b>Other Commands:</b>
 • <code>/addurl</code> - Add single site
-• <code>/txtls</code> - List all your sites
+• <code>/txtls</code> - List sites (up to 20)
+• <code>/showsitetxt</code> - Get full list as TXT
 • <code>/rurl site.com</code> - Remove a site
 • <code>/clearurl</code> - Clear all sites
 ━━━━━━━━━━━━━━━
@@ -613,13 +640,11 @@ Use <code>/txtls</code> to view your sites.""",
 
 @Client.on_message(filters.command("txtls"))
 async def txtls_handler(client: Client, message: Message):
-    """List user's all sites using unified site manager."""
+    """List user's sites (up to 20). Use /showsitetxt for full list as TXT."""
     user_id = str(message.from_user.id)
     clickable_name = f"<a href='tg://user?id={user_id}'>{message.from_user.first_name}</a>"
-    
-    # Use unified site manager
     unified_sites = get_user_sites(user_id)
-    
+
     if not unified_sites:
         return await message.reply(
             """<pre>No Sites Found ℹ️</pre>
@@ -627,32 +652,32 @@ async def txtls_handler(client: Client, message: Message):
 
 <b>Add sites using:</b>
 • <code>/addurl store.com</code> - Single site
-• <code>/txturl site1.com site2.com</code> - Multiple sites""",
+• <code>/txturl site1.com site2.com</code> - Multiple sites
+• <code>/txturl</code> (reply to TXT file with URLs)""",
             reply_to_message_id=message.id,
             parse_mode=ParseMode.HTML
         )
-    
+
     lines = ["<pre>📋 Your Shopify Sites</pre>", "━━━━━━━━━━━━━"]
-    
-    for i, site in enumerate(unified_sites[:20], 1):
-        url = site.get("url", "N/A").replace('https://', '')
+    display_limit = 20
+    for i, site in enumerate(unified_sites[:display_limit], 1):
+        url = site.get("url", "N/A").replace("https://", "")
         gateway = site.get("gateway", "Unknown")
         is_primary = "⭐" if site.get("is_primary") else ""
-        
-        # Extract price from gateway string if present
         price = site.get("price", "")
         if not price and "$" in gateway:
             try:
                 price = gateway.split("$")[1].split()[0]
-            except:
+            except Exception:
                 price = "N/A"
-        
         lines.append(f"<b>{i}.</b> {is_primary}<code>{url[:35]}</code>")
         lines.append(f"   <i>${price}</i>")
-    
-    if len(unified_sites) > 20:
-        lines.append(f"\n<i>... and {len(unified_sites) - 20} more sites</i>")
-    
+
+    if len(unified_sites) > display_limit:
+        lines.append(f"\n<i>… and {len(unified_sites) - display_limit} more site(s)</i>")
+        lines.append("")
+        lines.append("📥 <b>Full list:</b> Use <code>/showsitetxt</code> to get all sites as a TXT file.")
+
     lines.extend([
         "━━━━━━━━━━━━━",
         f"<b>Total:</b> <code>{len(unified_sites)}</code> site(s)",
@@ -660,14 +685,22 @@ async def txtls_handler(client: Client, message: Message):
         "",
         "<b>Commands:</b>",
         "• <code>/sh</code> - Check card",
+        "• <code>/showsitetxt</code> - Get full list (TXT)",
         "• <code>/rurl site.com</code> - Remove site",
         "• <code>/clearurl</code> - Clear all"
     ])
-    
+
+    buttons = None
+    if len(unified_sites) > display_limit:
+        buttons = InlineKeyboardMarkup([
+            [InlineKeyboardButton("📥 Full list (TXT)", callback_data="showsitetxt_btn")]
+        ])
+
     await message.reply(
         "\n".join(lines),
         reply_to_message_id=message.id,
-        parse_mode=ParseMode.HTML
+        parse_mode=ParseMode.HTML,
+        reply_markup=buttons
     )
 
 
@@ -754,6 +787,48 @@ async def clearurl_handler(client: Client, message: Message):
         )
 
 
+@Client.on_message(filters.command("showsitetxt"))
+async def showsitetxt_handler(client: Client, message: Message):
+    """Send a TXT file containing all user sites (one URL per line)."""
+    user_id = str(message.from_user.id)
+    unified_sites = get_user_sites(user_id)
+
+    if not unified_sites:
+        return await message.reply(
+            """<pre>No Sites Found ℹ️</pre>
+<b>You haven't added any sites yet.</b>
+
+Add sites with <code>/addurl</code> or <code>/txturl</code>, then use <code>/showsitetxt</code>.""",
+            reply_to_message_id=message.id,
+            parse_mode=ParseMode.HTML
+        )
+
+    lines = []
+    for site in unified_sites:
+        url = site.get("url", "").strip()
+        if url:
+            lines.append(url)
+    if not lines:
+        return await message.reply(
+            "<pre>No sites to export.</pre>",
+            reply_to_message_id=message.id,
+            parse_mode=ParseMode.HTML
+        )
+
+    body = "\n".join(lines)
+    buf = io.BytesIO(body.encode("utf-8"))
+    buf.name = "my_sites.txt"
+    buf.seek(0)
+
+    await message.reply_document(
+        document=buf,
+        file_name="my_sites.txt",
+        caption=f"<pre>📥 Your Site List</pre>\n<b>Total:</b> <code>{len(lines)}</code> site(s)",
+        reply_to_message_id=message.id,
+        parse_mode=ParseMode.HTML
+    )
+
+
 # ==================== CALLBACK HANDLERS ====================
 
 @Client.on_callback_query(filters.regex("^txtls_view$"))
@@ -761,31 +836,52 @@ async def txtls_view_callback(client, callback_query):
     """View sites list via callback."""
     user_id = str(callback_query.from_user.id)
     sites = get_user_sites(user_id)
-    
+
     if not sites:
         await callback_query.answer("❌ No sites found!", show_alert=True)
         return
-    
+
     lines = ["<pre>📋 Your Sites</pre>", "━━━━━━━━━━━━━"]
-    
     for i, site in enumerate(sites[:15], 1):
-        url = site.get("url", "N/A").replace('https://', '')[:30]
+        url = site.get("url", "N/A").replace("https://", "")[:30]
         is_primary = "⭐" if site.get("is_primary") else ""
         price = site.get("price", "N/A")
         lines.append(f"{i}. {is_primary}<code>{url}</code> ${price}")
-    
     if len(sites) > 15:
-        lines.append(f"\n<i>...and {len(sites) - 15} more</i>")
-    
+        lines.append(f"\n<i>…and {len(sites) - 15} more</i>")
     lines.extend([
         "━━━━━━━━━━━━━",
         f"<b>Total:</b> <code>{len(sites)}</code>",
-        "<b>Use:</b> <code>/txtls</code> for full list"
+        "<b>Use:</b> <code>/showsitetxt</code> for full list (TXT)"
     ])
-    
     await callback_query.answer()
-    await callback_query.message.reply(
-        "\n".join(lines),
+    await callback_query.message.reply("\n".join(lines), parse_mode=ParseMode.HTML)
+
+
+@Client.on_callback_query(filters.regex("^showsitetxt_btn$"))
+async def showsitetxt_btn_callback(client, callback_query):
+    """Send TXT file with all sites when user clicks 'Full list (TXT)'."""
+    user_id = str(callback_query.from_user.id)
+    sites = get_user_sites(user_id)
+
+    if not sites:
+        await callback_query.answer("❌ No sites found!", show_alert=True)
+        return
+
+    url_lines = [s.get("url", "").strip() for s in sites if s.get("url", "").strip()]
+    if not url_lines:
+        await callback_query.answer("❌ No sites to export!", show_alert=True)
+        return
+
+    body = "\n".join(url_lines)
+    buf = io.BytesIO(body.encode("utf-8"))
+    buf.name = "my_sites.txt"
+    buf.seek(0)
+    await callback_query.answer("📥 Sending TXT…")
+    await callback_query.message.reply_document(
+        document=buf,
+        file_name="my_sites.txt",
+        caption=f"<pre>📥 Your Site List</pre>\n<b>Total:</b> <code>{len(url_lines)}</code> site(s)",
         parse_mode=ParseMode.HTML
     )
 

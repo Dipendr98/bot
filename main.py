@@ -86,8 +86,9 @@ async def run_bot():
         BotCommand("slfurl", "Add Shopify site (alias)"),
         BotCommand("mysite", "View your current site"),
         BotCommand("delsite", "Remove your saved site"),
-        BotCommand("txturl", "Add multiple sites for TXT"),
-        BotCommand("txtls", "List your TXT sites"),
+        BotCommand("txturl", "Add multiple sites (text or TXT file)"),
+        BotCommand("txtls", "List your sites (up to 20)"),
+        BotCommand("showsitetxt", "Get full site list as TXT file"),
         BotCommand("rurl", "Remove TXT sites"),
     ]
 
