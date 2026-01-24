@@ -66,26 +66,39 @@ def format_shopify_response(
     response = str(raw_response).upper() if raw_response else "UNKNOWN"
     
     # Determine status based on response
-    if any(x in response for x in ["ORDER_PLACED", "ORDER_CONFIRMED", "CHARGED", "THANK_YOU"]):
+    # CHARGED: Payment went through
+    if any(x in response for x in [
+        "ORDER_PLACED", "ORDER_CONFIRMED", "CHARGED", "THANK_YOU", "SUCCESS", "COMPLETE"
+    ]):
         status_flag = "Charged 💎"
         header = "CHARGED"
-    elif any(x in response for x in [
-        "3DS", "AUTHENTICATION", "INCORRECT_CVC", "INVALID_CVC", "INCORRECT_CVV",
-        "MISMATCHED", "INCORRECT_ADDRESS", "INCORRECT_ZIP", "INCORRECT_PIN",
-        "FRAUD", "INSUFFICIENT_FUNDS", "CARD_DECLINED", "GENERIC_DECLINE",
-        "DO_NOT_HONOR", "MISMATCHED_BILL"
-    ]):
-        status_flag = "Approved ✅"
-        header = "CCN LIVE"
+    # ERROR: System issues, not card-related
     elif any(x in response for x in [
         "CAPTCHA", "HCAPTCHA", "RECAPTCHA", "EMPTY", "DEAD", "ERROR",
-        "TIMEOUT", "FAILED", "TAX"
+        "TIMEOUT", "CONNECTION", "RATE_LIMIT", "SITE_ERROR", "BLOCKED", "PROXY"
     ]):
         status_flag = "Error ⚠️"
         header = "ERROR"
-    else:
+    # CCN/LIVE: Card is valid but CVV/address issue
+    elif any(x in response for x in [
+        "3DS", "3D_SECURE", "AUTHENTICATION_REQUIRED", "INCORRECT_CVC", "INVALID_CVC", 
+        "INCORRECT_CVV", "CVV_MISMATCH", "INCORRECT_ADDRESS", "INCORRECT_ZIP", 
+        "INCORRECT_PIN", "MISMATCHED_BILLING", "MISMATCHED_ZIP", "MISMATCHED_PIN", 
+        "MISMATCHED_BILL", "INSUFFICIENT_FUNDS"
+    ]):
+        status_flag = "Approved ✅"
+        header = "CCN LIVE"
+    # DECLINED: Card is dead/blocked/expired
+    elif any(x in response for x in [
+        "CARD_DECLINED", "DECLINED", "GENERIC_DECLINE", "DO_NOT_HONOR",
+        "FRAUD", "FRAUDULENT", "EXPIRED", "INVALID_NUMBER", "LOST", "STOLEN",
+        "PICKUP", "RESTRICTED", "REVOKED", "NOT_SUPPORTED", "INVALID_ACCOUNT"
+    ]):
         status_flag = "Declined ❌"
         header = "DECLINED"
+    else:
+        status_flag = "Declined ❌"
+        header = "RESULT"
     
     # BIN lookup
     bin_data = get_bin_details(cc[:6]) if get_bin_details else None

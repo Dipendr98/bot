@@ -17,24 +17,48 @@ def chunk_cards(cards, size):
         yield cards[i:i + size]
 
 def get_status_flag(raw_response):
-    """Determine status flag from response."""
+    """
+    Determine status flag from response.
+    
+    Categories:
+    - Charged 💎: Payment completed successfully
+    - Approved ✅: Card is live, CVV/Address issue (CCN)
+    - Declined ❌: Card is dead/blocked/expired
+    - Error ⚠️: System/Site errors
+    """
     # Check for system errors first
     if any(error_keyword in raw_response for error_keyword in [
         "CONNECTION FAILED", "IP RATE LIMIT", "PRODUCT ID", "SITE NOT FOUND",
-        "REQUEST TIMEOUT", "REQUEST FAILED", "SITE | CARD ERROR", "CAPTCHA", "HCAPTCHA"
+        "REQUEST TIMEOUT", "REQUEST FAILED", "SITE | CARD ERROR", "CAPTCHA", 
+        "HCAPTCHA", "ERROR", "BLOCKED", "PROXY"
     ]):
         return "Error ⚠️"
-    elif "ORDER_PLACED" in raw_response or "THANK YOU" in raw_response:
-        return "Charged 💎"
+    
+    # Charged - Payment completed
     elif any(keyword in raw_response for keyword in [
-        "3D CC", "MISMATCHED_BILLING", "MISMATCHED_PIN", "MISMATCHED_ZIP",
-        "INSUFFICIENT_FUNDS", "INVALID_CVC", "INCORRECT_CVC", "3DS_REQUIRED", "MISMATCHED_BILL",
-        "3D_AUTHENTICATION", "INCORRECT_ZIP", "INCORRECT_ADDRESS", "CARD_DECLINED",
-        "GENERIC_DECLINE", "DO_NOT_HONOR", "INVALID_ACCOUNT", "EXPIRED_CARD",
-        "PROCESSING_ERROR", "CARD_NOT_SUPPORTED", "TRY_AGAIN_LATER",
-        "AUTHENTICATION_REQUIRED", "PICKUP_CARD", "LOST_CARD", "STOLEN_CARD"
+        "ORDER_PLACED", "THANK YOU", "SUCCESS", "CHARGED", "COMPLETE"
+    ]):
+        return "Charged 💎"
+    
+    # Approved/CCN - Card is valid, CVV/Address issue
+    elif any(keyword in raw_response for keyword in [
+        "3D CC", "3DS", "3D_SECURE", "AUTHENTICATION_REQUIRED",
+        "MISMATCHED_BILLING", "MISMATCHED_PIN", "MISMATCHED_ZIP", "MISMATCHED_BILL",
+        "INCORRECT_CVC", "INVALID_CVC", "CVV_MISMATCH",
+        "INCORRECT_ZIP", "INCORRECT_ADDRESS", "INCORRECT_PIN",
+        "INSUFFICIENT_FUNDS"  # Card is valid but no funds
     ]):
         return "Approved ✅"
+    
+    # Declined - Card is dead/blocked/expired
+    elif any(keyword in raw_response for keyword in [
+        "CARD_DECLINED", "DECLINED", "GENERIC_DECLINE", "DO_NOT_HONOR",
+        "INVALID_ACCOUNT", "EXPIRED", "CARD_NOT_SUPPORTED", "TRY_AGAIN",
+        "PROCESSING_ERROR", "PICKUP", "LOST", "STOLEN", "FRAUD",
+        "RESTRICTED", "REVOKED", "INVALID_NUMBER", "NO_SUCH_CARD"
+    ]):
+        return "Declined ❌"
+    
     else:
         return "Declined ❌"
 

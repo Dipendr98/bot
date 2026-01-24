@@ -145,20 +145,38 @@ async def handle_mbtcvv_command(client, message):
 
             # Categorize result
             if status == "approved":
-                status_flag = "CVV Authenticated ✅"
+                status_flag = "CVV VALID ✅"
                 approved_count += 1
+            elif status == "ccn":
+                status_flag = "CCN LIVE ⚡"
+                approved_count += 1  # Count as live
             elif status == "declined":
-                status_flag = "CVV Failed ❌"
+                status_flag = "DECLINED ❌"
                 declined_count += 1
             else:
-                status_flag = "Error ⚠️"
+                status_flag = "ERROR ⚠️"
                 error_count += 1
 
             processed_count += 1
+            
+            # Get BIN info
+            try:
+                from TOOLS.getbin import get_bin_details
+                bin_data = get_bin_details(card[:6])
+                if bin_data:
+                    bin_info = f"{bin_data.get('vendor', 'N/A')} - {bin_data.get('type', 'N/A')}"
+                    country_info = f"{bin_data.get('country', 'N/A')} {bin_data.get('flag', '')}"
+                else:
+                    bin_info = "N/A"
+                    country_info = "N/A"
+            except:
+                bin_info = "N/A"
+                country_info = "N/A"
 
-            final_results.append(f"""• <b>Card :</b> <code>{fullcc}</code>
-• <b>Status :</b> <code>{status_flag}</code>
-• <b>Result :</b> <code>{response or "-"}</code>
+            final_results.append(f"""<b>[•] Card:</b> <code>{fullcc}</code>
+<b>[•] Status:</b> <code>{status_flag}</code>
+<b>[•] Response:</b> <code>{response or "-"}</code>
+<b>[+] BIN:</b> <code>{card[:6]}</code> | <code>{bin_info}</code> | <code>{country_info}</code>
 ━ ━ ━ ━ ━ ━━━ ━ ━ ━ ━ ━""")
 
             # Update after each card with progress (show last 10)
@@ -185,18 +203,18 @@ async def handle_mbtcvv_command(client, message):
         from datetime import datetime
         current_time = datetime.now().strftime("%I:%M %p")
 
-        completion_message = f"""<pre>✦ Braintree CVV Check Completed</pre>
+        completion_message = f"""<b>[#BraintreeCVV] | MASS CHECK ✦</b>
 ━━━━━━━━━━━━━━━
 🟢 <b>Total CC</b>     : <code>{total_cc}</code>
 💬 <b>Progress</b>    : <code>{processed_count}/{total_cc}</code>
-✅ <b>CVV Authenticated</b>  : <code>{approved_count}</code>
-❌ <b>CVV Failed</b>  : <code>{declined_count}</code>
+✅ <b>CVV Valid/CCN</b>  : <code>{approved_count}</code>
+❌ <b>Declined</b>    : <code>{declined_count}</code>
 ⚠️ <b>Errors</b>      : <code>{error_count}</code>
+━ ━ ━ ━ ━ ━ ━ ━ ━ ━ ━ ━ ━
+<b>[ﾒ] Checked By:</b> {checked_by} [<code>{plan} {badge}</code>]
+<b>[ϟ] Dev:</b> <a href="https://t.me/Chr1shtopher">Chr1shtopher</a>
 ━━━━━━━━━━━━━━━
-⏱️ <b>Time Elapsed :</b> <code>{timetaken}s</code>
-👤 <b>Checked By :</b> {checked_by} [<code>{plan} {badge}</code>]
-🔧 <b>Dev</b>: <a href="https://t.me/Chr1shtopher">Chr1shtopher</a> <code>{current_time}</code>
-━━━━━━━━━━━━━━━"""
+<b>[ﾒ] Time:</b> <code>{timetaken}s</code> | <code>{current_time}</code>"""
 
         await loader_msg.edit(completion_message, disable_web_page_preview=True)
 

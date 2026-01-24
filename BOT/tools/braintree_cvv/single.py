@@ -134,29 +134,64 @@ async def handle_btcvv_command(client, message):
         status = result.get("status", "error")
         response = result.get("response", "Unknown error")
 
-        # Status emoji
+        # Status emoji and text based on status
         if status == "approved":
             status_emoji = "✅"
-            status_text = "CVV Authenticated"
+            status_text = "CVV VALID"
+            header = "CVV MATCHED"
+        elif status == "ccn":
+            status_emoji = "⚡"
+            status_text = "CCN LIVE"
+            header = "WRONG CVV"
         elif status == "declined":
             status_emoji = "❌"
-            status_text = "CVV Failed"
+            status_text = "DECLINED"
+            header = "DEAD CARD"
         else:
             status_emoji = "⚠️"
-            status_text = "Error"
+            status_text = "ERROR"
+            header = "ERROR"
 
         from datetime import datetime
         current_time = datetime.now().strftime("%I:%M %p")
+        
+        # Get BIN info
+        try:
+            from TOOLS.getbin import get_bin_details
+            bin_data = get_bin_details(card[:6])
+            if bin_data:
+                bin_number = bin_data.get('bin', card[:6])
+                vendor = bin_data.get('vendor', 'N/A')
+                card_type = bin_data.get('type', 'N/A')
+                level = bin_data.get('level', 'N/A')
+                bank = bin_data.get('bank', 'N/A')
+                country = bin_data.get('country', 'N/A')
+                country_flag = bin_data.get('flag', '🏳️')
+            else:
+                bin_number = card[:6]
+                vendor, card_type, level = "N/A", "N/A", "N/A"
+                bank, country, country_flag = "N/A", "N/A", "🏳️"
+        except:
+            bin_number = card[:6]
+            vendor, card_type, level = "N/A", "N/A", "N/A"
+            bank, country, country_flag = "N/A", "N/A", "🏳️"
 
-        final_message = f"""<pre>━━━ Braintree CVV Auth ━━━</pre>
-<b>Card:</b> <code>{fullcc}</code>
-<b>Status:</b> <code>{status_text} {status_emoji}</code>
-<b>Response:</b> <code>{response}</code>{proxy_text}
+        final_message = f"""<b>[#BraintreeCVV] | {header}</b> ✦
 ━━━━━━━━━━━━━━━
-<b>⏱️ Time:</b> <code>{timetaken}s</code>
-<b>Gateway:</b> <code>{gateway}</code>
-<b>Checked By:</b> {checked_by} [<code>{plan} {badge}</code>]
-<b>Dev:</b> <a href="https://t.me/Chr1shtopher">Chr1shtopher</a> <code>{current_time}</code>"""
+<b>[•] Card:</b> <code>{fullcc}</code>
+<b>[•] Gateway:</b> <code>Braintree CVV Auth</code>
+<b>[•] Status:</b> <code>{status_text} {status_emoji}</code>
+<b>[•] Response:</b> <code>{response}</code>
+━ ━ ━ ━ ━ ━ ━ ━ ━ ━ ━ ━ ━
+<b>[+] BIN:</b> <code>{bin_number}</code>
+<b>[+] Info:</b> <code>{vendor} - {card_type} - {level}</code>
+<b>[+] Bank:</b> <code>{bank}</code> 🏦
+<b>[+] Country:</b> <code>{country}</code> {country_flag}
+━ ━ ━ ━ ━ ━ ━ ━ ━ ━ ━ ━ ━
+<b>[ﾒ] Checked By:</b> {checked_by} [<code>{plan} {badge}</code>]
+<b>[ϟ] Dev:</b> <a href="https://t.me/Chr1shtopher">Chr1shtopher</a>
+━━━━━━━━━━━━━━━
+<b>[ﾒ] Time:</b> <code>{timetaken}s</code> | <b>Proxy:</b> <code>{'Live ⚡️' if proxy else 'None'}</code>"""
 
         await loader_msg.edit(final_message, disable_web_page_preview=True)
 
