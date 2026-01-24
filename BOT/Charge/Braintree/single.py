@@ -19,13 +19,13 @@ def extract_card(text):
     return None
 
 
-@Client.on_message(filters.command(["br", "braintree"]) | filters.regex(r"^\.br(\s|$)"))
+@Client.on_message(filters.command(["br", "braintree", "b3"]) | filters.regex(r"^\.br(\s|$)") | filters.regex(r"^\.b3(\s|$)"))
 async def handle_braintree(client, message):
     """
-    Handle /br command for Braintree card checking via Pixorize
+    Handle /br or /b3 command for Braintree card checking via Pixorize
 
-    Usage: /br cc|mm|yy|cvv
-    Example: /br 4405639706340195|03|2029|734
+    Usage: /b3 cc|mm|yy|cvv
+    Example: /b3 4405639706340195|03|2029|734
     """
     try:
         # Load users and check registration
