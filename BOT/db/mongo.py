@@ -3,6 +3,7 @@ MongoDB client and database setup.
 Uses pymongo (sync). Connection via env only: MONGODB_URI or MONGO_URL.
 """
 
+import json
 import os
 
 try:
@@ -90,7 +91,7 @@ def init_db() -> bool:
 def close_db():
     """Close MongoDB connection."""
     global _client, _db
-    if _client:
+    if _client is not None:
         try:
             _client.close()
         except Exception:
@@ -107,6 +108,7 @@ def ensure_indexes():
     get_db().au_gates.create_index("_id")
     get_db().redeems.create_index("_id")
     get_db().plan_requests.create_index("_id")
+    get_db().groups.create_index("_id")
 
 
 def migrate_json_to_mongo():

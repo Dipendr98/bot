@@ -60,32 +60,44 @@ def _mongo():
     return get_db()
 
 
+def _use_mongo() -> bool:
+    from BOT.db.mongo import use_mongo
+    return use_mongo()
+
+
 def _users_coll():
-    return _mongo().users if _mongo() else None
+    m = _mongo()
+    return m.users if m is not None else None
 
 
 def _proxies_coll():
-    return _mongo().proxies if _mongo() else None
+    m = _mongo()
+    return m.proxies if m is not None else None
 
 
 def _sites_coll():
-    return _mongo().user_sites if _mongo() else None
+    m = _mongo()
+    return m.user_sites if m is not None else None
 
 
 def _au_gates_coll():
-    return _mongo().au_gates if _mongo() else None
+    m = _mongo()
+    return m.au_gates if m is not None else None
 
 
 def _plan_requests_coll():
-    return _mongo().plan_requests if _mongo() else None
+    m = _mongo()
+    return m.plan_requests if m is not None else None
 
 
 def _redeems_coll():
-    return _mongo().redeems if _mongo() else None
+    m = _mongo()
+    return m.redeems if m is not None else None
 
 
 def _groups_coll():
-    return _mongo().groups if _mongo() else None
+    m = _mongo()
+    return m.groups if m is not None else None
 
 
 # ---------------------------------------------------------------------------
@@ -124,8 +136,8 @@ def default_plan(user_id: str) -> dict:
 # ---------------------------------------------------------------------------
 
 def load_users() -> dict:
-    c = _users_coll()
-    if c:
+    if _use_mongo():
+        c = _users_coll()
         out = {}
         for doc in c.find({}):
             uid = str(doc["_id"])
@@ -143,8 +155,8 @@ def load_users() -> dict:
 
 
 def save_users(users: dict) -> None:
-    c = _users_coll()
-    if c:
+    if _use_mongo():
+        c = _users_coll()
         for uid, doc in users.items():
             uid = str(uid)
             payload = {"_id": uid, **{k: v for k, v in doc.items()}}
@@ -187,8 +199,8 @@ def has_credits(user_id: str) -> bool:
 
 
 def deduct_credit(user_id: str) -> tuple[bool, str]:
-    c = _users_coll()
-    if c:
+    if _use_mongo():
+        c = _users_coll()
         try:
             doc = c.find_one({"_id": str(user_id)})
             if not doc:
@@ -230,8 +242,8 @@ def deduct_credit(user_id: str) -> tuple[bool, str]:
 
 
 def deduct_credit_bulk(user_id: str, amount: int) -> tuple[bool, str]:
-    c = _users_coll()
-    if c:
+    if _use_mongo():
+        c = _users_coll()
         try:
             doc = c.find_one({"_id": str(user_id)})
             if not doc:
@@ -280,8 +292,8 @@ def deduct_credit_bulk(user_id: str, amount: int) -> tuple[bool, str]:
 # ---------------------------------------------------------------------------
 
 def load_proxies() -> dict:
-    coll = _proxies_coll()
-    if coll:
+    if _use_mongo():
+        coll = _proxies_coll()
         return {str(d["_id"]): d["proxy"] for d in coll.find({})}
     _ensure_data()
     if not os.path.exists(PROXY_FILE):
@@ -294,8 +306,8 @@ def load_proxies() -> dict:
 
 
 def save_proxies(data: dict) -> None:
-    coll = _proxies_coll()
-    if coll:
+    if _use_mongo():
+        coll = _proxies_coll()
         for uid, proxy in data.items():
             coll.replace_one({"_id": str(uid)}, {"_id": str(uid), "proxy": proxy}, upsert=True)
         return
@@ -328,8 +340,8 @@ def delete_proxy(user_id: str) -> None:
 # ---------------------------------------------------------------------------
 
 def load_unified_sites() -> dict:
-    coll = _sites_coll()
-    if coll:
+    if _use_mongo():
+        coll = _sites_coll()
         return {str(d["_id"]): d.get("sites", []) for d in coll.find({})}
     _ensure_data()
     if not os.path.exists(USER_SITES_FILE):
@@ -342,8 +354,8 @@ def load_unified_sites() -> dict:
 
 
 def save_unified_sites(data: dict) -> None:
-    coll = _sites_coll()
-    if coll:
+    if _use_mongo():
+        coll = _sites_coll()
         for uid, sites in data.items():
             coll.replace_one({"_id": str(uid)}, {"_id": str(uid), "sites": sites or []}, upsert=True)
         return
@@ -505,8 +517,8 @@ DEFAULT_AU_GATE = "epicalarc"
 
 
 def get_au_gate(user_id: str) -> str:
-    coll = _au_gates_coll()
-    if coll:
+    if _use_mongo():
+        coll = _au_gates_coll()
         d = coll.find_one({"_id": str(user_id)})
         g = (d or {}).get("gate", DEFAULT_AU_GATE)
         return g if g in AU_GATES else DEFAULT_AU_GATE
@@ -525,8 +537,8 @@ def get_au_gate(user_id: str) -> str:
 def set_au_gate(user_id: str, gate: str) -> bool:
     if gate not in AU_GATES:
         return False
-    coll = _au_gates_coll()
-    if coll:
+    if _use_mongo():
+        coll = _au_gates_coll()
         coll.replace_one({"_id": str(user_id)}, {"_id": str(user_id), "gate": gate}, upsert=True)
         return True
     _ensure_data()
@@ -567,8 +579,8 @@ def gate_display_name(gate_key: str) -> str:
 # ---------------------------------------------------------------------------
 
 def load_plan_requests() -> dict:
-    coll = _plan_requests_coll()
-    if coll:
+    if _use_mongo():
+        coll = _plan_requests_coll()
         return {str(d["_id"]): {k: v for k, v in d.items() if k != "_id"} for d in coll.find({})}
     _ensure_data()
     if not os.path.exists(PLAN_REQUESTS_FILE):
@@ -581,8 +593,8 @@ def load_plan_requests() -> dict:
 
 
 def save_plan_requests(requests: dict) -> None:
-    coll = _plan_requests_coll()
-    if coll:
+    if _use_mongo():
+        coll = _plan_requests_coll()
         for uid, doc in requests.items():
             payload = {"_id": str(uid), **doc}
             coll.replace_one({"_id": str(uid)}, payload, upsert=True)
@@ -597,8 +609,8 @@ def save_plan_requests(requests: dict) -> None:
 # ---------------------------------------------------------------------------
 
 def load_redeems() -> dict:
-    coll = _redeems_coll()
-    if coll:
+    if _use_mongo():
+        coll = _redeems_coll()
         return {d["_id"]: {"used": d.get("used", False), "used_by": d.get("used_by"), "used_at": d.get("used_at")} for d in coll.find({})}
     _ensure_data()
     if not os.path.exists(REDEEMS_FILE):
@@ -611,8 +623,8 @@ def load_redeems() -> dict:
 
 
 def save_redeems(data: dict) -> None:
-    coll = _redeems_coll()
-    if coll:
+    if _use_mongo():
+        coll = _redeems_coll()
         coll.delete_many({})
         for code, doc in data.items():
             coll.insert_one({"_id": code, "used": doc.get("used", False), "used_by": doc.get("used_by"), "used_at": doc.get("used_at")})
@@ -627,8 +639,8 @@ def save_redeems(data: dict) -> None:
 # ---------------------------------------------------------------------------
 
 def load_allowed_groups() -> list:
-    coll = _groups_coll()
-    if coll:
+    if _use_mongo():
+        coll = _groups_coll()
         d = coll.find_one({"_id": "allowed"})
         return (d or {}).get("groups", [])
     _ensure_data()
@@ -643,8 +655,8 @@ def load_allowed_groups() -> list:
 
 
 def save_allowed_groups(groups: list) -> None:
-    coll = _groups_coll()
-    if coll:
+    if _use_mongo():
+        coll = _groups_coll()
         coll.replace_one({"_id": "allowed"}, {"_id": "allowed", "groups": list(groups)}, upsert=True)
         return
     _ensure_data()
