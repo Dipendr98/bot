@@ -34,17 +34,15 @@ MAX_SITE_RETRIES = 5
 # Exactly 3 attempts per site before rotating; rotate up to 3 times (4 sites total)
 CHECKS_PER_SITE = 3
 MAX_SITE_CHANGES = 3
-# Delay (seconds) between attempts on same site; between site rotations (fast + 429-proof)
-DELAY_BETWEEN_ATTEMPTS = 0.25
-DELAY_BETWEEN_SITES = 0.15
+# Delay (s) between attempts on same site; between site rotations. Minimal, 429-safe.
+DELAY_BETWEEN_ATTEMPTS = 0.15
+DELAY_BETWEEN_SITES = 0.1
 # Captcha retries per attempt (TLS fingerprint rotation)
 CAPTCHA_RETRIES_PER_ATTEMPT = 3
-# Mass-check concurrency (/tsh, /msh). Reduced to avoid CHECKOUT_HTTP_429 / NEGOTIATE_HTTP_429.
-SH_CONCURRENT_THREADS = 4
-# Delay (s) between mass-check chunks to avoid rate-limit bursts
-MASS_CHUNK_DELAY = 0.7
-# Stagger (s) between starting each check within a chunk
-MASS_STAGGER_PER_CHECK = 0.18
+# Mass checks: sequential only. No parallel threads to avoid HTTP 429 / captcha.
+SH_CONCURRENT_THREADS = 1
+# Delay (s) between each card in /tsh, /msh. Sequential = no burst; minimal delay.
+MASS_DELAY_BETWEEN_CARDS = 0.2
 
 
 def _is_valid_shopify_response(rotator: SiteRotator, resp: str) -> bool:
@@ -525,7 +523,7 @@ Use <code>/txturl site1.com site2.com</code> for multiple sites.""",
         )
 
         spinners = ("◐", "◓", "◑", "◒")
-        SPINNER_INTERVAL = 3.5
+        SPINNER_INTERVAL = 2.0
 
         async def spinner_loop():
             i = 0
@@ -560,7 +558,7 @@ Use <code>/txturl site1.com site2.com</code> for multiple sites.""",
                     await client.send_chat_action(message.chat.id, ChatAction.TYPING)
                 except Exception:
                     pass
-                await asyncio.sleep(4)
+                await asyncio.sleep(3)
 
         spinner_task = asyncio.create_task(spinner_loop())
         typing_task = asyncio.create_task(typing_loop())

@@ -16,8 +16,7 @@ from BOT.Charge.Shopify.slf.site_manager import SiteRotator, get_user_sites
 from BOT.Charge.Shopify.slf.single import (
     check_card_all_sites_parallel,
     SH_CONCURRENT_THREADS,
-    MASS_CHUNK_DELAY,
-    MASS_STAGGER_PER_CHECK,
+    MASS_DELAY_BETWEEN_CARDS,
 )
 from BOT.helper.start import load_users
 from BOT.tools.proxy import get_proxy
@@ -306,7 +305,7 @@ async def mslf_handler(client, message):
 <b>[⚬] Gateway:</b> <code>{gateway}</code>
 <b>[⚬] Cards:</b> <code>{card_count}</code>
 <b>[⚬] Sites:</b> <code>{site_count}</code>
-<b>[⚬] Threads:</b> <code>{SH_CONCURRENT_THREADS}</code> (parallel)
+<b>[⚬] Mode:</b> <code>Sequential</code>
 <b>[⚬] Status:</b> <code>Processing Request...</code>
 ━━━━━━━━━━━━━━━
 <b>[⚬] Checked By:</b> {checked_by} [<code>{plan} {badge}</code>]""",
@@ -424,78 +423,63 @@ async def mslf_handler(client, message):
             except Exception:
                 pass
 
-        thread_count = SH_CONCURRENT_THREADS
-
-        async def check_one(card, stagger_delay: float = 0):
-            if stagger_delay > 0:
-                await asyncio.sleep(stagger_delay)
+        async def check_one(card):
             try:
                 result, retries = await check_card_all_sites_parallel(user_id, card, proxy)
                 return card, str((result or {}).get("Response", "UNKNOWN")), retries, (result or {})
             except Exception as e:
                 return card, f"ERROR: {str(e)[:40]}", 0, None
 
-        for chunk_start in range(0, total_cc, thread_count):
-            chunk = all_cards[chunk_start : chunk_start + thread_count]
-            tasks = [
-                check_one(c, MASS_STAGGER_PER_CHECK * i)
-                for i, c in enumerate(chunk)
-            ]
-            outs = await asyncio.gather(*tasks, return_exceptions=True)
-            if chunk_start + thread_count < total_cc:
-                await asyncio.sleep(MASS_CHUNK_DELAY)
-            for i, o in enumerate(outs):
-                if isinstance(o, Exception):
-                    raw_response = f"ERROR: {str(o)[:40]}"
-                    result = None
-                    retries = 0
-                    card = chunk[i] if i < len(chunk) else ""
-                else:
-                    card, raw_response, retries, result = o
-                processed_count = chunk_start + i + 1
-                total_retries += retries
+        for idx, card in enumerate(all_cards):
+            try:
+                o = await check_one(card)
+            except Exception as e:
+                o = (card, f"ERROR: {str(e)[:40]}", 0, None)
+            card_used, raw_response, retries, result = o
+            processed_count = idx + 1
+            total_retries += retries
 
-                status_flag = get_status_flag((raw_response or "").upper())
-                response_upper = (raw_response or "").upper()
-                is_charged = "Charged 💎" in status_flag
-                is_approved = "Approved ✅" in status_flag
-                is_error = "Error ⚠️" in status_flag
-                is_captcha = any(x in response_upper for x in ["CAPTCHA", "RECAPTCHA", "CHALLENGE", "HCAPTCHA"])
-                if is_charged:
-                    charged_count += 1
-                elif is_approved:
-                    approved_count += 1
-                elif is_error:
-                    error_count += 1
-                else:
-                    declined_count += 1
-                if is_captcha:
-                    captcha_count += 1
+            status_flag = get_status_flag((raw_response or "").upper())
+            response_upper = (raw_response or "").upper()
+            is_charged = "Charged 💎" in status_flag
+            is_approved = "Approved ✅" in status_flag
+            is_error = "Error ⚠️" in status_flag
+            is_captcha = any(x in response_upper for x in ["CAPTCHA", "RECAPTCHA", "CHALLENGE", "HCAPTCHA"])
+            if is_charged:
+                charged_count += 1
+            elif is_approved:
+                approved_count += 1
+            elif is_error:
+                error_count += 1
+            else:
+                declined_count += 1
+            if is_captcha:
+                captcha_count += 1
 
-                if is_charged or is_approved:
-                    cc_num = card.split("|")[0] if "|" in card else card
-                    try:
-                        bin_data = get_bin_details(cc_num[:6])
-                        if bin_data:
-                            bin_info = f"{bin_data.get('vendor', 'N/A')} - {bin_data.get('type', 'N/A')} - {bin_data.get('level', 'N/A')}"
-                            bank = bin_data.get('bank', 'N/A')
-                            country = f"{bin_data.get('country', 'N/A')} {bin_data.get('flag', '')}"
-                        else:
-                            bin_info = bank = country = "N/A"
-                    except Exception:
+            if is_charged or is_approved:
+                cc_num = card_used.split("|")[0] if "|" in card_used else card_used
+                try:
+                    bin_data = get_bin_details(cc_num[:6])
+                    if bin_data:
+                        bin_info = f"{bin_data.get('vendor', 'N/A')} - {bin_data.get('type', 'N/A')} - {bin_data.get('level', 'N/A')}"
+                        bank = bin_data.get('bank', 'N/A')
+                        country = f"{bin_data.get('country', 'N/A')} {bin_data.get('flag', '')}"
+                    else:
                         bin_info = bank = country = "N/A"
-                    pr = (result or {}).get("Price", "0.00")
-                    try:
-                        pv = float(pr)
-                        pr = f"{pv:.2f}" if pv != int(pv) else str(int(pv))
-                    except (TypeError, ValueError):
-                        pr = str(pr) if pr else "0.00"
-                    gateway_display = f"Shopify Normal ${pr}"
-                    hit_header = "CHARGED" if is_charged else "CCN LIVE"
-                    hit_status = "Charged 💎" if is_charged else "Approved ✅"
-                    hit_message = f"""<b>[#Shopify] | {hit_header}</b> ✦
+                except Exception:
+                    bin_info = bank = country = "N/A"
+                pr = (result or {}).get("Price", "0.00")
+                try:
+                    pv = float(pr)
+                    pr = f"{pv:.2f}" if pv != int(pv) else str(int(pv))
+                except (TypeError, ValueError):
+                    pr = str(pr) if pr else "0.00"
+                gateway_display = f"Shopify Normal ${pr}"
+                hit_header = "CHARGED" if is_charged else "CCN LIVE"
+                hit_status = "Charged 💎" if is_charged else "Approved ✅"
+                hit_message = f"""<b>[#Shopify] | {hit_header}</b> ✦
 ━━━━━━━━━━━━━━━
-<b>[•] Card:</b> <code>{card}</code>
+<b>[•] Card:</b> <code>{card_used}</code>
 <b>[•] Gateway:</b> <code>{gateway_display}</code>
 <b>[•] Status:</b> <code>{hit_status}</code>
 <b>[•] Response:</b> <code>{raw_response}</code>
@@ -509,14 +493,17 @@ async def mslf_handler(client, message):
 <b>[ﾒ] Checked By:</b> {checked_by} [<code>{plan} {badge}</code>]
 <b>[ϟ] Dev:</b> <a href="https://t.me/Chr1shtopher">Chr1shtopher</a>
 ━━━━━━━━━━━━━━━"""
-                    try:
-                        await message.reply(hit_message, parse_mode=ParseMode.HTML, disable_web_page_preview=True)
-                    except Exception:
-                        pass
-                    await _edit_progress(force=True)
+                try:
+                    await message.reply(hit_message, parse_mode=ParseMode.HTML, disable_web_page_preview=True)
+                except Exception:
+                    pass
+                await _edit_progress(force=True)
 
-                is_last = processed_count == total_cc
-                await _edit_progress(force=is_last)
+            is_last = processed_count == total_cc
+            await _edit_progress(force=is_last)
+
+            if idx + 1 < total_cc:
+                await asyncio.sleep(MASS_DELAY_BETWEEN_CARDS)
 
         end_time = time.time()
         timetaken = round(end_time - start_time, 2)

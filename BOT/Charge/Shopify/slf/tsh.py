@@ -12,8 +12,7 @@ from BOT.Charge.Shopify.slf.site_manager import SiteRotator, get_user_sites
 from BOT.Charge.Shopify.slf.single import (
     check_card_all_sites_parallel,
     SH_CONCURRENT_THREADS,
-    MASS_CHUNK_DELAY,
-    MASS_STAGGER_PER_CHECK,
+    MASS_DELAY_BETWEEN_CARDS,
 )
 from BOT.helper.permissions import check_private_access
 from BOT.tools.proxy import get_proxy
@@ -240,14 +239,13 @@ async def tsh_handler(client: Client, m: Message):
     
     site_count = len(user_sites)
     gateway = user_sites[0].get("gateway", "Shopify") if user_sites else "Shopify"
-    thread_count = SH_CONCURRENT_THREADS
 
     # Send preparing message
     status_msg = await m.reply(
         f"""<pre>✦ [#TSH] | TXT Shopify Check</pre>
 ━━━━━━━━━━━━━
 <b>⊙ Total CC:</b> <code>{total_cards}</code>
-<b>⊙ Sites:</b> <code>{site_count}</code> · <b>Threads:</b> <code>{thread_count}</code>
+<b>⊙ Sites:</b> <code>{site_count}</code> · <b>Mode:</b> <code>Sequential</code>
 <b>⊙ Status:</b> <code>Preparing...</code>
 ━━━━━━━━━━━━━
 <b>[ﾒ] Checked By:</b> {user.mention}""",
@@ -256,7 +254,7 @@ async def tsh_handler(client: Client, m: Message):
 
     start_time = time.time()
     last_progress_edit = 0.0
-    PROGRESS_THROTTLE = 1.0
+    PROGRESS_THROTTLE = 0.7
     checked_count = 0
     charged_count = 0
     approved_count = 0
@@ -291,36 +289,23 @@ async def tsh_handler(client: Client, m: Message):
         except Exception:
             pass
 
-    async def check_one(card, stagger_delay: float = 0):
-        if stagger_delay > 0:
-            await asyncio.sleep(stagger_delay)
+    async def check_one(card):
         try:
             result, retries = await check_card_all_sites_parallel(user_id, card, proxy)
             return card, str((result or {}).get("Response", "UNKNOWN")), retries, result
         except Exception as e:
             return card, f"ERROR: {str(e)[:40]}", 0, None
 
-    for chunk_start in range(0, total_cards, thread_count):
-        chunk = cards[chunk_start : chunk_start + thread_count]
-        tasks = [
-            check_one(c, MASS_STAGGER_PER_CHECK * i)
-            for i, c in enumerate(chunk)
-        ]
-        outs = await asyncio.gather(*tasks, return_exceptions=True)
-        if chunk_start + thread_count < total_cards:
-            await asyncio.sleep(MASS_CHUNK_DELAY)
-        for i, o in enumerate(outs):
-            if isinstance(o, Exception):
-                raw_response = f"ERROR: {str(o)[:40]}"
-                retries = 0
-                result = None
-                card = chunk[i] if i < len(chunk) else ""
-            else:
-                card, raw_response, retries, result = o
-            checked_count = chunk_start + i + 1
-            total_retries += retries
+    for idx, card in enumerate(cards):
+        try:
+            o = await check_one(card)
+        except Exception as e:
+            o = (card, f"ERROR: {str(e)[:40]}", 0, None)
+        card_used, raw_response, retries, result = o
+        checked_count = idx + 1
+        total_retries += retries
 
-            try:
+        try:
                 response_upper = (raw_response or "").upper()
                 status_flag = get_status_flag(response_upper)
                 is_charged = "Charged 💎" in status_flag
@@ -338,7 +323,7 @@ async def tsh_handler(client: Client, m: Message):
                 if is_captcha:
                     captcha_count += 1
                 if is_charged or is_approved:
-                    cc = card.split("|")[0] if "|" in card else card
+                    cc = card_used.split("|")[0] if "|" in card_used else card_used
                     try:
                         bin_data = get_bin_details(cc[:6])
                         if bin_data:
@@ -359,7 +344,7 @@ async def tsh_handler(client: Client, m: Message):
                     hit_header = "CHARGED" if is_charged else "CCN LIVE"
                     hit_message = f"""<b>[#Shopify] | {hit_header}</b> ✦
 ━━━━━━━━━━━━━━━
-<b>[•] Card:</b> <code>{card}</code>
+<b>[•] Card:</b> <code>{card_used}</code>
 <b>[•] Gateway:</b> <code>{gateway_display}</code>
 <b>[•] Status:</b> <code>{status_flag}</code>
 <b>[•] Response:</b> <code>{raw_response}</code>
@@ -380,23 +365,26 @@ async def tsh_handler(client: Client, m: Message):
                     await _edit_progress(force=True)
                 is_last = checked_count == total_cards
                 await _edit_progress(force=is_last)
-            except Exception as e:
-                error_count += 1
-                try:
-                    elapsed = time.time() - start_time
-                    rate = checked_count / elapsed if elapsed > 0 else 0
-                    await status_msg.edit_text(
-                        f"""<pre>✦ [#TSH] | TXT Shopify Check</pre>
+        except Exception as e:
+            error_count += 1
+            try:
+                elapsed = time.time() - start_time
+                rate = checked_count / elapsed if elapsed > 0 else 0
+                await status_msg.edit_text(
+                    f"""<pre>✦ [#TSH] | TXT Shopify Check</pre>
 ━━━━━━━━━━━━━━━
 <b>💬 Progress:</b> <code>{checked_count}/{total_cards}</code>
 <b>⚠️ Errors:</b> <code>{error_count}</code> (card err: {str(e)[:25]})
 <b>⏱️ Time:</b> <code>{elapsed:.1f}s</code> · <code>{rate:.1f} cc/s</code>
 <b>[ﾒ] By:</b> {user.mention}""",
-                        parse_mode=ParseMode.HTML,
-                    )
-                    last_progress_edit = time.time()
-                except Exception:
-                    pass
+                    parse_mode=ParseMode.HTML,
+                )
+                last_progress_edit = time.time()
+            except Exception:
+                pass
+
+        if idx + 1 < total_cards:
+            await asyncio.sleep(MASS_DELAY_BETWEEN_CARDS)
 
     total_time = time.time() - start_time
     current_time = datetime.now().strftime("%I:%M %p")
