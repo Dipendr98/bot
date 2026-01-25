@@ -3,12 +3,16 @@ Professional Shopify Site URL Handler (Unified)
 Robust site validation with lowest product parsing for /addurl and /txturl commands.
 Works in both private chats and groups.
 
+Site-add flow (addurl / txturl):
+1. Fetch /products.json → find lowest product (price, variant, gateway).
+2. Run test checkout with current Shopify gate API (test card).
+3. If ReceiptId is present → valid site → SAVE.
+4. If ReceiptId is NOT present → invalid site → DO NOT SAVE.
+
 Features:
-- Lowest product price detection
-- Gateway detection
-- Test check before saving
-- Unified site storage
-- Group and private chat support
+- Lowest product price detection, gateway detection.
+- Test check (ReceiptId) before saving; only verified sites stored.
+- Unified site storage (store/MongoDB). Group and private chat support.
 """
 
 import os
@@ -390,9 +394,8 @@ async def test_site_with_card(url: str, proxy: Optional[str] = None) -> tuple[bo
     Run a /sh-style test check on a single URL with TEST_CARD.
     Returns (has_receipt, result).
 
-    Valid = whenever bill/ReceiptId is present. We do NOT filter by Response.
-    So CAPTCHA_REQUIRED, CAPTCHA_MAX_RETRIES, etc. with ReceiptId still count
-    as valid — add the site with accurate checkout total (result["Price"]).
+    Valid site = ReceiptId present → save. Invalid = ReceiptId absent → do not save.
+    We do NOT filter by Response; CAPTCHA_* etc. with ReceiptId still count as valid.
     """
     proxy_url = None
     if proxy and str(proxy).strip():

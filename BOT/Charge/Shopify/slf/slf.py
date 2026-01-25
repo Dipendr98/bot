@@ -1,41 +1,33 @@
 """
 Shopify SLF Module
 Uses the complete autoshopify checkout flow for real card checking.
+Sites and proxy from store (MongoDB or JSON).
 """
 
-import json
-import os
 from typing import Optional, Dict, Any
 
 from BOT.Charge.Shopify.slf.api import autoshopify
 from BOT.Charge.Shopify.tls_session import TLSAsyncSession
 from BOT.tools.proxy import get_proxy
-
-SITES_PATH = "DATA/sites.json"
+from BOT.Charge.Shopify.slf.site_manager import get_primary_site
 
 
 def get_site(user_id: str) -> Optional[str]:
-    """Get user's saved site from sites.json."""
-    try:
-        if not os.path.exists(SITES_PATH):
-            return None
-        with open(SITES_PATH, "r", encoding="utf-8") as f:
-            sites = json.load(f)
-        return sites.get(str(user_id), {}).get("site")
-    except Exception:
-        return None
+    """Get user's saved primary site from store (user_sites)."""
+    site = get_primary_site(str(user_id))
+    return (site.get("url") or None) if site else None
 
 
 def get_site_info(user_id: str) -> Optional[Dict[str, str]]:
-    """Get user's full site info (site + gateway)."""
-    try:
-        if not os.path.exists(SITES_PATH):
-            return None
-        with open(SITES_PATH, "r", encoding="utf-8") as f:
-            sites = json.load(f)
-        return sites.get(str(user_id))
-    except Exception:
+    """Get user's full site info (site + gateway) from store."""
+    site = get_primary_site(str(user_id))
+    if not site:
         return None
+    return {
+        "site": site.get("url"),
+        "gateway": site.get("gateway", "Unknown"),
+        "price": site.get("price", "N/A"),
+    }
 
 
 # Maximum retries for CAPTCHA

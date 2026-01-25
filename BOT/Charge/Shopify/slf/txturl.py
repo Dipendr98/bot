@@ -3,11 +3,14 @@ TXT URL Handler (Unified)
 Professional batch site validation with lowest product parsing.
 Works exactly like /addurl but for multiple sites at once.
 
+Site-add flow (same as /addurl):
+1. Fetch /products.json → find lowest product.
+2. Test checkout with Shopify gate API (test card).
+3. ReceiptId present → valid → SAVE. ReceiptId absent → invalid → DO NOT SAVE.
+
 Features:
-- Robust batch URL processing
-- Accurate lowest product detection
-- Unified site storage with /addurl
-- Group and private chat support
+- Robust batch URL processing, lowest product detection.
+- Unified site storage with /addurl. Group and private chat support.
 """
 
 import io

@@ -90,7 +90,7 @@ from pyrogram import Client, filters
 from pyrogram.types import Message
 import re, asyncio, httpx
 
-from BOT.db.store import load_proxies, save_proxies, get_proxy as _get_proxy, set_proxy as _set_proxy, delete_proxy as _delete_proxy
+from BOT.db.store import get_proxy as _get_proxy, set_proxy as _set_proxy, delete_proxy as _delete_proxy
 
 
 def normalize_proxy(proxy_raw: str) -> str:
@@ -127,14 +127,9 @@ async def get_ip(proxy_url: str):
     except Exception as e:
         return None, str(e)
 
-def get_proxy(user_id: int) -> str | None:
-    if not os.path.exists(PROXY_FILE):
-        return None
-    try:
-        data = json.load(open(PROXY_FILE))
-        return data.get(str(user_id))
-    except Exception:
-        return None
+def get_proxy(user_id: int | str) -> str | None:
+    """Return user's proxy from store (MongoDB or JSON). Used by checks, addurl, txturl."""
+    return _get_proxy(str(user_id))
 
 @Client.on_message(filters.command("setpx") & ~filters.private)
 async def setpx_group_redirect(client, message: Message):
@@ -261,16 +256,18 @@ async def delete_proxy(client, message: Message):
 
 @Client.on_message(filters.command("getpx"))
 async def getpx_handler(client, message):
-    user_id = message.from_user.id
+    user_id = str(message.from_user.id)
     proxy = _get_proxy(user_id)
 
     if not proxy:
         return await message.reply("<b>You haven't set any proxy yet ❌</b>")
 
     try:
-        # Remove http:// if present
-        proxy = proxy.replace("http://", "")
-        creds, hostport = proxy.split("@")
+        # Normalize: strip protocol for display
+        proxy = (proxy or "").replace("http://", "").replace("https://", "")
+        if "@" not in proxy:
+            return await message.reply(f"<b>Proxy stored ✓</b>\n<code>{proxy[:60]}...</code>" if len(proxy) > 60 else f"<b>Proxy stored ✓</b>\n<code>{proxy}</code>")
+        creds, hostport = proxy.split("@", 1)
         username = creds.split(":")[0]
         host = hostport.split(":")[0]
 
