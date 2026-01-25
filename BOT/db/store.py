@@ -297,14 +297,20 @@ def load_proxies() -> dict:
         coll = _proxies_coll()
         out = {}
         for d in coll.find({}):
-            uid = str(d["_id"])
-            raw = d.get("proxies")
-            if raw is not None and isinstance(raw, list):
-                out[uid] = [str(p) for p in raw if p]
-            elif d.get("proxy") is not None:
-                out[uid] = [str(d["proxy"])]
-            else:
-                out[uid] = []
+            try:
+                uid = str(d["_id"])
+                # Try new format first (proxies list)
+                raw = d.get("proxies")
+                if raw is not None and isinstance(raw, list):
+                    out[uid] = [str(p) for p in raw if p]
+                # Fallback to old format (single proxy)
+                elif d.get("proxy") is not None:
+                    out[uid] = [str(d["proxy"])]
+                else:
+                    out[uid] = []
+            except (KeyError, TypeError, AttributeError) as e:
+                # Skip malformed documents
+                continue
         return out
     _ensure_data()
     if not os.path.exists(PROXY_FILE):

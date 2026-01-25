@@ -30,13 +30,14 @@ tsh_stop_requested: dict[str, bool] = {}
 # --- Adaptive Rate Limiter Class ---
 
 class RateLimitedChecker:
-    def __init__(self, concurrency=20, requests_per_second=12):
+    def __init__(self, concurrency=20, requests_per_second=15):
+        """Optimized for maximum speed - silver bullet performance."""
         self.sem = asyncio.Semaphore(concurrency)
-        self.requests_per_second = requests_per_second
+        self.requests_per_second = requests_per_second  # Increased for faster processing
         self.request_times = deque()
         self.lock = asyncio.Lock()
         self.consecutive_429s = 0
-        self.current_delay = 0.1
+        self.current_delay = 0.05  # Reduced initial delay for faster start
     
     async def wait_for_rate_limit(self):
         """Token bucket enforcement"""
@@ -51,13 +52,13 @@ class RateLimitedChecker:
             self.request_times.append(time.monotonic())
 
     async def adaptive_delay(self):
-        """Dynamic sleep based on health"""
-        jitter = random.uniform(0.05, 0.15)
+        """Dynamic sleep based on health - optimized for speed"""
+        jitter = random.uniform(0.02, 0.08)  # Reduced jitter for faster processing
         await asyncio.sleep(self.current_delay + jitter)
     
     def on_success(self):
         self.consecutive_429s = 0
-        self.current_delay = max(0.1, self.current_delay * 0.95)  # Speed up
+        self.current_delay = max(0.03, self.current_delay * 0.92)  # Faster speed up
     
     def on_429(self):
         self.consecutive_429s += 1
@@ -370,7 +371,8 @@ async def tsh_handler(client: Client, m: Message):
             pass
 
     # Initialize Checker with 20 threads for professional performance
-    checker = RateLimitedChecker(concurrency=20, requests_per_second=12)
+    # Initialize Checker with 20 threads for professional performance - optimized for speed
+    checker = RateLimitedChecker(concurrency=20, requests_per_second=15)
     
     # Create Tasks
     tasks = [checker.safe_check(user_id, card) for card in cards]
