@@ -326,7 +326,7 @@ async def autoshopify(url, card, session, proxy=None):
                 break
             if sc == 429 or (500 <= sc <= 599):
                 if attempt < products_fetch_retries - 1:
-                    backoff = 0.8 + attempt * 0.6
+                    backoff = 2.0 + attempt * 1.0 if sc == 429 else 0.8 + attempt * 0.6
                     await asyncio.sleep(backoff)
                     continue
             output.update({
@@ -485,15 +485,16 @@ async def autoshopify(url, card, session, proxy=None):
         request = None
         checkout_sc = 0
         checkout_text = ""
-        for _checkout_attempt in range(5):
+        for _checkout_attempt in range(6):
             req = await session.get(checkout_url, headers=headers, params=params, follow_redirects=True, timeout=18)
             checkout_sc = getattr(req, "status_code", 0)
             checkout_text = req.text if req.text else ""
             if checkout_sc == 200:
                 request = req
                 break
-            if checkout_sc in (429, 502, 503, 504) and _checkout_attempt < 4:
-                await asyncio.sleep(1.0 + _checkout_attempt * 0.7)
+            if checkout_sc in (429, 502, 503, 504) and _checkout_attempt < 5:
+                backoff = 2.0 + _checkout_attempt * 1.0 if checkout_sc == 429 else 1.0 + _checkout_attempt * 0.7
+                await asyncio.sleep(backoff)
                 continue
             break
         if request is None and checkout_sc != 200:
@@ -893,15 +894,16 @@ async def autoshopify(url, card, session, proxy=None):
         proposal1 = None
         p1_sc = 0
         p1_text = ""
-        for _p1_attempt in range(5):
+        for _p1_attempt in range(6):
             p1_req = await session.post(f'{url}/checkouts/unstable/graphql', params=params, headers=headers, json=json_data, timeout=22)
             p1_sc = getattr(p1_req, "status_code", 0)
             p1_text = (p1_req.text or "").strip()
             if p1_sc == 200:
                 proposal1 = p1_req
                 break
-            if p1_sc in (429, 502, 503, 504) and _p1_attempt < 4:
-                await asyncio.sleep(1.0 + _p1_attempt * 0.7)
+            if p1_sc in (429, 502, 503, 504) and _p1_attempt < 5:
+                backoff = 2.0 + _p1_attempt * 1.0 if p1_sc == 429 else 1.0 + _p1_attempt * 0.7
+                await asyncio.sleep(backoff)
                 continue
             break
         if proposal1 is None and p1_sc != 200:
@@ -1130,14 +1132,15 @@ async def autoshopify(url, card, session, proxy=None):
         }
         
         request = None
-        for attempt in range(6):
+        for attempt in range(7):
             req = await session.post(f'{url}/checkouts/unstable/graphql', params=params, headers=headers, json=json_data, timeout=22)
             req_text = (req.text or "").strip()
             req_sc = getattr(req, "status_code", 0)
 
             if req_sc != 200:
-                if attempt < 5 and req_sc in (429, 502, 503, 504):
-                    await asyncio.sleep(1.0 + attempt * 0.6)
+                if attempt < 6 and req_sc in (429, 502, 503, 504):
+                    backoff = 2.0 + attempt * 1.0 if req_sc == 429 else 1.0 + attempt * 0.6
+                    await asyncio.sleep(backoff)
                     continue
                 output.update({"Response": f"NEGOTIATE_HTTP_{req_sc}", "Status": False})
                 _log_output_to_terminal(output)
@@ -1703,13 +1706,14 @@ async def autoshopify(url, card, session, proxy=None):
         else:
             selected_json_data = sjson_data
 
-        for _sfc_attempt in range(5):
+        for _sfc_attempt in range(6):
             request = await session.post(f'{url}/checkouts/unstable/graphql', params=params, headers=headers, json=selected_json_data, timeout=22)
             sfc_sc = getattr(request, "status_code", 0)
             if sfc_sc == 200 and "success" in (request.text or ""):
                 break
-            if sfc_sc in (429, 502, 503, 504) and _sfc_attempt < 4:
-                await asyncio.sleep(1.0 + _sfc_attempt * 0.7)
+            if sfc_sc in (429, 502, 503, 504) and _sfc_attempt < 5:
+                backoff = 2.0 + _sfc_attempt * 1.0 if sfc_sc == 429 else 1.0 + _sfc_attempt * 0.7
+                await asyncio.sleep(backoff)
                 continue
             try:
                 js = request.json()
@@ -2113,6 +2117,9 @@ async def autoshopify_with_captcha_retry(
     captcha_attempts = 0
     last_result = None
     
+    http429_retries = 0
+    max_429_retries = 2
+    
     while captcha_attempts < max_captcha_retries:
         use_session = session
         if captcha_attempts > 0:
@@ -2141,14 +2148,24 @@ async def autoshopify_with_captcha_retry(
             "CAPTCHA", "HCAPTCHA", "RECAPTCHA", "CHALLENGE",
             "CAPTCHA_METADATA_MISSING", "SITE_CAPTCHA", "CART_HTML", "HCAPTCHA_DETECTED"
         ])
+        is_429 = "HTTP_429" in response or "NEGOTIATE_HTTP_429" in response or "CHECKOUT_HTTP_429" in response
         
-        if not is_captcha:
+        if not is_captcha and not is_429:
             return result
         
-        captcha_attempts += 1
-        logger.info(f"Captcha on attempt {captcha_attempts}/{max_captcha_retries} for {url}")
-        if captcha_attempts < max_captcha_retries:
-            await asyncio.sleep(0.6 + captcha_attempts * 0.25)
+        if is_429 and http429_retries < max_429_retries:
+            http429_retries += 1
+            logger.info(f"HTTP 429 on attempt {http429_retries}/{max_429_retries} for {url}, backing off")
+            await asyncio.sleep(2.5 + http429_retries * 1.0)
+            continue
+        
+        if is_captcha:
+            captcha_attempts += 1
+            logger.info(f"Captcha on attempt {captcha_attempts}/{max_captcha_retries} for {url}")
+            if captcha_attempts < max_captcha_retries:
+                await asyncio.sleep(0.6 + captcha_attempts * 0.25)
+            continue
+        return result
     
     if last_result:
         last_result["Response"] = f"CAPTCHA_MAX_RETRIES ({max_captcha_retries})"

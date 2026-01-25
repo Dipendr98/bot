@@ -1,7 +1,15 @@
 """
 TXT Sites Shopify Checker with Site Rotation
 Handles /tsh command with intelligent site rotation on captcha/errors.
+429-proof: sequential checks, robust retries, proxy usage.
 """
+
+import os
+import re
+import json
+import asyncio
+import time
+from datetime import datetime
 
 from pyrogram import Client, filters
 from pyrogram.types import Message
@@ -11,17 +19,13 @@ from BOT.Charge.Shopify.tls_session import TLSAsyncSession
 from BOT.Charge.Shopify.slf.site_manager import SiteRotator, get_user_sites
 from BOT.Charge.Shopify.slf.single import (
     check_card_all_sites_parallel,
-    SH_CONCURRENT_THREADS,
     MASS_DELAY_BETWEEN_CARDS,
 )
 from BOT.helper.permissions import check_private_access
 from BOT.tools.proxy import get_proxy
 from BOT.helper.start import load_users
-import json
-import re
-import asyncio
-import time
-from datetime import datetime
+
+SPINNERS = ("◐", "◓", "◑", "◒")
 
 # Try to import BIN lookup
 try:
@@ -186,10 +190,17 @@ async def tsh_handler(client: Client, m: Message):
     cards = []
     
     if m.reply_to_message.document:
-        file = await m.reply_to_message.download()
-        with open(file, "r", encoding="utf-8", errors="ignore") as f:
-            text = f.read()
-        cards = extract_cards_from_text(text)
+        file_path = await m.reply_to_message.download()
+        try:
+            with open(file_path, "r", encoding="utf-8", errors="ignore") as f:
+                text = f.read()
+            cards = extract_cards_from_text(text)
+        finally:
+            try:
+                if file_path and os.path.isfile(file_path):
+                    os.remove(file_path)
+            except Exception:
+                pass
     elif m.reply_to_message.text:
         cards = extract_cards_from_text(m.reply_to_message.text)
     
@@ -240,13 +251,13 @@ async def tsh_handler(client: Client, m: Message):
     site_count = len(user_sites)
     gateway = user_sites[0].get("gateway", "Shopify") if user_sites else "Shopify"
 
-    # Send preparing message
+    # Send preparing message with loading spinner
     status_msg = await m.reply(
-        f"""<pre>✦ [#TSH] | TXT Shopify Check</pre>
+        f"""<pre>◐ [#TSH] | TXT Shopify Check</pre>
 ━━━━━━━━━━━━━
 <b>⊙ Total CC:</b> <code>{total_cards}</code>
 <b>⊙ Sites:</b> <code>{site_count}</code> · <b>Mode:</b> <code>Sequential</code>
-<b>⊙ Status:</b> <code>Preparing...</code>
+<b>⊙ Status:</b> <code>◐ Preparing...</code>
 ━━━━━━━━━━━━━
 <b>[ﾒ] Checked By:</b> {user.mention}""",
         parse_mode=ParseMode.HTML,
@@ -254,7 +265,7 @@ async def tsh_handler(client: Client, m: Message):
 
     start_time = time.time()
     last_progress_edit = 0.0
-    PROGRESS_THROTTLE = 0.7
+    PROGRESS_THROTTLE = 0.45
     checked_count = 0
     charged_count = 0
     approved_count = 0
@@ -270,9 +281,10 @@ async def tsh_handler(client: Client, m: Message):
             return
         elapsed = now - start_time
         rate = (checked_count / elapsed) if elapsed > 0 else 0
+        sp = SPINNERS[checked_count % 4]
         try:
             await status_msg.edit_text(
-                f"""<pre>✦ [#TSH] | TXT Shopify Check</pre>
+                f"""<pre>{sp} [#TSH] | TXT Shopify Check</pre>
 ━━━━━━━━━━━━━━━
 <b>🟢 Total CC:</b> <code>{total_cards}</code>
 <b>💬 Progress:</b> <code>{checked_count}/{total_cards}</code>
@@ -389,7 +401,7 @@ async def tsh_handler(client: Client, m: Message):
     total_time = time.time() - start_time
     current_time = datetime.now().strftime("%I:%M %p")
 
-    summary_text = f"""<pre>✦ CC Check Completed</pre>
+    summary_text = f"""<pre>✓ CC Check Completed</pre>
 ━━━━━━━━━━━━━━━
 🟢 <b>Total CC</b>     : <code>{total_cards}</code>
 💬 <b>Progress</b>    : <code>{checked_count}/{total_cards}</code>

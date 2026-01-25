@@ -32,6 +32,7 @@ except ImportError:
 
 user_locks = {}
 MAX_SITE_RETRIES = 3
+SPINNERS = ("◐", "◓", "◑", "◒")
 
 def chunk_cards(cards, size):
     for i in range(0, len(cards), size):
@@ -220,8 +221,8 @@ async def mslf_handler(client, message):
         if not await check_private_access(message):
             return
 
-        proxy = get_proxy(user_id)
-        if proxy == None:
+        proxy = get_proxy(str(user_id))
+        if not proxy:
             return await message.reply(
                 "<pre>Proxy Error ❗️</pre>\n"
                 "<b>~ Message :</b> <code>You Have To Add Proxy For Mass checking</code>\n"
@@ -300,13 +301,13 @@ async def mslf_handler(client, message):
         checked_by = f"<a href='tg://user?id={message.from_user.id}'>{message.from_user.first_name}</a>"
 
         loader_msg = await message.reply(
-            f"""<pre>✦ [#MSH] | Mass Shopify Check</pre>
+            f"""<pre>◐ [#MSH] | Mass Shopify Check</pre>
 ━━━━━━━━━━━━━━━
 <b>[⚬] Gateway:</b> <code>{gateway}</code>
 <b>[⚬] Cards:</b> <code>{card_count}</code>
 <b>[⚬] Sites:</b> <code>{site_count}</code>
 <b>[⚬] Mode:</b> <code>Sequential</code>
-<b>[⚬] Status:</b> <code>Processing Request...</code>
+<b>[⚬] Status:</b> <code>◐ Processing...</code>
 ━━━━━━━━━━━━━━━
 <b>[⚬] Checked By:</b> {checked_by} [<code>{plan} {badge}</code>]""",
             reply_to_message_id=message.id,
@@ -387,7 +388,7 @@ async def mslf_handler(client, message):
         start_time = time.time()
         total_cc = len(all_cards)
         last_progress_edit = 0.0
-        PROGRESS_THROTTLE = 1.0
+        PROGRESS_THROTTLE = 0.5
         approved_count = 0
         declined_count = 0
         charged_count = 0
@@ -403,9 +404,10 @@ async def mslf_handler(client, message):
                 return
             elapsed = now - start_time
             rate = (processed_count / elapsed) if elapsed > 0 else 0
+            sp = SPINNERS[processed_count % 4]
             try:
                 await loader_msg.edit(
-                    f"""<pre>✦ [#MSH] | Mass Shopify Check</pre>
+                    f"""<pre>{sp} [#MSH] | Mass Shopify Check</pre>
 ━━━━━━━━━━━━━━━
 <b>🟢 Total CC:</b> <code>{total_cc}</code>
 <b>💬 Progress:</b> <code>{processed_count}/{total_cc}</code>
