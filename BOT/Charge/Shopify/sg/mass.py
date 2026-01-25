@@ -109,7 +109,7 @@ async def handle_msg_command(client, message):
 
         # Initial loader message
         loader_msg = await message.reply(
-            f"""<pre>✦ Sync | {gateway}</pre>
+            f"""<pre>✦ Christopher | {gateway}</pre>
 <b>[⚬] Gateway -</b> <b>{gateway}</b>
 <b>[⚬] CC Amount : {len(all_cards)}</b>
 <b>[⚬] Checked By :</b> {checked_by} [<code>{plan} {badge}</code>]
@@ -174,7 +174,7 @@ async def handle_msg_command(client, message):
                 # Update after each with progress
                 ongoing_result = "\n".join(final_results[-10:])  # Show last 10 cards
                 await loader_msg.edit(
-                    f"""<pre>✦ Sync | {gateway}</pre>
+                    f"""<pre>✦ Christopher | {gateway}</pre>
 {ongoing_result}
 <b>💬 Progress :</b> <code>{processed_count}/{total_cc}</code>
 <b>[⚬] Checked By :</b> {checked_by} [<code>{plan} {badge}</code>]

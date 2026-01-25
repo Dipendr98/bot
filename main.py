@@ -1,4 +1,5 @@
 import json
+import os
 import asyncio
 import threading
 from pyrogram import Client, idle
@@ -9,13 +10,16 @@ from BOT.plans.plan2 import check_and_expire_plans as plan2_expiry
 from BOT.plans.plan3 import check_and_expire_plans as plan3_expiry
 from BOT.plans.plan4 import check_and_expire_plans as plan4_expiry
 from BOT.plans.redeem import check_and_expire_redeem_plans as redeem_expiry
+from BOT.db.mongo import use_mongo, init_db, close_db, migrate_json_to_mongo
 
-# Load bot credentials
-with open("FILES/config.json", "r", encoding="utf-8") as f:
-    DATA = json.load(f)
-    API_ID = DATA["API_ID"]
-    API_HASH = DATA["API_HASH"]
-    BOT_TOKEN = DATA["BOT_TOKEN"]
+# Load bot credentials from FILES/config.json (existing implementation)
+from BOT.config_loader import get_config
+DATA = get_config()
+API_ID = int(DATA.get("API_ID") or 0)
+API_HASH = (DATA.get("API_HASH") or "").strip()
+BOT_TOKEN = (DATA.get("BOT_TOKEN") or "").strip()
+if not (API_ID and API_HASH and BOT_TOKEN):
+    raise ValueError("Set BOT_TOKEN, API_ID, API_HASH in FILES/config.json.")
 
 # Pyrogram plugins
 plugins = dict(root="BOT")
@@ -37,9 +41,17 @@ def home():
     return "Bot is running!"
 
 def run_flask():
-    app.run(host="0.0.0.0", port=3000)
+    port = int(os.environ.get("PORT", "3000"))
+    app.run(host="0.0.0.0", port=port)
 
 async def run_bot():
+    if use_mongo():
+        try:
+            init_db()
+            migrate_json_to_mongo()
+            print("✅ MongoDB connected and ready.")
+        except Exception as e:
+            print(f"⚠️ MongoDB init failed: {e}. Using JSON storage.")
     await bot.start()
     print("✅ Bot is running...")
 
@@ -104,6 +116,9 @@ async def run_bot():
 
     await idle()
     await bot.stop()
+    if use_mongo():
+        close_db()
+        print("✅ MongoDB connection closed.")
     print("❌ Bot stopped.")
 
 if __name__ == "__main__":

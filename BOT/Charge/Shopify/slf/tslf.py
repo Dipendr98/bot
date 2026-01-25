@@ -177,7 +177,7 @@
 #         if status_flag in ["Approved ❎", "Charged 💎"]:
 #             await c.send_message(
 #                 msg.chat.id,
-#                 f"<b>#AutoShopify | Sync ✦[SELF TEXT]</b>\n"
+#                 f"<b>#AutoShopify | Christopher ✦[SELF TEXT]</b>\n"
 #                 f"━━━━━━━━━━━━━\n"
 #                 f"<b>⌁ Card:</b> <code>{cc}</code>\n"
 #                 f"<b>⌁ Status:</b> <code>{status_flag}</code>\n"
@@ -220,23 +220,19 @@ import asyncio
 import re
 from BOT.Charge.Shopify.slf.slf import check_card  # your check logic
 
-# Helper to load txtsite config
+from BOT.Charge.Shopify.slf.site_manager import get_user_sites
+
+
 def get_sites(user_id):
-    try:
-        with open("DATA/txtsite.json", "r") as f:
-            data = json.load(f)
-        site_list = data.get(str(user_id), [])
-        return [site["site"] for site in site_list if "site" in site]
-    except Exception:
-        return []
-# Add this helper function
+    sites = get_user_sites(str(user_id))
+    return [s.get("url", "") for s in sites if s.get("url")]
+
+
 def get_user_site_info(user_id):
-    try:
-        with open("DATA/txtsite.json", "r") as f:
-            data = json.load(f)
-        return data.get(str(user_id), [])
-    except Exception:
-        return []
+    """Return sites as [{site, gate}, ...] for tslf compatibility."""
+    sites = get_user_sites(str(user_id))
+    return [{"site": s.get("url", ""), "gate": s.get("gateway", "Unknown")} for s in sites if s.get("url")]
+
 
 def get_site_and_gate(user_id, index):
     sites = get_user_site_info(user_id)
@@ -505,7 +501,7 @@ async def start_check(c, msg, user, state):
     #     if send_broadcast:
     #         await c.send_message(
     #             msg.chat.id,
-    #             f"<b>#AutoShopify | Sync ✦[SELF TEXT]</b>\n"
+    #             f"<b>#AutoShopify | Christopher ✦[SELF TEXT]</b>\n"
     #             f"━━━━━━━━━━━━━\n"
     #             f"<b>⌁ Card:</b> <code>{cc}</code>\n"
     #             f"<b>⌁ Status:</b> <code>{status_flag}</code>\n"
@@ -585,7 +581,7 @@ async def start_check(c, msg, user, state):
             if send_broadcast:
                 await c.send_message(
                     msg.chat.id,
-                    f"<b>#AutoShopify | Sync ✦[SELF TEXT]</b>\n"
+                    f"<b>#AutoShopify | Christopher ✦[SELF TEXT]</b>\n"
                     f"━━━━━━━━━━━━━\n"
                     f"<b>⌁ Card:</b> <code>{cc}</code>\n"
                     f"<b>⌁ Status:</b> <code>{status_flag}</code>\n"

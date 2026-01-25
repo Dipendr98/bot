@@ -13,3 +13,4 @@ cloudscraper
 fake-useragent
 faker
 aiohttp
+pymongo>=4.0

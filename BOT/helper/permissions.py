@@ -1,33 +1,17 @@
 from pyrogram import Client, filters
-from BOT.helper.start import load_users
 from pyrogram.types import Message, InlineKeyboardMarkup, InlineKeyboardButton
-import json
-import os
 from pyrogram.enums import ChatType, ParseMode
 
-GROUPS_FILE = "DATA/groups.json"
-OWNER_ID = 6891929831  # Owner user ID
+from BOT.helper.start import load_users
+from BOT.db.store import load_owner_id, load_allowed_groups, save_allowed_groups
+
+OWNER_ID = int(load_owner_id() or 0)
 
 # Commands that require private chat - Only site/proxy management
-# All other commands work everywhere (group + private)
 PRIVATE_ONLY_COMMANDS = [
-    "addurl", "slfurl", "seturl",  # Site adding
-    "setpx",  # Proxy adding (security sensitive)
+    "addurl", "slfurl", "seturl",
+    "setpx",
 ]
-
-
-def load_allowed_groups():
-    if not os.path.exists(GROUPS_FILE):
-        print("Groups file not found:", GROUPS_FILE)
-        return []
-    with open(GROUPS_FILE, "r") as f:
-        data = json.load(f)
-        return data
-
-
-def save_allowed_groups(groups):
-    with open(GROUPS_FILE, "w") as f:
-        json.dump(groups, f)
 
 
 async def is_premium_user(message: Message) -> bool:
@@ -139,21 +123,6 @@ async def require_private_chat(message: Message, command_name: str = None) -> bo
     )
     return False
 
-# GROUPS_FILE = "DATA/groups.json"
-# OWNER_ID = 6891929831  # apna user ID yahan daal
-
-# def load_allowed_groups():
-#     if not os.path.exists(GROUPS_FILE):
-#         print("Groups file not found:", GROUPS_FILE)
-#         return []
-#     with open(GROUPS_FILE, "r") as f:
-#         data = json.load(f)
-#         print("Loaded groups:", data)
-#         return data
-
-# def save_allowed_groups(groups):
-#     with open(GROUPS_FILE, "w") as f:
-#         json.dump(groups, f)
 @Client.on_message(filters.command(["add", ".add", "$add"]) & filters.user(OWNER_ID))
 async def add_group(client: Client, message: Message):
     try:
@@ -190,13 +159,6 @@ async def remove_group(client: Client, message: Message):
     except Exception as e:
         await message.reply(f"⚠️ Error: {e}")
 
-FILE_PATH = "DATA/groups.json"
-
-# Ensure the file exists
-if not os.path.exists(FILE_PATH):
-    with open(FILE_PATH, "w") as f:
-        json.dump([], f)
-
 @Client.on_message(filters.command(["groupid", "id", "chatid"]))
 async def get_group_id(client: Client, message: Message):
     """Shows the current chat ID"""
@@ -213,7 +175,7 @@ async def get_group_id(client: Client, message: Message):
     )
     await message.reply(response)
 
-@Client.on_message(filters.command(["add", "rmv"]) & filters.user([6891929831]))  # Add your admin ID here
+@Client.on_message(filters.command(["add", "rmv"]) & filters.user(OWNER_ID))
 async def modify_allowed_chats(bot, message: Message):
     if len(message.command) < 2:
         return await message.reply_text("❌ Usage: /add <chat_id> or /rmv <chat_id>")
@@ -224,23 +186,18 @@ async def modify_allowed_chats(bot, message: Message):
     except ValueError:
         return await message.reply_text("❌ Invalid chat ID.")
 
-    with open(FILE_PATH, "r") as f:
-        allowed = json.load(f)
+    allowed = load_allowed_groups()
 
     if command == "add":
         if chat_id not in allowed:
             allowed.append(chat_id)
-            with open(FILE_PATH, "w") as f:
-                json.dump(allowed, f, indent=4)
+            save_allowed_groups(allowed)
             return await message.reply_text(f"✅ Chat ID {chat_id} added to allowed list.")
-        else:
-            return await message.reply_text(f"ℹ️ Chat ID {chat_id} is already allowed.")
+        return await message.reply_text(f"ℹ️ Chat ID {chat_id} is already allowed.")
 
-    elif command == "rmv":
+    if command == "rmv":
         if chat_id in allowed:
             allowed.remove(chat_id)
-            with open(FILE_PATH, "w") as f:
-                json.dump(allowed, f, indent=4)
+            save_allowed_groups(allowed)
             return await message.reply_text(f"✅ Chat ID {chat_id} removed from allowed list.")
-        else:
-            return await message.reply_text(f"❌ Chat ID {chat_id} not found in allowed list.")
+        return await message.reply_text(f"❌ Chat ID {chat_id} not found in allowed list.")

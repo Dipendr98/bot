@@ -12,7 +12,7 @@ from datetime import datetime
 import asyncio
 
 from pyrogram import Client, filters
-from pyrogram.types import Message, InlineKeyboardMarkup, InlineKeyboardButton
+from pyrogram.types import Message, CallbackQuery, InlineKeyboardMarkup, InlineKeyboardButton
 from pyrogram.enums import ParseMode
 
 from BOT.helper.start import load_users
@@ -20,8 +20,14 @@ from BOT.helper.permissions import check_private_access, is_premium_user
 from BOT.helper.antispam import can_run_command
 from BOT.gc.credit import deduct_credit, has_credits
 
-# Import the WooCommerce Stripe checker
+# Import the WooCommerce Stripe checker and gate selector
 from BOT.Auth.StripeAuth.wc_checker import check_stripe_wc_fullcc, determine_status
+from BOT.Auth.StripeAuth.au_gate import (
+    get_au_gate,
+    get_au_gate_url,
+    toggle_au_gate,
+    gate_display_name,
+)
 
 # Try to import BIN lookup
 try:
@@ -216,28 +222,32 @@ async def handle_au_command(client: Client, message: Message):
         user_info = {"profile": profile, "plan": plan, "badge": badge}
         
         start_time = time()
-        
+        gate_key = get_au_gate(user_id)
+        site_url = get_au_gate_url(user_id)
+        gate_label = gate_display_name(gate_key)
+
         # Show processing message
         loading_msg = await message.reply(
             f"""<pre>Processing Request...</pre>
 ━ ━ ━ ━ ━ ━ ━ ━ ━ ━ ━ ━
 <b>• Card:</b> <code>{fullcc}</code>
-<b>• Gate:</b> <code>Stripe Auth [WC]</code>
+<b>• Gate:</b> <code>Stripe Auth [{gate_label}]</code>
 <b>• Status:</b> <i>Registering and checking... ◐</i>""",
             reply_to_message_id=message.id,
             parse_mode=ParseMode.HTML
         )
-        
-        # Check card using WooCommerce Stripe checker
-        result = await check_stripe_wc_fullcc(fullcc)
-        
+
+        # Check card using WooCommerce Stripe checker (current gate)
+        result = await check_stripe_wc_fullcc(fullcc, site_url=site_url)
+
         time_taken = round(time() - start_time, 2)
-        
+
         # Format response
         final_message = format_response(fullcc, result, user_info, time_taken)
-        
+
         buttons = InlineKeyboardMarkup([
             [
+                InlineKeyboardButton("Change gate", callback_data="au_change_gate"),
                 InlineKeyboardButton("Support", url="https://t.me/Chr1shtopher"),
                 InlineKeyboardButton("Plans", callback_data="plans_info")
             ]
@@ -270,3 +280,32 @@ async def handle_au_command(client: Client, message: Message):
     
     finally:
         user_locks.pop(user_id, None)
+
+
+@Client.on_callback_query(filters.regex("^au_change_gate$"))
+async def au_change_gate_callback(client: Client, cq: CallbackQuery):
+    """Toggle Stripe Auth gate (epicalarc <-> shavercity) for /au and /mau."""
+    if not cq.from_user:
+        return
+    user_id = str(cq.from_user.id)
+    new_gate = toggle_au_gate(user_id)
+    label = gate_display_name(new_gate)
+    try:
+        await cq.answer(f"Gate switched to {label}", show_alert=False)
+        await cq.edit_message_text(
+            f"""<pre>Stripe Auth Gate Changed</pre>
+━ ━ ━ ━ ━ ━ ━ ━ ━ ━ ━ ━
+<b>• Current gate:</b> <code>{label}</code>
+<b>• Use</b> <code>/au</code> <b>or</b> <code>/mau</code> <b>to check.</b>
+━ ━ ━ ━ ━ ━ ━ ━ ━ ━ ━ ━""",
+            reply_markup=InlineKeyboardMarkup([
+                [
+                    InlineKeyboardButton("Change gate", callback_data="au_change_gate"),
+                    InlineKeyboardButton("Support", url="https://t.me/Chr1shtopher"),
+                    InlineKeyboardButton("Plans", callback_data="plans_info")
+                ]
+            ]),
+            parse_mode=ParseMode.HTML,
+        )
+    except Exception:
+        pass

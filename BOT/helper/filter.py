@@ -88,7 +88,7 @@ def extract_cards(text):
 
 
 def get_next_filename():
-    base_name = "Sync-Filtered-"
+    base_name = "Christopher-Filtered-"
     existing_files = [f for f in os.listdir(DOWNLOAD_DIR) if f.startswith(base_name) and f.endswith(".txt")]
     if not existing_files:
         return os.path.join(DOWNLOAD_DIR, f"{base_name}0001.txt")

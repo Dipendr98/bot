@@ -70,7 +70,7 @@ async def info_command(client, message: Message):
         stats = "Paid"
 
     msg = f"""
-<pre>[{uid}] ~ Sync</pre>
+<pre>[{uid}] ~ Christopher</pre>
 ━━━━━━━━━━━━━━
 • <b>Firstname :</b> <code>{fname}</code>
 • <b>UserID :</b> <code>{uid}</code>

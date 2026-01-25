@@ -1,13 +1,11 @@
 from pyrogram import Client, filters
 from pyrogram.types import InlineKeyboardMarkup, InlineKeyboardButton, Message
-import json
 
-# Load config
-with open("FILES/config.json") as f:
-    CONFIG = json.load(f)
+from BOT.config_loader import get_config
 
-OWNER = int(CONFIG["OWNER"])
-CHANNEL = CONFIG["FEEDBACK"]  # use @channel_username only
+CONFIG = get_config()
+OWNER = int(CONFIG.get("OWNER") or 0)
+CHANNEL = CONFIG.get("FEEDBACK") or "@Chr1shtopher"
 
 
 # ✅ /fback command

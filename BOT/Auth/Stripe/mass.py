@@ -8,6 +8,7 @@ Uses WooCommerce site (epicalarc.com) with auto-registration for Stripe auth che
 
 import re
 from pyrogram import Client, filters
+from pyrogram.types import InlineKeyboardMarkup, InlineKeyboardButton
 from pyrogram.enums import ParseMode
 from time import time
 import asyncio
@@ -17,8 +18,9 @@ from BOT.helper.start import load_users
 from BOT.helper.permissions import check_private_access, is_premium_user
 from BOT.gc.credit import deduct_credit_bulk
 
-# Import the WooCommerce Stripe checker
+# Import the WooCommerce Stripe checker and gate selector
 from BOT.Auth.StripeAuth.wc_checker import check_stripe_wc_fullcc, determine_status
+from BOT.Auth.StripeAuth.au_gate import get_au_gate, get_au_gate_url, gate_display_name
 
 # Try to import BIN lookup
 try:
@@ -131,22 +133,29 @@ async def handle_mau_command(client, message):
                 pass
         
         checked_by = f"<a href='tg://user?id={message.from_user.id}'>{message.from_user.first_name}</a>"
-        
+        gate_key = get_au_gate(user_id)
+        site_url = get_au_gate_url(user_id)
+        gate_label = gate_display_name(gate_key)
+        change_gate_btn = InlineKeyboardMarkup([
+            [InlineKeyboardButton("Change gate", callback_data="au_change_gate")],
+        ])
+
         # Send initial message
         loader_msg = await message.reply(
-            f"""<pre>✦ [#MAU] | Mass Stripe Auth [WC]</pre>
+            f"""<pre>✦ [#MAU] | Mass Stripe Auth</pre>
 ━━━━━━━━━━━━━━━
-<b>[⚬] Gateway:</b> <code>Stripe Auth [WC]</code>
+<b>[⚬] Gate:</b> <code>{gate_label}</code>
 <b>[⚬] Cards:</b> <code>{card_count}</code>
 <b>[⚬] Status:</b> <code>Processing...</code>
 ━━━━━━━━━━━━━━━
 <b>[⚬] Checked By:</b> {checked_by} [<code>{plan} {badge}</code>]""",
             reply_to_message_id=message.id,
-            parse_mode=ParseMode.HTML
+            parse_mode=ParseMode.HTML,
+            reply_markup=change_gate_btn,
         )
-        
+
         start_time = time()
-        
+
         # Statistics
         total_cc = len(all_cards)
         approved_count = 0
@@ -165,8 +174,8 @@ async def handle_mau_command(client, message):
                 parts[2] = "20" + parts[2]
                 card = "|".join(parts)
             
-            # Check card using WooCommerce Stripe checker
-            result = await check_stripe_wc_fullcc(card)
+            # Check card using WooCommerce Stripe checker (current gate)
+            result = await check_stripe_wc_fullcc(card, site_url=site_url)
             
             # Get status from result
             status = determine_status(result)
@@ -242,8 +251,9 @@ async def handle_mau_command(client, message):
             if idx % 2 == 0 or idx == total_cc:
                 try:
                     await loader_msg.edit(
-                        f"""<pre>✦ [#MAU] | Mass Stripe Auth [WC]</pre>
+                        f"""<pre>✦ [#MAU] | Mass Stripe Auth</pre>
 ━━━━━━━━━━━━━━━
+<b>[⚬] Gate:</b> <code>{gate_label}</code>
 <b>🟢 Total CC:</b> <code>{total_cc}</code>
 <b>💬 Progress:</b> <code>{processed_count}/{total_cc}</code>
 <b>✅ Approved:</b> <code>{approved_count}</code>
@@ -253,11 +263,12 @@ async def handle_mau_command(client, message):
 ━━━━━━━━━━━━━━━
 <b>👤 Checked By:</b> {checked_by} [<code>{plan} {badge}</code>]""",
                         parse_mode=ParseMode.HTML,
-                        disable_web_page_preview=True
+                        disable_web_page_preview=True,
+                        reply_markup=change_gate_btn,
                     )
                 except:
                     pass
-        
+
         end_time = time()
         timetaken = round(end_time - start_time, 2)
         
@@ -271,6 +282,7 @@ async def handle_mau_command(client, message):
         
         completion_message = f"""<pre>✦ Stripe Auth Check Completed</pre>
 ━━━━━━━━━━━━━━━
+<b>[⚬] Gate:</b> <code>{gate_label}</code>
 🟢 <b>Total CC</b>     : <code>{total_cc}</code>
 💬 <b>Progress</b>    : <code>{processed_count}/{total_cc}</code>
 ✅ <b>Approved</b>    : <code>{approved_count}</code>
@@ -283,8 +295,13 @@ async def handle_mau_command(client, message):
 🔧 <b>Dev</b>: <a href="https://t.me/Chr1shtopher">Chr1shtopher</a> <code>{current_time}</code>
 ━━━━━━━━━━━━━━━"""
         
-        await loader_msg.edit(completion_message, parse_mode=ParseMode.HTML, disable_web_page_preview=True)
-        
+        await loader_msg.edit(
+            completion_message,
+            parse_mode=ParseMode.HTML,
+            disable_web_page_preview=True,
+            reply_markup=change_gate_btn,
+        )
+
     except Exception as e:
         await message.reply(f"⚠️ Error: {e}", reply_to_message_id=message.id)
     

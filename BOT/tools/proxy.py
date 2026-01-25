@@ -88,16 +88,10 @@
 
 from pyrogram import Client, filters
 from pyrogram.types import Message
-import json, re, os, asyncio, httpx
+import re, asyncio, httpx
 
-PROXY_FILE = "DATA/proxy.json"
+from BOT.db.store import load_proxies, save_proxies, get_proxy as _get_proxy, set_proxy as _set_proxy, delete_proxy as _delete_proxy
 
-def load_proxies():
-    return json.load(open(PROXY_FILE)) if os.path.exists(PROXY_FILE) else {}
-
-def save_proxies(data):
-    with open(PROXY_FILE, "w") as f:
-        json.dump(data, f, indent=2)
 
 def normalize_proxy(proxy_raw: str) -> str:
     proxy_raw = proxy_raw.strip()
@@ -210,14 +204,12 @@ async def set_proxy(client, message: Message):
         )
 
     user_id = str(message.from_user.id)
-    data = load_proxies()
-
-    if data.get(user_id) == proxy_url:
+    existing = _get_proxy(user_id)
+    if existing == proxy_url:
         return await message.reply("<b>This proxy is already added ⚠️</b>", quote=True)
 
     msg = await message.reply("<pre>Validating Proxy 🔘</pre>", quote=True)
 
-    # Test proxy connection - only need to verify it works
     ip, err = await get_ip(proxy_url)
 
     if not ip:
@@ -233,11 +225,8 @@ async def set_proxy(client, message: Message):
 • Try a different proxy"""
         )
 
-    # Save proxy for user - accept all live proxies
-    data[user_id] = proxy_url
-    save_proxies(data)
+    _set_proxy(user_id, proxy_url)
 
-    # Get proxy info for display
     try:
         proxy_clean = proxy_url.replace("http://", "").replace("https://", "")
         if "@" in proxy_clean:
@@ -265,19 +254,15 @@ async def set_proxy(client, message: Message):
 @Client.on_message(filters.command("delpx"))
 async def delete_proxy(client, message: Message):
     user_id = str(message.from_user.id)
-    data = load_proxies()
-
-    if user_id not in data:
+    if not _get_proxy(user_id):
         return await message.reply("<b>No proxy was found to delete !!!</b>", quote=True)
-
-    del data[user_id]
-    save_proxies(data)
+    _delete_proxy(user_id)
     await message.reply("<b>Your proxy has been removed ✅</b>", quote=True)
 
 @Client.on_message(filters.command("getpx"))
 async def getpx_handler(client, message):
     user_id = message.from_user.id
-    proxy = get_proxy(user_id)
+    proxy = _get_proxy(user_id)
 
     if not proxy:
         return await message.reply("<b>You haven't set any proxy yet ❌</b>")

@@ -7,7 +7,7 @@ async def help_command(client: Client, message: Message):
     """Display help information and available commands"""
 
     help_text = """<pre>━━━━━ 📚 HELP MENU 📚 ━━━━━</pre>
-<b>Welcome to Sync Bot Help Center!</b>
+<b>Welcome to Christopher Help Center!</b>
 
 <i>Browse through different command categories to learn what each command does.</i>
 
@@ -90,7 +90,7 @@ async def help_callback(client: Client, callback_query: CallbackQuery):
 
     if data == "help_close":
         try:
-            await callback_query.message.edit_text("<pre>Thanks for using Sync Bot! ✨</pre>")
+            await callback_query.message.edit_text("<pre>Thanks for using Christopher! ✨</pre>")
         except MessageNotModified:
             pass
         return
@@ -98,7 +98,7 @@ async def help_callback(client: Client, callback_query: CallbackQuery):
     elif data == "help_main":
         # Main help menu
         help_text = """<pre>━━━━━ 📚 HELP MENU 📚 ━━━━━</pre>
-<b>Welcome to Sync Bot Help Center!</b>
+<b>Welcome to Christopher Help Center!</b>
 
 <i>Browse through different command categories to learn what each command does.</i>
 

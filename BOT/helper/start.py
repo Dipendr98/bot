@@ -1,80 +1,31 @@
+import asyncio
+import html
 import json
 import os
+
 from pyrogram import Client, filters
 from pyrogram.types import Message, InlineKeyboardMarkup, InlineKeyboardButton, CallbackQuery
 from pyrogram.errors import MessageNotModified
-from datetime import datetime
-import asyncio
-import html
-import pytz
+
+from BOT.db.store import (
+    load_users,
+    save_users,
+    load_owner_id,
+    get_ist_time,
+    default_plan,
+)
 
 # Create a lock for user operations to prevent race conditions
 user_lock = asyncio.Lock()
 
-USERS_FILE = "DATA/users.json"
+USERS_FILE = "DATA/users.json"  # kept for backwards refs; actual storage in BOT.db.store
 CONFIG_FILE = "FILES/config.json"
+
 
 def clean_text(text):
     if not text:
         return "N/A"
     return html.unescape(text)
-
-# Function to load the OWNER_ID from config file
-def load_owner_id():
-    try:
-        with open(CONFIG_FILE, "r") as f:
-            config_data = json.load(f)
-            return config_data.get("OWNER")
-    except FileNotFoundError:
-        print("Config file not found.")
-        return None
-
-# Function to get IST time
-def get_ist_time():
-    ist = pytz.timezone("Asia/Kolkata")
-    return datetime.now(ist).strftime("%Y-%m-%d %H:%M:%S")
-
-# Load users from the JSON file
-def load_users():
-    try:
-        with open(USERS_FILE, "r") as f:
-            return json.load(f)
-    except FileNotFoundError:
-        return {}
-
-# Save the updated users to the JSON file
-def save_users(users):
-    with open(USERS_FILE, "w") as f:
-        json.dump(users, f, indent=4)
-
-# Default plan data for new users
-def default_plan(user_id):
-    OWNER_ID = load_owner_id()
-
-    if user_id == OWNER_ID:
-        return {
-            "plan": "Owner",
-            "activated_at": get_ist_time(),
-            "expires_at": None,
-            "antispam": None,
-            "mlimit": None,
-            "credits": "∞",
-            "badge": "🎭",
-            "private": "on",
-            "keyredeem": 0
-        }
-
-    return {
-        "plan": "Free",
-        "activated_at": get_ist_time(),
-        "expires_at": None,
-        "antispam": 15,
-        "mlimit": 5,
-        "credits": 100,
-        "badge": "🧿",
-        "private": "off",
-        "keyredeem": 0
-    }
 
 @Client.on_message(filters.command("start"))
 async def start_command(client: Client, message: Message):
@@ -140,7 +91,7 @@ async def register_callback(client, callback_query):
 
         if user_id in users:
             user_data = users[user_id]
-            first_name = user_data['first_name']
+            first_name = user_data["first_name"]
             profile = f"<a href='tg://user?id={user_id}'>{first_name}</a> ({user_data['role']})"
 
             buttons = InlineKeyboardMarkup([
@@ -163,11 +114,12 @@ async def register_callback(client, callback_query):
             "user_id": callback_query.from_user.id,
             "registered_at": get_ist_time(),
             "plan": plan_data,
-            "role": role
+            "role": role,
         }
 
         save_users(users)
 
+    users = load_users()
     user_data = users[user_id]
     buttons = InlineKeyboardMarkup([
         [InlineKeyboardButton("Home", callback_data="home"),
@@ -202,7 +154,7 @@ async def register_command(client, message):
 
         if user_id in users:
             user_data = users[user_id]
-            first_name = user_data['first_name']
+            first_name = user_data["first_name"]
             profile = f"<a href='tg://user?id={user_id}'>{first_name}</a> ({user_data['role']})"
 
             buttons = InlineKeyboardMarkup([
@@ -210,12 +162,11 @@ async def register_command(client, message):
                  InlineKeyboardButton("Exit", callback_data="exit")]
             ])
 
-            # Reply to the original message if the user is already registered
             await client.send_message(
                 chat_id=message.chat.id,
                 text=f"<pre>User {profile} You Are Already Registered</pre>",
                 reply_to_message_id=message.id,
-                reply_markup=buttons
+                reply_markup=buttons,
             )
             return
 
@@ -231,11 +182,12 @@ async def register_command(client, message):
             "user_id": message.from_user.id,
             "registered_at": get_ist_time(),
             "plan": plan_data,
-            "role": role
+            "role": role,
         }
 
         save_users(users)
 
+    users = load_users()
     user_data = users[user_id]
     buttons = InlineKeyboardMarkup([
         [InlineKeyboardButton("Home", callback_data="home"),

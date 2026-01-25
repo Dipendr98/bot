@@ -1,4 +1,3 @@
-import json
 import time
 import asyncio
 from pyrogram import Client, filters
@@ -6,14 +5,15 @@ from pyrogram.enums import ChatAction
 from pyrogram.errors import FloodWait, UserIsBlocked, PeerIdInvalid, InputUserDeactivated, UserDeactivatedBan
 from pyrogram.types import Message
 
-with open("FILES/config.json") as f:
-    config = json.load(f)
+from BOT.config_loader import get_config
+from BOT.db.store import load_users as _load_users
 
-OWNER_ID = int(config["OWNER"])
+config = get_config()
+OWNER_ID = int(config.get("OWNER") or 0)
+
 
 def load_users():
-    with open("DATA/users.json") as f:
-        return list(json.load(f).keys())
+    return list(_load_users().keys())
 
 broadcast_filter = filters.command("b") & filters.user(OWNER_ID)
 
