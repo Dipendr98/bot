@@ -286,52 +286,60 @@ async def tsh_handler(client: Client, m: Message):
         except Exception:
             pass
 
-    for idx, card in enumerate(cards, start=1):
-        result = None
+    async def check_one(card):
         try:
             result, retries = await check_card_all_sites_parallel(user_id, card, proxy)
-            raw_response = str((result or {}).get("Response", "UNKNOWN"))
+            return card, str((result or {}).get("Response", "UNKNOWN")), retries, result
         except Exception as e:
-            raw_response = f"ERROR: {str(e)[:40]}"
-            retries = 0
-        checked_count = idx
-        total_retries += retries
+            return card, f"ERROR: {str(e)[:40]}", 0, None
 
-        try:
-            response_upper = (raw_response or "").upper()
-            status_flag = get_status_flag(response_upper)
-
-            is_charged = "Charged 💎" in status_flag
-            is_approved = "Approved ✅" in status_flag
-            is_error = "Error ⚠️" in status_flag
-            is_captcha = any(x in response_upper for x in ["CAPTCHA", "HCAPTCHA", "RECAPTCHA"])
-
-            if is_charged:
-                charged_count += 1
-            elif is_approved:
-                approved_count += 1
-            elif is_error:
-                error_count += 1
+    for chunk_start in range(0, total_cards, thread_count):
+        chunk = cards[chunk_start : chunk_start + thread_count]
+        tasks = [check_one(c) for c in chunk]
+        outs = await asyncio.gather(*tasks, return_exceptions=True)
+        for i, o in enumerate(outs):
+            if isinstance(o, Exception):
+                raw_response = f"ERROR: {str(o)[:40]}"
+                retries = 0
+                result = None
+                card = chunk[i] if i < len(chunk) else ""
             else:
-                declined_count += 1
-            if is_captcha:
-                captcha_count += 1
+                card, raw_response, retries, result = o
+            checked_count = chunk_start + i + 1
+            total_retries += retries
 
-            if is_charged or is_approved:
-                cc = card.split("|")[0] if "|" in card else card
-                try:
-                    bin_data = get_bin_details(cc[:6])
-                    if bin_data:
-                        bin_info = f"{bin_data.get('vendor', 'N/A')} - {bin_data.get('type', 'N/A')} - {bin_data.get('level', 'N/A')}"
-                        bank = bin_data.get('bank', 'N/A')
-                        country = f"{bin_data.get('country', 'N/A')} {bin_data.get('flag', '')}"
-                    else:
+            try:
+                response_upper = (raw_response or "").upper()
+                status_flag = get_status_flag(response_upper)
+                is_charged = "Charged 💎" in status_flag
+                is_approved = "Approved ✅" in status_flag
+                is_error = "Error ⚠️" in status_flag
+                is_captcha = any(x in response_upper for x in ["CAPTCHA", "HCAPTCHA", "RECAPTCHA"])
+                if is_charged:
+                    charged_count += 1
+                elif is_approved:
+                    approved_count += 1
+                elif is_error:
+                    error_count += 1
+                else:
+                    declined_count += 1
+                if is_captcha:
+                    captcha_count += 1
+                if is_charged or is_approved:
+                    cc = card.split("|")[0] if "|" in card else card
+                    try:
+                        bin_data = get_bin_details(cc[:6])
+                        if bin_data:
+                            bin_info = f"{bin_data.get('vendor', 'N/A')} - {bin_data.get('type', 'N/A')} - {bin_data.get('level', 'N/A')}"
+                            bank = bin_data.get('bank', 'N/A')
+                            country = f"{bin_data.get('country', 'N/A')} {bin_data.get('flag', '')}"
+                        else:
+                            bin_info = bank = country = "N/A"
+                    except Exception:
                         bin_info = bank = country = "N/A"
-                except Exception:
-                    bin_info = bank = country = "N/A"
-                gateway_display = str((result or {}).get("Gateway") or gateway)
-                hit_header = "CHARGED" if is_charged else "CCN LIVE"
-                hit_message = f"""<b>[#Shopify] | {hit_header}</b> ✦
+                    gateway_display = str((result or {}).get("Gateway") or gateway)
+                    hit_header = "CHARGED" if is_charged else "CCN LIVE"
+                    hit_message = f"""<b>[#Shopify] | {hit_header}</b> ✦
 ━━━━━━━━━━━━━━━
 <b>[•] Card:</b> <code>{card}</code>
 <b>[•] Gateway:</b> <code>{gateway_display}</code>
@@ -347,31 +355,30 @@ async def tsh_handler(client: Client, m: Message):
 <b>[ﾒ] Checked By:</b> {user.mention}
 <b>[ϟ] Dev:</b> <a href="https://t.me/Chr1shtopher">Chr1shtopher</a>
 ━━━━━━━━━━━━━━━"""
+                    try:
+                        await m.reply(hit_message, parse_mode=ParseMode.HTML, disable_web_page_preview=True)
+                    except Exception:
+                        pass
+                    await _edit_progress(force=True)
+                is_last = checked_count == total_cards
+                await _edit_progress(force=is_last)
+            except Exception as e:
+                error_count += 1
                 try:
-                    await m.reply(hit_message, parse_mode=ParseMode.HTML, disable_web_page_preview=True)
-                except Exception:
-                    pass
-                await _edit_progress(force=True)
-
-            is_last = checked_count == total_cards
-            await _edit_progress(force=is_last)
-        except Exception as e:
-            error_count += 1
-            try:
-                elapsed = time.time() - start_time
-                rate = checked_count / elapsed if elapsed > 0 else 0
-                await status_msg.edit_text(
-                    f"""<pre>✦ [#TSH] | TXT Shopify Check</pre>
-━━━━━━━━━━━━━
+                    elapsed = time.time() - start_time
+                    rate = checked_count / elapsed if elapsed > 0 else 0
+                    await status_msg.edit_text(
+                        f"""<pre>✦ [#TSH] | TXT Shopify Check</pre>
+━━━━━━━━━━━━━━━
 <b>💬 Progress:</b> <code>{checked_count}/{total_cards}</code>
 <b>⚠️ Errors:</b> <code>{error_count}</code> (card err: {str(e)[:25]})
 <b>⏱️ Time:</b> <code>{elapsed:.1f}s</code> · <code>{rate:.1f} cc/s</code>
 <b>[ﾒ] By:</b> {user.mention}""",
-                    parse_mode=ParseMode.HTML,
-                )
-                last_progress_edit = time.time()
-            except Exception:
-                pass
+                        parse_mode=ParseMode.HTML,
+                    )
+                    last_progress_edit = time.time()
+                except Exception:
+                    pass
 
     total_time = time.time() - start_time
     current_time = datetime.now().strftime("%I:%M %p")
@@ -385,6 +392,7 @@ async def tsh_handler(client: Client, m: Message):
 ❌ <b>Declined</b>    : <code>{declined_count}</code>
 ⚠️ <b>Errors</b>      : <code>{error_count}</code>
 ⚠️ <b>CAPTCHA</b>     : <code>{captcha_count}</code>
+🔄 <b>Rotations</b>   : <code>{total_retries}</code>
 ━━━━━━━━━━━━━━━
 ⏱️ <b>Time</b> : <code>{total_time:.1f}s</code> · <code>{((checked_count / total_time) if total_time > 0 else 0):.1f} cc/s</code>
 👤 <b>Checked By</b> : {user.mention}

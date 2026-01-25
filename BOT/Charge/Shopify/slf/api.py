@@ -484,19 +484,28 @@ async def autoshopify(url, card, session, proxy=None):
             'auto_redirect': 'false',
         }
 
-        request = await session.get(checkout_url, headers=headers, params=params, follow_redirects=True, timeout=20)
-
-        checkout_sc = getattr(request, "status_code", 0)
-        checkout_text = request.text if request.text else ""
-        checkout_lower = checkout_text.lower()
-
-        if checkout_sc != 200:
+        request = None
+        checkout_sc = 0
+        checkout_text = ""
+        for _checkout_attempt in range(3):
+            req = await session.get(checkout_url, headers=headers, params=params, follow_redirects=True, timeout=20)
+            checkout_sc = getattr(req, "status_code", 0)
+            checkout_text = req.text if req.text else ""
+            if checkout_sc == 200:
+                request = req
+                break
+            if checkout_sc in (429, 502, 503, 504) and _checkout_attempt < 2:
+                await asyncio.sleep(1.5 + _checkout_attempt * 1.0)
+                continue
+            break
+        if request is None and checkout_sc != 200:
             output.update({
                 "Response": f"CHECKOUT_HTTP_{checkout_sc}",
                 "Status": False,
             })
             _log_output_to_terminal(output)
             return output
+        checkout_lower = checkout_text.lower()
 
         if checkout_text.strip().startswith("<"):
             if any(x in checkout_lower for x in ["captcha", "hcaptcha", "recaptcha", "challenge", "verify"]):
@@ -883,11 +892,21 @@ async def autoshopify(url, card, session, proxy=None):
             'operationName': 'Proposal',
         }
 
-        proposal1 = await session.post(f'{url}/checkouts/unstable/graphql', params=params, headers=headers, json=json_data, timeout=20)
-
-        p1_sc = getattr(proposal1, "status_code", 0)
-        p1_text = (proposal1.text or "").strip()
-        if p1_sc != 200:
+        proposal1 = None
+        p1_sc = 0
+        p1_text = ""
+        for _p1_attempt in range(3):
+            p1_req = await session.post(f'{url}/checkouts/unstable/graphql', params=params, headers=headers, json=json_data, timeout=25)
+            p1_sc = getattr(p1_req, "status_code", 0)
+            p1_text = (p1_req.text or "").strip()
+            if p1_sc == 200:
+                proposal1 = p1_req
+                break
+            if p1_sc in (429, 502, 503, 504) and _p1_attempt < 2:
+                await asyncio.sleep(1.5 + _p1_attempt * 1.0)
+                continue
+            break
+        if proposal1 is None and p1_sc != 200:
             output.update({
                 "Response": f"NEGOTIATE_HTTP_{p1_sc}",
                 "Status": False,

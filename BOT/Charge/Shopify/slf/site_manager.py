@@ -448,7 +448,8 @@ class SiteRotator:
             "SESSION_ERROR", "SESSION_ID", "SESSION_INVALID",
             "NO_AVAILABLE_PRODUCTS", "BUILD", "NEGOTIATE", "DELIVERY_ERROR",
             "CHECKOUT_HTML", "CHECKOUT_TOKENS", "CHECKOUT_HTTP",
-            "TIMEOUT", "CONNECTION", "RATE_LIMIT", "BLOCKED", "PROXY_ERROR"
+            "TIMEOUT", "CONNECTION", "RATE_LIMIT", "BLOCKED", "PROXY_ERROR",
+            "429", "502", "503", "504",
         ]
         
         return any(keyword in response_upper for keyword in retry_keywords)

@@ -35,9 +35,9 @@ MAX_SITE_RETRIES = 5
 CHECKS_PER_SITE = 3
 # Max site changes: try up to (1 + MAX_SITE_CHANGES) sites, then stop
 MAX_SITE_CHANGES = 3
-# Delay (seconds) between attempts on same site; between site rotations
-DELAY_BETWEEN_ATTEMPTS = 2
-DELAY_BETWEEN_SITES = 1
+# Delay (seconds) between attempts on same site; between site rotations (fast + 429-proof)
+DELAY_BETWEEN_ATTEMPTS = 1
+DELAY_BETWEEN_SITES = 0.5
 # Captcha retries per attempt (TLS fingerprint rotation)
 CAPTCHA_RETRIES_PER_ATTEMPT = 3
 # Kept for /tsh mass-check display; /sh uses CHECKS_PER_SITE rotation
@@ -81,10 +81,12 @@ async def check_card_all_sites_parallel(
     user_id: str,
     fullcc: str,
     proxy,
+    progress_callback=None,
 ) -> tuple:
     """
     Site rotation for /sh: 3 checks per site, then rotate to next.
     Primary site first, then others. Valid response returns immediately.
+    progress_callback: optional async (gateway, site_idx, sites_total, site_change) -> None.
     Returns (result_dict, retry_count).
     """
     ordered = _ordered_sites_for_rotation(user_id)
@@ -112,8 +114,14 @@ async def check_card_all_sites_parallel(
             return (gate, {"Response": f"ERROR: {str(e)[:50]}", "Status": False, "Gateway": gate, "Price": "0.00", "cc": fullcc})
 
     sites_to_try = ordered[: 1 + MAX_SITE_CHANGES]
-    for site_info in sites_to_try:
+    for site_idx, site_info in enumerate(sites_to_try):
         gate = site_info.get("gateway", "Shopify")
+        site_change = site_idx > 0
+        if progress_callback:
+            try:
+                await progress_callback(gate, site_idx + 1, len(sites_to_try), site_change)
+            except Exception:
+                pass
         for attempt in range(CHECKS_PER_SITE):
             g, res = await check_one(site_info)
             gate = g
@@ -478,15 +486,29 @@ Use <code>/txturl site1.com site2.com</code> for multiple sites.""",
             )
         
         has_proxy = True
-        
-        # Show loading message with round spinner
-        site_count = rotator.get_site_count()
+
+        ordered = _ordered_sites_for_rotation(user_id)
+        sites_to_try = ordered[: 1 + MAX_SITE_CHANGES]
+        sites_total = len(sites_to_try)
+        first_gateway = sites_to_try[0].get("gateway", "Shopify") if sites_to_try else "Shopify"
+        if first_gateway == "Shopify" or not first_gateway:
+            first_gateway = "Shopify Normal"
+
+        progress = {"gateway": first_gateway, "site": 1, "sites_total": sites_total, "site_change": False}
+
+        async def on_progress(gateway: str, site_idx: int, total: int, site_change: bool):
+            g = gateway if (gateway and gateway != "Shopify" and "$" in str(gateway)) else "Shopify Normal"
+            progress["gateway"] = g
+            progress["site"] = site_idx
+            progress["sites_total"] = total
+            progress["site_change"] = site_change
+
         loading_msg = await message.reply(
             f"""<pre>◐ Checking...</pre>
 ━ ━ ━ ━ ━ ━ ━ ━ ━ ━ ━ ━
 <b>• Card:</b> <code>{fullcc}</code>
-<b>• Gate:</b> <code>Shopify</code>
-<b>• Sites:</b> <code>{site_count}</code>
+<b>• Gate:</b> <code>{progress["gateway"]}</code>
+<b>• Site:</b> <code>1/{sites_total}</code>
 <b>• Status:</b> <i>◐ Processing...</i>""",
             reply_to_message_id=message.id,
             parse_mode=ParseMode.HTML
@@ -498,12 +520,17 @@ Use <code>/txturl site1.com site2.com</code> for multiple sites.""",
             i = 0
             while True:
                 try:
+                    g = progress.get("gateway", "Shopify")
+                    s = progress.get("site", 1)
+                    t = progress.get("sites_total", 1)
+                    ch = progress.get("site_change", False)
+                    rot = " ↑ Rotated" if ch else ""
                     await loading_msg.edit(
                         f"""<pre>{spinners[i % 4]} Checking...</pre>
 ━ ━ ━ ━ ━ ━ ━ ━ ━ ━ ━ ━
 <b>• Card:</b> <code>{fullcc}</code>
-<b>• Gate:</b> <code>Shopify</code>
-<b>• Sites:</b> <code>{site_count}</code>
+<b>• Gate:</b> <code>{g}</code>
+<b>• Site:</b> <code>{s}/{t}</code>{rot}
 <b>• Status:</b> <i>{spinners[i % 4]} Processing...</i>""",
                         parse_mode=ParseMode.HTML,
                     )
@@ -524,7 +551,9 @@ Use <code>/txturl site1.com site2.com</code> for multiple sites.""",
         typing_task = asyncio.create_task(typing_loop())
 
         try:
-            result, retry_count = await check_card_all_sites_parallel(user_id, fullcc, user_proxy)
+            result, retry_count = await check_card_all_sites_parallel(
+                user_id, fullcc, user_proxy, progress_callback=on_progress
+            )
         finally:
             spinner_task.cancel()
             typing_task.cancel()
