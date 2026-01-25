@@ -4,7 +4,7 @@ WooCommerce Stripe Auth Checker
 Professional Stripe authentication checker using WooCommerce sites.
 Auto-generates credentials and processes card checks.
 
-Supports: epicalarc.com, shavercity.com.au
+Supports: shop.nomade-studio.be (primary), epicalarc.com (secondary)
 """
 
 import asyncio
@@ -318,7 +318,7 @@ async def check_stripe_wc(card: str, month: str, year: str, cvv: str, site_url: 
         month: Expiry month (1-12)
         year: Expiry year (2 or 4 digits)
         cvv: CVV code
-        site_url: Optional base URL (default: WC_SITE). Use for epicalarc or shavercity.
+        site_url: Optional base URL (default: WC_SITE). Use for epicalarc.
 
     Returns:
         Result dictionary
@@ -334,7 +334,7 @@ async def check_stripe_wc_fullcc(fullcc: str, site_url: Optional[str] = None) ->
 
     Args:
         fullcc: Card in format cc|mm|yy|cvv or cc|mm|yyyy|cvv
-        site_url: Optional gate URL (epicalarc.com or shavercity.com.au). Default: WC_SITE.
+        site_url: Optional gate URL (epicalarc.com). Default: WC_SITE.
 
     Returns:
         Result dictionary with success, response, message, card, site, etc.

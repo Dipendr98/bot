@@ -1,6 +1,6 @@
 """
 Stripe Auth (/au, /mau) gate selector.
-Stores current gate per user: epicalarc.com | shavercity.com.au
+Stores current gate per user: nomade-studio.be (primary) | epicalarc.com (secondary)
 """
 
 import json
@@ -11,11 +11,11 @@ AU_GATE_PATH = os.path.join(DATA_DIR, "au_gate.json")
 
 # Gate key -> base URL
 AU_GATES = {
+    "nomade": "https://shop.nomade-studio.be",
     "epicalarc": "https://epicalarc.com",
-    "shavercity": "https://shavercity.com.au",
 }
 
-DEFAULT_GATE = "epicalarc"
+DEFAULT_GATE = "nomade"  # Nomade is now primary
 
 
 def _ensure_data_dir():
@@ -64,17 +64,17 @@ def get_au_gate_url(user_id: str) -> str:
 
 
 def toggle_au_gate(user_id: str) -> str:
-    """Switch epicalarc <-> shavercity. Returns new gate key."""
+    """Switch nomade <-> epicalarc. Returns new gate key."""
     current = get_au_gate(user_id)
-    new = "shavercity" if current == "epicalarc" else "epicalarc"
+    new = "epicalarc" if current == "nomade" else "nomade"
     set_au_gate(user_id, new)
     return new
 
 
 def gate_display_name(gate_key: str) -> str:
     """Short label for UI."""
+    if gate_key == "nomade":
+        return "nomade-studio.be"
     if gate_key == "epicalarc":
         return "epicalarc.com"
-    if gate_key == "shavercity":
-        return "shavercity.com.au"
     return gate_key

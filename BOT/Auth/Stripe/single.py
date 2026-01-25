@@ -22,6 +22,7 @@ from BOT.gc.credit import deduct_credit, has_credits
 
 # Import the WooCommerce Stripe checker and gate selector
 from BOT.Auth.StripeAuth.wc_checker import check_stripe_wc_fullcc, determine_status
+from BOT.Auth.StripeAuth.nomade_checker import check_nomade_stripe, determine_nomade_status
 from BOT.Auth.StripeAuth.au_gate import (
     get_au_gate,
     get_au_gate_url,
@@ -56,8 +57,12 @@ def format_response(fullcc: str, result: dict, user_info: dict, time_taken: floa
     message = result.get("message", "Unknown")
     site = result.get("site", "Unknown")
     
-    # Determine status and header
-    status = determine_status(result)
+    # Determine status and header (support both checkers)
+    site = result.get("site", "")
+    if "nomade" in site.lower():
+        status = determine_nomade_status(result)
+    else:
+        status = determine_status(result)
     
     if status == "APPROVED":
         header = "APPROVED"
@@ -237,8 +242,20 @@ async def handle_au_command(client: Client, message: Message):
             parse_mode=ParseMode.HTML
         )
 
-        # Check card using WooCommerce Stripe checker (current gate)
-        result = await check_stripe_wc_fullcc(fullcc, site_url=site_url)
+        # Check card using appropriate checker based on gate
+        if gate_key == "nomade":
+            # Use fast Nomade checker
+            result = await check_nomade_stripe(fullcc)
+            # Convert nomade result format to match expected format
+            if result.get("response") == "APPROVED":
+                result["response"] = "APPROVED"
+            elif result.get("response") == "CCN LIVE" or result.get("response") == "CCN_LIVE":
+                result["response"] = "CCN LIVE"
+            else:
+                result["response"] = result.get("response", "DECLINED")
+        else:
+            # Use WooCommerce checker for epicalarc
+            result = await check_stripe_wc_fullcc(fullcc, site_url=site_url)
 
         time_taken = round(time() - start_time, 2)
 
@@ -284,7 +301,7 @@ async def handle_au_command(client: Client, message: Message):
 
 @Client.on_callback_query(filters.regex("^au_change_gate$"))
 async def au_change_gate_callback(client: Client, cq: CallbackQuery):
-    """Toggle Stripe Auth gate (epicalarc <-> shavercity) for /au and /mau."""
+    """Toggle Stripe Auth gate (nomade <-> epicalarc) for /au and /mau."""
     if not cq.from_user:
         return
     user_id = str(cq.from_user.id)
@@ -296,6 +313,8 @@ async def au_change_gate_callback(client: Client, cq: CallbackQuery):
             f"""<pre>Stripe Auth Gate Changed</pre>
 ━ ━ ━ ━ ━ ━ ━ ━ ━ ━ ━ ━
 <b>• Current gate:</b> <code>{label}</code>
+<b>• Primary:</b> <code>nomade-studio.be</code> (Fast ⚡)
+<b>• Secondary:</b> <code>epicalarc.com</code>
 <b>• Use</b> <code>/au</code> <b>or</b> <code>/mau</code> <b>to check.</b>
 ━ ━ ━ ━ ━ ━ ━ ━ ━ ━ ━ ━""",
             reply_markup=InlineKeyboardMarkup([

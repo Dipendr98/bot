@@ -20,6 +20,7 @@ from BOT.gc.credit import deduct_credit_bulk
 
 # Import the WooCommerce Stripe checker and gate selector
 from BOT.Auth.StripeAuth.wc_checker import check_stripe_wc_fullcc, determine_status
+from BOT.Auth.StripeAuth.nomade_checker import check_nomade_stripe, determine_nomade_status
 from BOT.Auth.StripeAuth.au_gate import get_au_gate, get_au_gate_url, gate_display_name
 
 # Try to import BIN lookup
@@ -174,11 +175,22 @@ async def handle_mau_command(client, message):
                 parts[2] = "20" + parts[2]
                 card = "|".join(parts)
             
-            # Check card using WooCommerce Stripe checker (current gate)
-            result = await check_stripe_wc_fullcc(card, site_url=site_url)
-            
-            # Get status from result
-            status = determine_status(result)
+            # Check card using appropriate checker based on gate
+            if gate_key == "nomade":
+                # Use fast Nomade checker
+                result = await check_nomade_stripe(card)
+                # Convert nomade result format
+                if result.get("response") == "APPROVED":
+                    result["response"] = "APPROVED"
+                elif result.get("response") == "CCN LIVE" or result.get("response") == "CCN_LIVE":
+                    result["response"] = "CCN LIVE"
+                else:
+                    result["response"] = result.get("response", "DECLINED")
+                status = determine_nomade_status(result)
+            else:
+                # Use WooCommerce checker for epicalarc
+                result = await check_stripe_wc_fullcc(card, site_url=site_url)
+                status = determine_status(result)
             response = result.get("response", "UNKNOWN")
             message_text = result.get("message", "Unknown")
             site = result.get("site", "Unknown")
