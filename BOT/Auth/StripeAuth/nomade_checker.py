@@ -17,8 +17,8 @@ from bs4 import BeautifulSoup
 # Nomade Studio site
 NOMADE_SITE = "https://shop.nomade-studio.be"
 
-# Fast timeout for high-speed operation (optimized for speed)
-REQUEST_TIMEOUT = 40
+# Fast timeout for high-speed operation (optimized for speed - silver bullet)
+REQUEST_TIMEOUT = 35  # Reduced for maximum speed
 
 # Stripe API key (extracted from site)
 STRIPE_PK = "pk_live_51Qk6dOGBzcph7eoyEfpy73SXBxq1FIoqNqxYbyUeSqJnBggfP60heFwXiky38CvEYcdosyIsNQJ7nAY5oRAUYFP3004LE7Hv0J"

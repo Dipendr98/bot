@@ -313,7 +313,7 @@ async def mslf_handler(client, message):
 <b>[⚬] Gateway:</b> <code>{gateway}</code>
 <b>[⚬] Cards:</b> <code>{card_count}</code>
 <b>[⚬] Sites:</b> <code>{site_count}</code>
-<b>[⚬] Mode:</b> <code>Sequential</code>
+<b>[⚬] Mode:</b> <code>Fast Sequential</code>
 <b>[⚬] Status:</b> <code>◐ Processing...</code>
 ━━━━━━━━━━━━━
 <b>[⚬] Checked By:</b> {checked_by} [<code>{plan} {badge}</code>]""",
@@ -436,12 +436,84 @@ async def mslf_handler(client, message):
                 pass
 
         async def check_one(card):
+            """Professional check with minimal rotations - optimized for speed."""
             try:
-                result, retries = await check_card_all_sites_parallel(user_id, card, proxy)
-                return card, str((result or {}).get("Response", "UNKNOWN")), retries, (result or {})
+                # Get fresh proxy for each card (rotation)
+                current_proxy = get_rotating_proxy(str(user_id))
+                if not current_proxy:
+                    return card, "NO_PROXY", 0, None
+                
+                # Get active sites
+                active_sites = [s for s in user_sites if s.get("active", True)]
+                if not active_sites:
+                    return card, "NO_ACTIVE_SITES", 0, None
+                
+                # Smart site selection: try primary first, then random if needed
+                rotator = SiteRotator(user_id, max_retries=2)  # Minimal retries for speed
+                retry_count = 0
+                last_response = "UNKNOWN"
+                last_result = None
+                
+                while retry_count < 2:  # Max 2 site attempts for speed
+                    current_site = rotator.get_current_site()
+                    if not current_site:
+                        break
+                    
+                    site_url = current_site.get("url")
+                    
+                    try:
+                        # Rotate proxy on retry
+                        if retry_count > 0:
+                            current_proxy = get_rotating_proxy(str(user_id))
+                        
+                        # Professional check with captcha bypass
+                        async with TLSAsyncSession(timeout_seconds=60, proxy=current_proxy) as session:
+                            result = await autoshopify_with_captcha_retry(
+                                site_url,
+                                card,
+                                session,
+                                max_captcha_retries=2,  # Reduced for speed
+                                proxy=current_proxy
+                            )
+                        
+                        response = str(result.get("Response", "UNKNOWN"))
+                        last_response = response
+                        last_result = result
+                        
+                        # Check if real response
+                        if rotator.is_real_response(response):
+                            rotator.mark_current_success()
+                            return card, response, retry_count, result
+                        
+                        # Check if should retry
+                        if rotator.should_retry(response) and retry_count < 1:
+                            retry_count += 1
+                            rotator.mark_current_failed()
+                            next_site = rotator.get_next_site()
+                            if not next_site:
+                                break
+                            await asyncio.sleep(0.1)  # Minimal delay
+                            continue
+                        else:
+                            return card, response, retry_count, result
+                            
+                    except Exception as e:
+                        last_response = f"ERROR: {str(e)[:30]}"
+                        retry_count += 1
+                        next_site = rotator.get_next_site()
+                        if not next_site:
+                            break
+                        await asyncio.sleep(0.1)
+                
+                # Return last result or error
+                if last_result:
+                    return card, str(last_result.get("Response", last_response)), retry_count, last_result
+                return card, last_response, retry_count, None
+                
             except Exception as e:
                 return card, f"ERROR: {str(e)[:40]}", 0, None
 
+        # Process cards with minimal delay
         for idx, card in enumerate(all_cards):
             if msh_stop_requested.get(user_id):
                 stopped = True
@@ -517,8 +589,9 @@ async def mslf_handler(client, message):
             is_last = processed_count == total_cc
             await _edit_progress(force=is_last)
 
+            # Minimal delay for speed - only if not last card
             if not stopped and idx + 1 < total_cc:
-                await asyncio.sleep(MASS_DELAY_BETWEEN_CARDS)
+                await asyncio.sleep(0.1)  # Reduced delay for faster processing
 
         end_time = time.time()
         timetaken = round(end_time - start_time, 2)

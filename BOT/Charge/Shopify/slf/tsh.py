@@ -30,21 +30,23 @@ tsh_stop_requested: dict[str, bool] = {}
 # --- Adaptive Rate Limiter Class ---
 
 class RateLimitedChecker:
-    def __init__(self, concurrency=20, requests_per_second=15):
-        """Optimized for maximum speed - silver bullet performance."""
+    def __init__(self, concurrency=20, requests_per_second=18):
+        """Silver bullet performance - 20 threads, optimized rate limiting."""
         self.sem = asyncio.Semaphore(concurrency)
-        self.requests_per_second = requests_per_second  # Increased for faster processing
+        self.requests_per_second = requests_per_second  # Increased for maximum speed
         self.request_times = deque()
         self.lock = asyncio.Lock()
         self.consecutive_429s = 0
-        self.current_delay = 0.05  # Reduced initial delay for faster start
+        self.current_delay = 0.02  # Ultra-fast initial delay
     
     async def wait_for_rate_limit(self):
-        """Token bucket enforcement"""
+        """Token bucket enforcement - optimized for speed"""
         async with self.lock:
             now = time.monotonic()
+            # Clean old entries
             while self.request_times and now - self.request_times[0] > 1.0:
                 self.request_times.popleft()
+            # Enforce rate limit
             if len(self.request_times) >= self.requests_per_second:
                 sleep_time = 1.0 - (now - self.request_times[0])
                 if sleep_time > 0: 
@@ -52,38 +54,125 @@ class RateLimitedChecker:
             self.request_times.append(time.monotonic())
 
     async def adaptive_delay(self):
-        """Dynamic sleep based on health - optimized for speed"""
-        jitter = random.uniform(0.02, 0.08)  # Reduced jitter for faster processing
+        """Dynamic sleep - silver bullet speed"""
+        jitter = random.uniform(0.01, 0.05)  # Minimal jitter for maximum speed
         await asyncio.sleep(self.current_delay + jitter)
     
     def on_success(self):
         self.consecutive_429s = 0
-        self.current_delay = max(0.03, self.current_delay * 0.92)  # Faster speed up
+        self.current_delay = max(0.01, self.current_delay * 0.90)  # Aggressive speed up
     
     def on_429(self):
         self.consecutive_429s += 1
-        self.current_delay = min(5.0, self.current_delay * 2.0)  # Slow down
+        self.current_delay = min(3.0, self.current_delay * 1.8)  # Moderate slowdown
 
     async def safe_check(self, user_id, card):
+        """
+        Professional card check with:
+        - Site rotation with retries
+        - Proxy rotation per request
+        - Captcha bypass logic
+        - Silver bullet speed
+        """
         async with self.sem:
             try:
                 await self.wait_for_rate_limit()
                 await self.adaptive_delay()
                 
-                # Get a fresh proxy for this request
+                # Get fresh proxy for this request (rotation)
                 proxy = get_rotating_proxy(user_id)
                 
-                # ACTUAL CHECK CALL
-                result, retries = await check_card_all_sites_parallel(user_id, card, proxy)
+                # Get user sites
+                sites = get_user_sites(user_id)
+                if not sites:
+                    return card, {"Response": "NO_SITES", "Status": False}, 0
                 
-                # Analyze result for Rate Limiting
-                resp_str = str((result or {}).get("Response", "")).upper()
-                if "429" in resp_str or "RATE LIMIT" in resp_str or "PROXY" in resp_str:
-                    self.on_429()
-                else:
-                    self.on_success()
+                # Filter active sites
+                active_sites = [s for s in sites if s.get("active", True)]
+                if not active_sites:
+                    return card, {"Response": "NO_ACTIVE_SITES", "Status": False}, 0
+                
+                # Site rotation with retries (professional logic)
+                rotator = SiteRotator(user_id, max_retries=MAX_SITE_RETRIES)
+                retry_count = 0
+                last_response = "UNKNOWN"
+                last_result = None
+                
+                while retry_count < MAX_SITE_RETRIES:
+                    current_site = rotator.get_current_site()
+                    if not current_site:
+                        break
                     
-                return card, result, retries
+                    site_url = current_site.get("url")
+                    
+                    try:
+                        # Rotate proxy for each retry attempt
+                        if retry_count > 0:
+                            proxy = get_rotating_proxy(user_id)
+                        
+                        # Professional check with captcha bypass
+                        async with TLSAsyncSession(timeout_seconds=60, proxy=proxy) as session:
+                            # Use captcha-aware wrapper with 3 internal retries
+                            result = await autoshopify_with_captcha_retry(
+                                site_url, 
+                                card, 
+                                session, 
+                                max_captcha_retries=3,
+                                proxy=proxy
+                            )
+                        
+                        response = str(result.get("Response", "UNKNOWN"))
+                        last_response = response
+                        last_result = result
+                        
+                        # Check if this is a real response
+                        if rotator.is_real_response(response):
+                            rotator.mark_current_success()
+                            # Analyze for rate limiting
+                            resp_str = response.upper()
+                            if "429" in resp_str or "RATE LIMIT" in resp_str:
+                                self.on_429()
+                            else:
+                                self.on_success()
+                            return card, result, retry_count
+                        
+                        # Check if we should retry with another site
+                        if rotator.should_retry(response):
+                            retry_count += 1
+                            rotator.mark_current_failed()
+                            next_site = rotator.get_next_site()
+                            if not next_site:
+                                break
+                            # Minimal delay between site rotations
+                            await asyncio.sleep(0.1)
+                            continue
+                        else:
+                            # Real response but not a hit - return it
+                            resp_str = response.upper()
+                            if "429" in resp_str or "RATE LIMIT" in resp_str:
+                                self.on_429()
+                            else:
+                                self.on_success()
+                            return card, result, retry_count
+                            
+                    except Exception as e:
+                        last_response = f"ERROR: {str(e)[:30]}"
+                        retry_count += 1
+                        next_site = rotator.get_next_site()
+                        if not next_site:
+                            break
+                        await asyncio.sleep(0.1)
+                
+                # All retries exhausted
+                if last_result:
+                    resp_str = str(last_result.get("Response", "")).upper()
+                    if "429" in resp_str or "RATE LIMIT" in resp_str:
+                        self.on_429()
+                    else:
+                        self.on_success()
+                    return card, last_result, retry_count
+                
+                return card, {"Response": last_response, "Status": False}, retry_count
                 
             except Exception as e:
                 return card, {"Response": f"ERROR: {e}", "Status": False}, 0
@@ -370,9 +459,8 @@ async def tsh_handler(client: Client, m: Message):
         except Exception:
             pass
 
-    # Initialize Checker with 20 threads for professional performance
-    # Initialize Checker with 20 threads for professional performance - optimized for speed
-    checker = RateLimitedChecker(concurrency=20, requests_per_second=15)
+    # Initialize Checker with 20 threads - Silver Bullet Performance
+    checker = RateLimitedChecker(concurrency=20, requests_per_second=18)
     
     # Create Tasks
     tasks = [checker.safe_check(user_id, card) for card in cards]
