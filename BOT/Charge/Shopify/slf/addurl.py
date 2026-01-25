@@ -46,8 +46,8 @@ from BOT.Charge.Shopify.slf.site_manager import (
 )
 
 # Timeout configurations
-FAST_TIMEOUT = 18
-STANDARD_TIMEOUT = 35
+FAST_TIMEOUT = 16
+STANDARD_TIMEOUT = 28
 MAX_RETRIES = 3
 FETCH_RETRIES = 2
 
@@ -379,7 +379,7 @@ async def validate_sites_batch(urls: List[str], user_proxy: Optional[str] = None
             
             # Small delay between batches
             if i + batch_size < len(urls):
-                await asyncio.sleep(0.3)
+                await asyncio.sleep(0.15)
     
     return results
 
@@ -404,7 +404,7 @@ async def test_site_with_card(url: str, proxy: Optional[str] = None) -> tuple[bo
         px = str(proxy).strip()
         proxy_url = px if px.startswith(("http://", "https://")) else f"http://{px}"
     try:
-        async with TLSAsyncSession(timeout_seconds=90, proxy=proxy_url) as session:
+        async with TLSAsyncSession(timeout_seconds=75, proxy=proxy_url) as session:
             res = await autoshopify_with_captcha_retry(
                 url, TEST_CARD, session, max_captcha_retries=2, proxy=proxy_url
             )
@@ -563,7 +563,7 @@ async def add_site_handler(client: Client, message: Message):
                 v["price"] = pr
                 v["formatted_price"] = f"${pr}"
                 sites_with_receipt.append(v)
-            await asyncio.sleep(0.5)
+            await asyncio.sleep(0.2)
         if not sites_with_receipt:
             time_taken = round(time.time() - start_time, 2)
             return await status_msg.edit_text(

@@ -31,13 +31,12 @@ except ImportError:
 
 # Maximum retries with site rotation
 MAX_SITE_RETRIES = 5
-# Checks per site before rotating to next (professional site rotation)
+# Exactly 3 attempts per site before rotating; rotate up to 3 times (4 sites total)
 CHECKS_PER_SITE = 3
-# Max site changes: try up to (1 + MAX_SITE_CHANGES) sites, then stop
 MAX_SITE_CHANGES = 3
 # Delay (seconds) between attempts on same site; between site rotations (fast + 429-proof)
-DELAY_BETWEEN_ATTEMPTS = 1
-DELAY_BETWEEN_SITES = 0.5
+DELAY_BETWEEN_ATTEMPTS = 0.25
+DELAY_BETWEEN_SITES = 0.15
 # Captcha retries per attempt (TLS fingerprint rotation)
 CAPTCHA_RETRIES_PER_ATTEMPT = 3
 # Kept for /tsh mass-check display; /sh uses CHECKS_PER_SITE rotation
@@ -85,8 +84,10 @@ async def check_card_all_sites_parallel(
     progress_callback=None,
 ) -> tuple:
     """
-    Site rotation for /sh: 3 checks per site, then rotate to next.
-    Primary site first, then others. Valid response returns immediately.
+    /sh site rotation: exactly 3 attempts per site, then rotate to next.
+    Rotate up to 3 times (4 sites total: primary + 3 rotations).
+    Return immediately on good real response (charged/CCN/declined). Otherwise
+    exhaust 3 attempts per site, then switch if more sites available.
     progress_callback: optional async (gateway, site_idx, sites_total, site_change) -> None.
     Returns (result_dict, retry_count).
     """
@@ -101,12 +102,13 @@ async def check_card_all_sites_parallel(
     retry_count = 0
     last_res = None
     last_gate = "Unknown"
+    sites_to_try = ordered[: 1 + MAX_SITE_CHANGES]
 
     async def check_one(site_info: dict):
         url = site_info.get("url", "")
         gate = site_info.get("gateway", "Shopify")
         try:
-            async with TLSAsyncSession(timeout_seconds=120, proxy=proxy) as session:
+            async with TLSAsyncSession(timeout_seconds=90, proxy=proxy) as session:
                 res = await autoshopify_with_captcha_retry(
                     url, fullcc, session, max_captcha_retries=CAPTCHA_RETRIES_PER_ATTEMPT, proxy=proxy
                 )
@@ -114,7 +116,6 @@ async def check_card_all_sites_parallel(
         except Exception as e:
             return (gate, {"Response": f"ERROR: {str(e)[:50]}", "Status": False, "Gateway": gate, "Price": "0.00", "cc": fullcc})
 
-    sites_to_try = ordered[: 1 + MAX_SITE_CHANGES]
     for site_idx, site_info in enumerate(sites_to_try):
         gate = site_info.get("gateway", "Shopify")
         site_change = site_idx > 0
@@ -123,6 +124,7 @@ async def check_card_all_sites_parallel(
                 await progress_callback(gate, site_idx + 1, len(sites_to_try), site_change)
             except Exception:
                 pass
+
         for attempt in range(CHECKS_PER_SITE):
             g, res = await check_one(site_info)
             gate = g
@@ -136,14 +138,12 @@ async def check_card_all_sites_parallel(
                 res["Gateway"] = gate
                 return (res, retry_count)
 
-            if not rotator.should_retry(resp):
-                break
-
-            retry_count += 1
             if attempt < CHECKS_PER_SITE - 1:
+                retry_count += 1
                 await asyncio.sleep(DELAY_BETWEEN_ATTEMPTS)
 
-        await asyncio.sleep(DELAY_BETWEEN_SITES)
+        if site_idx < len(sites_to_try) - 1:
+            await asyncio.sleep(DELAY_BETWEEN_SITES)
 
     if last_res is not None:
         last_res["Gateway"] = last_gate
@@ -521,29 +521,34 @@ Use <code>/txturl site1.com site2.com</code> for multiple sites.""",
         )
 
         spinners = ("◐", "◓", "◑", "◒")
+        SPINNER_INTERVAL = 3.5
 
         async def spinner_loop():
             i = 0
+            last_edit = (None, None, None, None)
             while True:
                 try:
                     g = progress.get("gateway", "Shopify")
                     s = progress.get("site", 1)
                     t = progress.get("sites_total", 1)
                     ch = progress.get("site_change", False)
-                    rot = " ↑ Rotated" if ch else ""
-                    await loading_msg.edit(
-                        f"""<pre>{spinners[i % 4]} Checking...</pre>
+                    key = (g, s, t, ch)
+                    if key != last_edit:
+                        last_edit = key
+                        rot = " ↑ Rotated" if ch else ""
+                        await loading_msg.edit(
+                            f"""<pre>{spinners[i % 4]} Checking...</pre>
 ━ ━ ━ ━ ━ ━ ━ ━ ━ ━ ━ ━
 <b>• Card:</b> <code>{fullcc}</code>
 <b>• Gate:</b> <code>{g}</code>
 <b>• Site:</b> <code>{s}/{t}</code>{rot}
 <b>• Status:</b> <i>{spinners[i % 4]} Processing...</i>""",
-                        parse_mode=ParseMode.HTML,
-                    )
+                            parse_mode=ParseMode.HTML,
+                        )
                 except Exception:
                     pass
                 i += 1
-                await asyncio.sleep(1.2)
+                await asyncio.sleep(SPINNER_INTERVAL)
 
         async def typing_loop():
             while True:

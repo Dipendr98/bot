@@ -153,7 +153,7 @@ async def check_card_with_rotation(user_id: str, card: str, proxy: str = None) -
         last_site = site_url
         
         try:
-            async with TLSAsyncSession(timeout_seconds=90, proxy=proxy) as session:
+            async with TLSAsyncSession(timeout_seconds=75, proxy=proxy) as session:
                 # Use captcha-aware wrapper with 3 internal retries
                 result = await autoshopify_with_captcha_retry(site_url, card, session, max_captcha_retries=3)
             
@@ -172,7 +172,7 @@ async def check_card_with_rotation(user_id: str, card: str, proxy: str = None) -
                 next_site = rotator.get_next_site()
                 if not next_site:
                     break
-                await asyncio.sleep(0.5)
+                await asyncio.sleep(0.2)
                 continue
             else:
                 return response, site_url, retry_count

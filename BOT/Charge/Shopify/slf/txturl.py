@@ -47,8 +47,8 @@ from BOT.Charge.Shopify.slf.site_manager import (
 TXT_SITES_PATH = "DATA/txtsite.json"
 
 # Timeouts
-FAST_TIMEOUT = 20
-STANDARD_TIMEOUT = 40
+FAST_TIMEOUT = 16
+STANDARD_TIMEOUT = 30
 FETCH_RETRIES = 2
 
 # Currency symbols
@@ -354,9 +354,8 @@ async def validate_sites_batch(
                 valid_so_far = len([r for r in results if r.get("valid")])
                 await progress_callback(processed, total, valid_so_far)
             
-            # Small delay between batches
             if i + batch_size < len(urls):
-                await asyncio.sleep(0.3)
+                await asyncio.sleep(0.15)
     
     return results
 
@@ -590,7 +589,7 @@ Use <code>/txtls</code> to view your sites.""",
                 v["price"] = pr
                 v["formatted_price"] = f"${pr}"
                 sites_with_receipt.append(v)
-            await asyncio.sleep(0.5)
+            await asyncio.sleep(0.2)
         if not sites_with_receipt:
             time_taken = round(time.time() - start_time, 2)
             return await wait_msg.edit_text(
