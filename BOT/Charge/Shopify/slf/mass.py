@@ -9,6 +9,7 @@ import asyncio
 import math
 from datetime import datetime
 from pyrogram import Client, filters
+from pyrogram.types import InlineKeyboardMarkup, InlineKeyboardButton
 from pyrogram.enums import ChatType, ParseMode
 from BOT.Charge.Shopify.slf.api import autoshopify, autoshopify_with_captcha_retry
 from BOT.Charge.Shopify.tls_session import TLSAsyncSession
@@ -31,6 +32,7 @@ except ImportError:
         return None
 
 user_locks = {}
+msh_stop_requested: dict[str, bool] = {}
 MAX_SITE_RETRIES = 3
 SPINNERS = ("◐", "◓", "◑", "◒")
 
@@ -300,6 +302,11 @@ async def mslf_handler(client, message):
 
         checked_by = f"<a href='tg://user?id={message.from_user.id}'>{message.from_user.first_name}</a>"
 
+        msh_stop_requested[user_id] = False
+        stop_kb = InlineKeyboardMarkup([
+            [InlineKeyboardButton("⏹ Stop Checking", callback_data=f"msh_stop_{user_id}")],
+        ])
+
         loader_msg = await message.reply(
             f"""<pre>◐ [#MSH] | Mass Shopify Check</pre>
 ━━━━━━━━━━━━━━━
@@ -308,10 +315,11 @@ async def mslf_handler(client, message):
 <b>[⚬] Sites:</b> <code>{site_count}</code>
 <b>[⚬] Mode:</b> <code>Sequential</code>
 <b>[⚬] Status:</b> <code>◐ Processing...</code>
-━━━━━━━━━━━━━━━
+━━━━━━━━━━━━━
 <b>[⚬] Checked By:</b> {checked_by} [<code>{plan} {badge}</code>]""",
             reply_to_message_id=message.id,
-            parse_mode=ParseMode.HTML
+            parse_mode=ParseMode.HTML,
+            reply_markup=stop_kb,
         )
 
         # start_time = time.time()
@@ -396,6 +404,7 @@ async def mslf_handler(client, message):
         error_count = 0
         processed_count = 0
         total_retries = 0
+        stopped = False
 
         async def _edit_progress(force: bool = False):
             nonlocal last_progress_edit
@@ -420,6 +429,7 @@ async def mslf_handler(client, message):
 <b>👤 Checked By:</b> {checked_by} [<code>{plan} {badge}</code>]""",
                     parse_mode=ParseMode.HTML,
                     disable_web_page_preview=True,
+                    reply_markup=stop_kb,
                 )
                 last_progress_edit = now
             except Exception:
@@ -433,6 +443,9 @@ async def mslf_handler(client, message):
                 return card, f"ERROR: {str(e)[:40]}", 0, None
 
         for idx, card in enumerate(all_cards):
+            if msh_stop_requested.get(user_id):
+                stopped = True
+                break
             try:
                 o = await check_one(card)
             except Exception as e:
@@ -504,22 +517,23 @@ async def mslf_handler(client, message):
             is_last = processed_count == total_cc
             await _edit_progress(force=is_last)
 
-            if idx + 1 < total_cc:
+            if not stopped and idx + 1 < total_cc:
                 await asyncio.sleep(MASS_DELAY_BETWEEN_CARDS)
 
         end_time = time.time()
         timetaken = round(end_time - start_time, 2)
         rate_final = (processed_count / timetaken) if timetaken > 0 else 0
 
-        # Deduct credits after processing
+        # Deduct credits: only for actually checked cards when stopped
         if user_data["plan"].get("credits") != "∞":
             loop = asyncio.get_event_loop()
-            await loop.run_in_executor(None, deduct_credit_bulk, user_id, len(all_cards))
+            count_to_deduct = processed_count if stopped else len(all_cards)
+            await loop.run_in_executor(None, deduct_credit_bulk, user_id, count_to_deduct)
 
         # Final completion response with statistics
         current_time = datetime.now().strftime("%I:%M %p")
-
-        completion_message = f"""<pre>✦ CC Check Completed</pre>
+        header = "<pre>⏹ Stopped by user</pre>" if stopped else "<pre>✦ CC Check Completed</pre>"
+        completion_message = f"""{header}
 ━━━━━━━━━━━━━━━
 🟢 <b>Total CC</b>     : <code>{total_cc}</code>
 💬 <b>Progress</b>    : <code>{processed_count}/{total_cc}</code>
@@ -536,7 +550,12 @@ async def mslf_handler(client, message):
 ━━━━━━━━━━━━━━━"""
 
         try:
-            await loader_msg.edit(completion_message, parse_mode=ParseMode.HTML, disable_web_page_preview=True)
+            await loader_msg.edit(
+                completion_message,
+                parse_mode=ParseMode.HTML,
+                disable_web_page_preview=True,
+                reply_markup=None,
+            )
         except Exception:
             pass
 
@@ -545,6 +564,33 @@ async def mslf_handler(client, message):
 
     finally:
         user_locks.pop(user_id, None)
+
+
+@Client.on_callback_query(filters.regex(r"^msh_stop_(\d+)$"))
+async def msh_stop_callback(client, cq):
+    """Stop a running /msh check. Only the user who started it can stop."""
+    try:
+        if not cq.from_user:
+            await cq.answer("Invalid request.", show_alert=True)
+            return
+        uid = cq.matches[0].group(1) if cq.matches else None
+        if not uid or str(cq.from_user.id) != uid:
+            await cq.answer("You can only stop your own check.", show_alert=True)
+            return
+        msh_stop_requested[uid] = True
+        try:
+            await cq.message.edit_text(
+                "<pre>⏹ Stopping... Please wait.</pre>\n\n"
+                "━━━━━━━━━━━━━━━\n"
+                "The check will stop after the current card finishes.",
+                parse_mode=ParseMode.HTML,
+                reply_markup=None,
+            )
+        except Exception:
+            pass
+        await cq.answer("Stop requested. Stopping after current card…")
+    except Exception:
+        await cq.answer("Could not process.", show_alert=True)
 
 
 # import re

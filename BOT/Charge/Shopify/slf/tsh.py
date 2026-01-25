@@ -12,7 +12,7 @@ import time
 from datetime import datetime
 
 from pyrogram import Client, filters
-from pyrogram.types import Message
+from pyrogram.types import Message, InlineKeyboardMarkup, InlineKeyboardButton
 from pyrogram.enums import ParseMode
 from BOT.Charge.Shopify.slf.api import autoshopify, autoshopify_with_captcha_retry
 from BOT.Charge.Shopify.tls_session import TLSAsyncSession
@@ -26,6 +26,7 @@ from BOT.tools.proxy import get_proxy
 from BOT.helper.start import load_users
 
 SPINNERS = ("◐", "◓", "◑", "◒")
+tsh_stop_requested: dict[str, bool] = {}
 
 # Try to import BIN lookup
 try:
@@ -251,7 +252,12 @@ async def tsh_handler(client: Client, m: Message):
     site_count = len(user_sites)
     gateway = user_sites[0].get("gateway", "Shopify") if user_sites else "Shopify"
 
-    # Send preparing message with loading spinner
+    tsh_stop_requested[user_id] = False
+    stop_kb = InlineKeyboardMarkup([
+        [InlineKeyboardButton("⏹ Stop Checking", callback_data=f"tsh_stop_{user_id}")],
+    ])
+
+    # Send preparing message with loading spinner and stop button
     status_msg = await m.reply(
         f"""<pre>◐ [#TSH] | TXT Shopify Check</pre>
 ━━━━━━━━━━━━━
@@ -261,6 +267,7 @@ async def tsh_handler(client: Client, m: Message):
 ━━━━━━━━━━━━━
 <b>[ﾒ] Checked By:</b> {user.mention}""",
         parse_mode=ParseMode.HTML,
+        reply_markup=stop_kb,
     )
 
     start_time = time.time()
@@ -273,6 +280,7 @@ async def tsh_handler(client: Client, m: Message):
     error_count = 0
     captcha_count = 0
     total_retries = 0
+    stopped = False
 
     async def _edit_progress(force: bool = False):
         nonlocal last_progress_edit
@@ -296,6 +304,7 @@ async def tsh_handler(client: Client, m: Message):
 <b>⏱️ Time:</b> <code>{elapsed:.1f}s</code> · <code>{rate:.1f} cc/s</code>
 <b>[ﾒ] By:</b> {user.mention}""",
                 parse_mode=ParseMode.HTML,
+                reply_markup=stop_kb,
             )
             last_progress_edit = now
         except Exception:
@@ -309,6 +318,9 @@ async def tsh_handler(client: Client, m: Message):
             return card, f"ERROR: {str(e)[:40]}", 0, None
 
     for idx, card in enumerate(cards):
+        if tsh_stop_requested.get(user_id):
+            stopped = True
+            break
         try:
             o = await check_one(card)
         except Exception as e:
@@ -390,18 +402,20 @@ async def tsh_handler(client: Client, m: Message):
 <b>⏱️ Time:</b> <code>{elapsed:.1f}s</code> · <code>{rate:.1f} cc/s</code>
 <b>[ﾒ] By:</b> {user.mention}""",
                     parse_mode=ParseMode.HTML,
+                    reply_markup=stop_kb,
                 )
                 last_progress_edit = time.time()
             except Exception:
                 pass
 
-        if idx + 1 < total_cards:
+        if not stopped and idx + 1 < total_cards:
             await asyncio.sleep(MASS_DELAY_BETWEEN_CARDS)
 
     total_time = time.time() - start_time
     current_time = datetime.now().strftime("%I:%M %p")
 
-    summary_text = f"""<pre>✓ CC Check Completed</pre>
+    header = "<pre>⏹ Stopped by user</pre>" if stopped else "<pre>✓ CC Check Completed</pre>"
+    summary_text = f"""{header}
 ━━━━━━━━━━━━━━━
 🟢 <b>Total CC</b>     : <code>{total_cards}</code>
 💬 <b>Progress</b>    : <code>{checked_count}/{total_cards}</code>
@@ -418,6 +432,38 @@ async def tsh_handler(client: Client, m: Message):
 ━━━━━━━━━━━━━━━"""
 
     try:
-        await status_msg.edit_text(summary_text, parse_mode=ParseMode.HTML, disable_web_page_preview=True)
+        await status_msg.edit_text(
+            summary_text,
+            parse_mode=ParseMode.HTML,
+            disable_web_page_preview=True,
+            reply_markup=None,
+        )
     except Exception:
         pass
+
+
+@Client.on_callback_query(filters.regex(r"^tsh_stop_(\d+)$"))
+async def tsh_stop_callback(client: Client, cq):
+    """Stop a running /tsh check. Only the user who started it can stop."""
+    try:
+        if not cq.from_user:
+            await cq.answer("Invalid request.", show_alert=True)
+            return
+        uid = cq.matches[0].group(1) if cq.matches else None
+        if not uid or str(cq.from_user.id) != uid:
+            await cq.answer("You can only stop your own check.", show_alert=True)
+            return
+        tsh_stop_requested[uid] = True
+        try:
+            await cq.message.edit_text(
+                "<pre>⏹ Stopping... Please wait.</pre>\n\n"
+                "━━━━━━━━━━━━━━━\n"
+                "The check will stop after the current card finishes.",
+                parse_mode=ParseMode.HTML,
+                reply_markup=None,
+            )
+        except Exception:
+            pass
+        await cq.answer("Stop requested. Stopping after current card…")
+    except Exception:
+        await cq.answer("Could not process.", show_alert=True)
