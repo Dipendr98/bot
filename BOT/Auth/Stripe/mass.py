@@ -9,6 +9,7 @@ Each thread creates a new account for maximum speed and reliability.
 
 import re
 import time
+import os
 from pyrogram import Client, filters
 from pyrogram.types import InlineKeyboardMarkup, InlineKeyboardButton
 from pyrogram.enums import ParseMode
@@ -122,32 +123,71 @@ async def handle_mau_command(client, message):
         else:
             mlimit = int(mlimit)
         
-        # Get cards
-        target_text = None
-        if message.reply_to_message and message.reply_to_message.text:
-            target_text = message.reply_to_message.text
-        elif len(message.text.split(maxsplit=1)) > 1:
-            target_text = message.text.split(maxsplit=1)[1]
+        # Get cards from reply (file or text) or command argument
+        all_cards = []
         
-        if not target_text:
+        # Check if replying to a message
+        if message.reply_to_message:
+            # Check if it's a file/document
+            if message.reply_to_message.document:
+                file_path = await message.reply_to_message.download()
+                try:
+                    with open(file_path, "r", encoding="utf-8", errors="ignore") as f:
+                        text = f.read()
+                    all_cards = extract_cards(text)
+                finally:
+                    try:
+                        if file_path and os.path.isfile(file_path):
+                            os.remove(file_path)
+                    except Exception:
+                        pass
+            # Check if it's text
+            elif message.reply_to_message.text:
+                all_cards = extract_cards(message.reply_to_message.text)
+        
+        # Check command argument
+        if not all_cards and len(message.text.split(maxsplit=1)) > 1:
+            target_text = message.text.split(maxsplit=1)[1]
+            all_cards = extract_cards(target_text)
+        
+        if not all_cards:
             return await message.reply(
-                "❌ Send cards! Reply to a message with cards or provide them after the command.",
-                reply_to_message_id=message.id
+                """<pre>No Cards Found ❌</pre>
+━━━━━━━━━━━━━━━
+<b>Usage:</b>
+• Reply to a message with cards
+• Reply to a file (.txt) containing cards
+• Or send cards after command: <code>/mau cards...</code>
+
+<b>Format:</b> <code>cc|mm|yy|cvv</code>
+<b>Example:</b> <code>4111111111111111|12|2025|123</code>
+━━━━━━━━━━━━━━━""",
+                reply_to_message_id=message.id,
+                parse_mode=ParseMode.HTML
             )
         
-        all_cards = extract_cards(target_text)
-        if not all_cards:
-            return await message.reply("❌ No valid cards found!", reply_to_message_id=message.id)
+        # Apply 50 card limit for /mau
+        MAU_MAX_CARDS = 50
+        if len(all_cards) > MAU_MAX_CARDS:
+            all_cards = all_cards[:MAU_MAX_CARDS]
+            await message.reply(
+                f"<pre>Card Limit Applied ⚠️</pre>\n"
+                f"<b>Limited to</b> <code>{MAU_MAX_CARDS}</code> <b>cards for</b> <code>/mau</code> <b>command.</b>\n"
+                f"<b>Processing first</b> <code>{MAU_MAX_CARDS}</code> <b>cards...</b>",
+                reply_to_message_id=message.id,
+                parse_mode=ParseMode.HTML
+            )
         
+        # Also check plan limit
         if len(all_cards) > mlimit:
             return await message.reply(
                 f"❌ You can check max {mlimit} cards as per your plan!",
                 reply_to_message_id=message.id
             )
         
-        # Check credits
+        # Check credits (use final card count after limit)
         available_credits = user_data.get("plan", {}).get("credits", 0)
-        card_count = len(all_cards)
+        card_count = len(all_cards)  # This is already limited to 50
         
         if available_credits != "∞":
             try:
@@ -181,12 +221,15 @@ async def handle_mau_command(client, message):
             [InlineKeyboardButton("⏹ Stop Checking", callback_data=f"mau_stop_{user_id}")],
         ])
 
+        # Get final card count after limit
+        final_card_count = len(all_cards)
+        
         # Send initial message
         loader_msg = await message.reply(
             f"""<pre>◐ [#MAU] | Mass Stripe Auth</pre>
 ━━━━━━━━━━━━━━━
 <b>[⚬] Gate:</b> <code>{gate_label}</code> (Default: nomade-studio.be)
-<b>[⚬] Cards:</b> <code>{card_count}</code>
+<b>[⚬] Cards:</b> <code>{final_card_count}</code> <i>(Max: 50)</i>
 <b>[⚬] Mode:</b> <code>Parallel (33 threads)</code>
 <b>[⚬] Status:</b> <code>◐ Processing...</code>
 ━━━━━━━━━━━━━━━
