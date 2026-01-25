@@ -39,8 +39,12 @@ DELAY_BETWEEN_ATTEMPTS = 0.25
 DELAY_BETWEEN_SITES = 0.15
 # Captcha retries per attempt (TLS fingerprint rotation)
 CAPTCHA_RETRIES_PER_ATTEMPT = 3
-# Kept for /tsh mass-check display; /sh uses CHECKS_PER_SITE rotation
-SH_CONCURRENT_THREADS = 10
+# Mass-check concurrency (/tsh, /msh). Reduced to avoid CHECKOUT_HTTP_429 / NEGOTIATE_HTTP_429.
+SH_CONCURRENT_THREADS = 4
+# Delay (s) between mass-check chunks to avoid rate-limit bursts
+MASS_CHUNK_DELAY = 0.7
+# Stagger (s) between starting each check within a chunk
+MASS_STAGGER_PER_CHECK = 0.18
 
 
 def _is_valid_shopify_response(rotator: SiteRotator, resp: str) -> bool:

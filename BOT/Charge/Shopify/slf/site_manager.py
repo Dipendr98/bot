@@ -450,7 +450,7 @@ class SiteRotator:
             "CHECKOUT_HTML", "CHECKOUT_TOKENS", "CHECKOUT_HTTP",
             "TIMEOUT", "CONNECTION", "RATE_LIMIT", "BLOCKED", "PROXY_ERROR",
             "429", "502", "503", "504",
-            "RECEIPT_EMPTY", "SUBMIT_INVALID_JSON",
+            "RECEIPT_EMPTY", "SUBMIT_INVALID_JSON", "SUBMIT_HTTP",
         ]
         
         return any(keyword in response_upper for keyword in retry_keywords)

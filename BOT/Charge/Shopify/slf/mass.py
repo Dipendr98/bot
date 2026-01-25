@@ -13,7 +13,12 @@ from pyrogram.enums import ChatType, ParseMode
 from BOT.Charge.Shopify.slf.api import autoshopify, autoshopify_with_captcha_retry
 from BOT.Charge.Shopify.tls_session import TLSAsyncSession
 from BOT.Charge.Shopify.slf.site_manager import SiteRotator, get_user_sites
-from BOT.Charge.Shopify.slf.single import check_card_all_sites_parallel, SH_CONCURRENT_THREADS
+from BOT.Charge.Shopify.slf.single import (
+    check_card_all_sites_parallel,
+    SH_CONCURRENT_THREADS,
+    MASS_CHUNK_DELAY,
+    MASS_STAGGER_PER_CHECK,
+)
 from BOT.helper.start import load_users
 from BOT.tools.proxy import get_proxy
 from BOT.helper.permissions import check_private_access
@@ -421,7 +426,9 @@ async def mslf_handler(client, message):
 
         thread_count = SH_CONCURRENT_THREADS
 
-        async def check_one(card):
+        async def check_one(card, stagger_delay: float = 0):
+            if stagger_delay > 0:
+                await asyncio.sleep(stagger_delay)
             try:
                 result, retries = await check_card_all_sites_parallel(user_id, card, proxy)
                 return card, str((result or {}).get("Response", "UNKNOWN")), retries, (result or {})
@@ -430,8 +437,13 @@ async def mslf_handler(client, message):
 
         for chunk_start in range(0, total_cc, thread_count):
             chunk = all_cards[chunk_start : chunk_start + thread_count]
-            tasks = [check_one(c) for c in chunk]
+            tasks = [
+                check_one(c, MASS_STAGGER_PER_CHECK * i)
+                for i, c in enumerate(chunk)
+            ]
             outs = await asyncio.gather(*tasks, return_exceptions=True)
+            if chunk_start + thread_count < total_cc:
+                await asyncio.sleep(MASS_CHUNK_DELAY)
             for i, o in enumerate(outs):
                 if isinstance(o, Exception):
                     raw_response = f"ERROR: {str(o)[:40]}"
