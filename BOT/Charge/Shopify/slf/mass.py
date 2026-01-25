@@ -424,7 +424,7 @@ async def mslf_handler(client, message):
         async def check_one(card):
             try:
                 result, retries = await check_card_all_sites_parallel(user_id, card, proxy)
-                return card, str((result or {}).get("Response", "UNKNOWN")), retries, (result or {}).get("Gateway")
+                return card, str((result or {}).get("Response", "UNKNOWN")), retries, (result or {})
             except Exception as e:
                 return card, f"ERROR: {str(e)[:40]}", 0, None
 
@@ -435,11 +435,11 @@ async def mslf_handler(client, message):
             for i, o in enumerate(outs):
                 if isinstance(o, Exception):
                     raw_response = f"ERROR: {str(o)[:40]}"
-                    used_site = None
+                    result = None
                     retries = 0
                     card = chunk[i] if i < len(chunk) else ""
                 else:
-                    card, raw_response, retries, used_site = o
+                    card, raw_response, retries, result = o
                 processed_count = chunk_start + i + 1
                 total_retries += retries
 
@@ -472,12 +472,19 @@ async def mslf_handler(client, message):
                             bin_info = bank = country = "N/A"
                     except Exception:
                         bin_info = bank = country = "N/A"
+                    pr = (result or {}).get("Price", "0.00")
+                    try:
+                        pv = float(pr)
+                        pr = f"{pv:.2f}" if pv != int(pv) else str(int(pv))
+                    except (TypeError, ValueError):
+                        pr = str(pr) if pr else "0.00"
+                    gateway_display = f"Shopify Normal ${pr}"
                     hit_header = "CHARGED" if is_charged else "CCN LIVE"
                     hit_status = "Charged 💎" if is_charged else "Approved ✅"
                     hit_message = f"""<b>[#Shopify] | {hit_header}</b> ✦
 ━━━━━━━━━━━━━━━
 <b>[•] Card:</b> <code>{card}</code>
-<b>[•] Gateway:</b> <code>{used_site or gateway}</code>
+<b>[•] Gateway:</b> <code>{gateway_display}</code>
 <b>[•] Status:</b> <code>{hit_status}</code>
 <b>[•] Response:</b> <code>{raw_response}</code>
 <b>[•] Retries:</b> <code>{retries}</code>

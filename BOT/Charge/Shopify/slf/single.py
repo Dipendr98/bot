@@ -57,6 +57,7 @@ def _is_valid_shopify_response(rotator: SiteRotator, resp: str) -> bool:
         "CAPTCHA" in u or "HCAPTCHA" in u or "SITE_" in u or "SITE DEAD" in u or "CART_" in u or "SESSION_" in u
         or "ERROR" in u or "TIMEOUT" in u or "CONNECTION" in u or "JSON" in u or "HTTP" in u
         or "CHECKOUT_" in u or "NEGOTIATE_" in u or "DEAD" in u
+        or "RECEIPT_EMPTY" in u or "SUBMIT_" in u
     )
     return not invalid
 
@@ -125,6 +126,8 @@ async def check_card_all_sites_parallel(
         for attempt in range(CHECKS_PER_SITE):
             g, res = await check_one(site_info)
             gate = g
+            if res:
+                res["Gateway"] = gate
             _log_check_to_terminal(gate, res, fullcc)
             resp = str((res or {}).get("Response", ""))
             last_res, last_gate = res, gate
@@ -154,13 +157,16 @@ async def check_card_all_sites_parallel(
 def _log_check_to_terminal(gate: str, res: dict, fullcc: str) -> None:
     """Print one check result to terminal (Gateway, Price, ReceiptId, Response, Status, cc)."""
     r = res or {}
-    gate = r.get("Gateway") or gate or "Unknown"
+    gate_raw = r.get("Gateway") or gate or "Unknown"
+    gate_display = "Shopify Normal" if (not gate_raw or gate_raw == "Unknown" or gate_raw == "Normal") else (gate_raw if "Shopify" in str(gate_raw) else f"Shopify {gate_raw}")
+    if "$" in str(gate_display):
+        gate_display = re.sub(r"\s*\$\s*[\d.]+\s*$", "", str(gate_display)).strip() or "Shopify Normal"
     price = r.get("Price", "0.00")
     rid = r.get("ReceiptId")
     resp = r.get("Response", "UNKNOWN")
     status = r.get("Status", False)
     cc = r.get("cc", fullcc)
-    lines = [f"Gateway: {gate}", f"Price: {price}"]
+    lines = [f"Gateway: {gate_display}", f"Price: {price}"]
     if rid:
         lines.append(f"ReceiptId: {rid}")
     lines.append(f"Response: {resp} Status: {str(status).lower()}")
@@ -213,6 +219,7 @@ def determine_status(response: str) -> tuple:
         # Other system errors
         "ERROR", "TIMEOUT", "EMPTY", "DEAD", "CONNECTION", "RATE_LIMIT",
         "BLOCKED", "PROXY", "NO_AVAILABLE_PRODUCTS", "BUILD",
+        "RECEIPT_EMPTY", "SUBMIT_INVALID_JSON", "SUBMIT_NO_RESPONSE",
         # Tax and delivery issues
         "TAX_ERROR", "DELIVERY_ERROR", "SHIPPING_ERROR"
     ]):
@@ -244,20 +251,19 @@ def determine_status(response: str) -> tuple:
 
 
 def format_response(fullcc: str, result: dict, user_info: dict, time_taken: float, retry_count: int = 0, has_proxy: bool = False) -> str:
-    """Format the checkout response in the original professional style."""
+    """Format the checkout response. Always use real checkout total for price."""
     parts = fullcc.split("|")
     cc = parts[0] if len(parts) > 0 else "Unknown"
     
     response = result.get("Response", "UNKNOWN")
-    gateway = result.get("Gateway", "Unknown")
     price = result.get("Price", "0.00")
-    receipt_id = result.get("ReceiptId", None)  # Get receipt ID if present
-
-    # Gateway display: site gateway may already be "Shopify Normal $0.50"; avoid "Shopify ... $0.50 $0.54" (double price)
-    if "$" in str(gateway):
-        gateway_display = gateway
-    else:
-        gateway_display = f"Shopify {gateway} ${price}"
+    receipt_id = result.get("ReceiptId", None)
+    try:
+        pv = float(price)
+        price_str = f"{pv:.2f}" if pv != int(pv) else str(int(pv))
+    except (TypeError, ValueError):
+        price_str = str(price) if price else "0.00"
+    gateway_display = f"Shopify Normal ${price_str}"
     
     status_text, header, is_live = determine_status(response)
     

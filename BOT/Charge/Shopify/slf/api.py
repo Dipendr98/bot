@@ -1706,13 +1706,19 @@ async def autoshopify(url, card, session, proxy=None):
             selected_json_data = sjson_data
 
         for _ in range(3):
-            request = await session.post(f'{url}/checkouts/unstable/graphql',params=params,headers=headers,json=selected_json_data, timeout=20)
-            # print(request)
-            if "success" in request.text:
+            request = await session.post(f'{url}/checkouts/unstable/graphql', params=params, headers=headers, json=selected_json_data, timeout=25)
+            if "success" in (request.text or ""):
                 break
-            else:
-                continue
-        # print(request.json())
+            try:
+                js = request.json()
+                sfc = js.get("data", {}).get("submitForCompletion") or {}
+                if sfc.get("__typename") == "Throttled":
+                    poll_ms = sfc.get("pollAfter") or 1500
+                    await asyncio.sleep(min(float(poll_ms) / 1000.0, 5.0))
+                    continue
+            except Exception:
+                pass
+            break
 
         if "TAX_NEW_TAX_VALUE_MUST_BE_ACCEPTED" in request.text:
             output.update({
@@ -1790,8 +1796,19 @@ async def autoshopify(url, card, session, proxy=None):
             _log_output_to_terminal(output)
             return output
         
-        receipt = jsun.get("data", {}).get("submitForCompletion", {}).get("receipt", {})
+        sfc = jsun.get("data", {}).get("submitForCompletion") or {}
+        receipt = sfc.get("receipt") or {}
         receipt_id = receipt.get("id")
+        if not receipt_id:
+            await asyncio.sleep(2.0)
+            try:
+                req2 = await session.post(f'{url}/checkouts/unstable/graphql', params=params, headers=headers, json=selected_json_data, timeout=25)
+                js2 = req2.json()
+                sfc2 = js2.get("data", {}).get("submitForCompletion") or {}
+                receipt = sfc2.get("receipt") or {}
+                receipt_id = receipt.get("id")
+            except Exception:
+                pass
         if not receipt_id:
             output.update({
                 "Response": "RECEIPT_EMPTY",

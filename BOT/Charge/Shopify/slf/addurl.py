@@ -26,6 +26,7 @@ from pyrogram.types import Message, InlineKeyboardMarkup, InlineKeyboardButton
 from pyrogram.enums import ParseMode, ChatType
 
 from BOT.Charge.Shopify.tls_session import TLSAsyncSession
+from BOT.Charge.Shopify.slf.api import autoshopify_with_captcha_retry
 from BOT.tools.proxy import get_proxy
 from BOT.helper.start import load_users
 
@@ -49,6 +50,9 @@ FAST_TIMEOUT = 18
 STANDARD_TIMEOUT = 35
 MAX_RETRIES = 3
 FETCH_RETRIES = 2
+
+# Test card for addurl/txturl gate validation (Visa test)
+TEST_CARD = "4111111111111111|12|2026|123"
 
 # Currency symbols mapping
 CURRENCY_SYMBOLS = {
@@ -382,8 +386,28 @@ async def validate_sites_batch(urls: List[str], user_proxy: Optional[str] = None
 
 def save_site_for_user_unified(user_id: str, site: str, gateway: str, price: str = "N/A") -> bool:
     """Save a site for a user using unified site manager."""
-    gate_name = f"Shopify {gateway} ${price}" if price != "N/A" else f"Shopify {gateway}"
-    return add_site_for_user(user_id, site, gate_name, price, set_primary=True)
+    gate_name = f"Shopify Normal ${price}" if price and price != "N/A" else "Shopify Normal"
+    return add_site_for_user(user_id, site, gate_name, price or "N/A", set_primary=True)
+
+
+async def test_site_with_card(url: str, proxy: Optional[str] = None) -> tuple[bool, dict]:
+    """
+    Run a /sh-style test check on a single URL with TEST_CARD.
+    Returns (has_receipt, result). Add site only when has_receipt.
+    """
+    proxy_url = None
+    if proxy and str(proxy).strip():
+        px = str(proxy).strip()
+        proxy_url = px if px.startswith(("http://", "https://")) else f"http://{px}"
+    try:
+        async with TLSAsyncSession(timeout_seconds=90, proxy=proxy_url) as session:
+            res = await autoshopify_with_captcha_retry(
+                url, TEST_CARD, session, max_captcha_retries=2, proxy=proxy_url
+            )
+    except Exception as e:
+        return False, {"Response": f"ERROR: {str(e)[:50]}", "ReceiptId": None, "Price": "0.00"}
+    has = bool(res.get("ReceiptId"))
+    return has, res
 
 
 def get_user_current_site(user_id: str) -> Optional[Dict[str, str]]:
@@ -483,19 +507,16 @@ async def add_site_handler(client: Client, message: Message):
         # Validate all sites with lowest product parsing
         results = await validate_sites_batch(urls, user_proxy)
         
-        # Separate valid and invalid sites
         valid_sites = [r for r in results if r["valid"]]
         invalid_sites = [r for r in results if not r["valid"]]
-        
-        time_taken = round(time.time() - start_time, 2)
-        
+
         if not valid_sites:
+            time_taken = round(time.time() - start_time, 2)
             error_lines = []
             for site in invalid_sites[:5]:
                 error_lines.append(f"• <code>{site['url'][:40]}</code> → {site.get('error', 'Invalid')}")
             
             error_text = "\n".join(error_lines)
-            
             return await status_msg.edit_text(
                 f"""<pre>No Valid Sites Found ❌</pre>
 ━━━━━━━━━━━━━
@@ -513,46 +534,71 @@ async def add_site_handler(client: Client, message: Message):
 ⏱️ <b>Time:</b> <code>{time_taken}s</code>""",
                 parse_mode=ParseMode.HTML
             )
-        
-        # Use the first valid site as primary
-        primary_site = valid_sites[0]
+
+        await status_msg.edit_text(
+            f"""<pre>🔍 Validating Shopify Sites...</pre>
+━━━━━━━━━━━━━
+<b>Sites:</b> <code>{total_urls}</code>
+<b>Status:</b> <i>Testing with gate (test card)...</i>""",
+            parse_mode=ParseMode.HTML
+        )
+        proxy_url = user_proxy
+        if user_proxy and str(user_proxy).strip():
+            px = str(user_proxy).strip()
+            proxy_url = px if px.startswith(("http://", "https://")) else f"http://{px}"
+        sites_with_receipt = []
+        for v in valid_sites:
+            has_rec, test_res = await test_site_with_card(v["url"], proxy_url)
+            if has_rec:
+                pr = test_res.get("Price") or v.get("price") or "N/A"
+                try:
+                    pv = float(pr)
+                    pr = f"{pv:.2f}" if pv != int(pv) else str(int(pv))
+                except (TypeError, ValueError):
+                    pr = str(pr) if pr else "N/A"
+                v["price"] = pr
+                v["formatted_price"] = f"${pr}"
+                sites_with_receipt.append(v)
+            await asyncio.sleep(0.5)
+        if not sites_with_receipt:
+            time_taken = round(time.time() - start_time, 2)
+            return await status_msg.edit_text(
+                f"""<pre>No Sites Verified ❌</pre>
+━━━━━━━━━━━━━
+<b>Test check did not return receipt/bill.</b>
+
+<b>Tips:</b>
+• Use a working Shopify gate (checkout completes with receipt)
+• Ensure proxy is set: <code>/setpx</code>
+━━━━━━━━━━━━━
+⏱️ <b>Time:</b> <code>{time_taken}s</code>""",
+                parse_mode=ParseMode.HTML
+            )
+        time_taken = round(time.time() - start_time, 2)
+        primary_site = sites_with_receipt[0]
         site_url = primary_site["url"]
-        gateway = primary_site["gateway"]
+        gateway = primary_site.get("gateway", "Normal")
         price = primary_site["price"]
         product_title = primary_site.get("product_title", "N/A")
         formatted_price = primary_site.get("formatted_price", f"${price}")
-        
-        # Save the primary site
         saved = save_site_for_user_unified(user_id, site_url, gateway, price)
-        
-        # Build response
         response_lines = [
             f"<pre>Site Added Successfully ✅</pre>",
-            "━━━━━━━━━━━━━"
-        ]
-        
-        # Primary site info with product details
-        response_lines.extend([
+            "━━━━━━━━━━━━━",
             f"[⌯] <b>Site:</b> <code>{site_url}</code>",
-            f"[⌯] <b>Gateway:</b> <code>{gateway}</code>",
-            f"[⌯] <b>Lowest Price:</b> <code>{formatted_price}</code>",
+            f"[⌯] <b>Gateway:</b> <code>Shopify Normal</code>",
+            f"[⌯] <b>Price:</b> <code>{formatted_price}</code>",
             f"[⌯] <b>Product:</b> <code>{product_title}...</code>",
-            f"[⌯] <b>Status:</b> <code>Active ✓</code>",
-        ])
-        
-        # Show additional valid sites if any
-        if len(valid_sites) > 1:
+            f"[⌯] <b>Status:</b> <code>Active ✓</code> (test card verified)",
+        ]
+        if len(sites_with_receipt) > 1:
             response_lines.append("")
-            response_lines.append(f"<b>Other Valid Sites ({len(valid_sites) - 1}):</b>")
-            for site in valid_sites[1:5]:
-                price_display = site.get("formatted_price", f"${site.get('price', 'N/A')}")
-                response_lines.append(f"• <code>{site['url'][:35]}</code> [{price_display}]")
-        
-        # Show failed sites count
+            response_lines.append(f"<b>Also verified ({len(sites_with_receipt) - 1}):</b>")
+            for s in sites_with_receipt[1:5]:
+                response_lines.append(f"• <code>{s['url'][:35]}</code> [${s.get('price', 'N/A')}]")
         if invalid_sites:
             response_lines.append("")
             response_lines.append(f"<b>Failed:</b> <code>{len(invalid_sites)}</code> site(s)")
-        
         response_lines.extend([
             "━━━━━━━━━━━━━",
             f"[⌯] <b>Command:</b> <code>/sh</code> or <code>/slf</code>",

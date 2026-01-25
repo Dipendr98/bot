@@ -337,7 +337,13 @@ async def tsh_handler(client: Client, m: Message):
                             bin_info = bank = country = "N/A"
                     except Exception:
                         bin_info = bank = country = "N/A"
-                    gateway_display = str((result or {}).get("Gateway") or gateway)
+                    pr = (result or {}).get("Price", "0.00")
+                    try:
+                        pv = float(pr)
+                        pr = f"{pv:.2f}" if pv != int(pv) else str(int(pv))
+                    except (TypeError, ValueError):
+                        pr = str(pr) if pr else "0.00"
+                    gateway_display = f"Shopify Normal ${pr}"
                     hit_header = "CHARGED" if is_charged else "CCN LIVE"
                     hit_message = f"""<b>[#Shopify] | {hit_header}</b> ✦
 ━━━━━━━━━━━━━━━

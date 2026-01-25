@@ -26,6 +26,7 @@ from pyrogram.enums import ParseMode
 from BOT.Charge.Shopify.tls_session import TLSAsyncSession
 from BOT.helper.start import load_users
 from BOT.tools.proxy import get_proxy
+from BOT.Charge.Shopify.slf.addurl import test_site_with_card
 
 try:
     import cloudscraper
@@ -565,19 +566,56 @@ Use <code>/txtls</code> to view your sites.""",
                 parse_mode=ParseMode.HTML
             )
         
-        # Prepare sites for batch save
+        await wait_msg.edit_text(
+            f"""<pre>🔍 Validating Shopify Sites...</pre>
+━━━━━━━━━━━━━━━
+<b>Sites:</b> <code>{len(valid_sites)}</code>
+<b>Status:</b> <i>Testing with gate (test card)...</i>""",
+            parse_mode=ParseMode.HTML
+        )
+        proxy_url = get_proxy(int(user_id))
+        if proxy_url and str(proxy_url).strip():
+            px = str(proxy_url).strip()
+            proxy_url = px if px.startswith(("http://", "https://")) else f"http://{px}"
+        sites_with_receipt = []
+        for v in valid_sites:
+            has_rec, test_res = await test_site_with_card(v["url"], proxy_url)
+            if has_rec:
+                pr = test_res.get("Price") or v.get("price") or "N/A"
+                try:
+                    pv = float(pr)
+                    pr = f"{pv:.2f}" if pv != int(pv) else str(int(pv))
+                except (TypeError, ValueError):
+                    pr = str(pr) if pr else "N/A"
+                v["price"] = pr
+                v["formatted_price"] = f"${pr}"
+                sites_with_receipt.append(v)
+            await asyncio.sleep(0.5)
+        if not sites_with_receipt:
+            time_taken = round(time.time() - start_time, 2)
+            return await wait_msg.edit_text(
+                f"""<pre>No Sites Verified ❌</pre>
+━━━━━━━━━━━━━━━
+<b>Test check did not return receipt/bill.</b>
+
+<b>Tips:</b>
+• Use working Shopify gates (checkout completes with receipt)
+• Ensure proxy is set: <code>/setpx</code>
+━━━━━━━━━━━━━
+⏱️ <b>Time:</b> <code>{time_taken}s</code>""",
+                parse_mode=ParseMode.HTML
+            )
+        valid_sites = sites_with_receipt
+        time_taken = round(time.time() - start_time, 2)
+
         sites_to_add = []
         for site in valid_sites:
-            gateway = site.get("gateway", "Normal")
             price = site.get("price", "N/A")
-            gate_name = f"Shopify {gateway} ${price}"
-            
             sites_to_add.append({
                 "url": site["url"],
-                "gateway": gate_name,
+                "gateway": f"Shopify Normal ${price}",
                 "price": price
             })
-        
         added_count = add_sites_batch(user_id, sites_to_add)
 
         # Build response
