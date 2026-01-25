@@ -2,6 +2,10 @@ import json
 import os
 import asyncio
 import threading
+
+from dotenv import load_dotenv
+load_dotenv()
+
 from pyrogram import Client, idle
 from pyrogram.types import BotCommand
 from flask import Flask
