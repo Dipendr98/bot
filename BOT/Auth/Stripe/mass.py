@@ -10,6 +10,7 @@ Each thread creates a new account for maximum speed and reliability.
 import re
 import time
 import os
+import random
 from pyrogram import Client, filters
 from pyrogram.types import InlineKeyboardMarkup, InlineKeyboardButton
 from pyrogram.enums import ParseMode
@@ -17,13 +18,26 @@ import asyncio
 from datetime import datetime
 from collections import deque
 
+# Anime character names for gateway display (professional)
+ANIME_CHARACTERS = [
+    "Naruto Uzumaki", "Sasuke Uchiha", "Goku", "Luffy", "Ichigo Kurosaki",
+    "Eren Yeager", "Levi Ackerman", "Tanjiro Kamado", "Zenitsu Agatsuma",
+    "Gojo Satoru", "Yuji Itadori", "Megumi Fushiguro", "Kakashi Hatake",
+    "Itachi Uchiha", "Monkey D. Luffy", "Roronoa Zoro", "Sanji Vinsmoke",
+    "Light Yagami", "L Lawliet", "Edward Elric", "Alphonse Elric",
+    "Spike Spiegel", "Vash the Stampede", "Guts", "Griffith",
+    "Kenshin Himura", "Saitama", "Genos", "Mob", "Reigen Arataka",
+    "Deku", "Katsuki Bakugo", "Shoto Todoroki", "All Might",
+    "Levi", "Mikasa Ackerman", "Armin Arlert", "Erwin Smith"
+]
+
 from BOT.helper.start import load_users
 from BOT.helper.permissions import check_private_access, is_premium_user
 from BOT.gc.credit import deduct_credit_bulk
 
-# Import the Nomade checker (default) and WooCommerce checker (fallback)
+# Import the Nomade and Grownetics checkers
 from BOT.Auth.StripeAuth.nomade_checker import check_nomade_stripe, determine_nomade_status
-from BOT.Auth.StripeAuth.wc_checker import check_stripe_wc_fullcc, determine_status
+from BOT.Auth.StripeAuth.grownetics_checker import check_grownetics_stripe, determine_grownetics_status
 from BOT.Auth.StripeAuth.au_gate import get_au_gate, get_au_gate_url, gate_display_name
 
 # Try to import BIN lookup
@@ -208,8 +222,8 @@ async def handle_mau_command(client, message):
         site_url = get_au_gate_url(user_id)
         gate_label = gate_display_name(gate_key)
         
-        # Force nomade as default for /mau (silver bullet performance)
-        if gate_key != "nomade":
+        # Ensure gate is valid (nomade or grownetics)
+        if gate_key not in ["nomade", "grownetics"]:
             gate_key = "nomade"
             gate_label = "nomade-studio.be"
         
@@ -317,7 +331,7 @@ async def handle_mau_command(client, message):
                     return card, {
                         "response": "ERROR",
                         "message": f"Error: {str(e)[:50]}",
-                        "site": "nomade-studio.be"
+                        "site": "Stripe Auth"  # Generic, site name never shown to users
                     }
         
         # Create tasks for parallel processing (33 threads)
@@ -334,15 +348,21 @@ async def handle_mau_command(client, message):
                 card_used, result = await task_coro
             except Exception as e:
                 card_used = "UNKNOWN"
-                result = {"response": "ERROR", "message": str(e)[:50], "site": "nomade-studio.be"}
+                result = {"response": "ERROR", "message": str(e)[:50], "site": "Stripe Auth"}  # Generic, site name never shown
             
             processed_count += 1
             
-            # Determine status
-            status = determine_nomade_status(result)
+            # Determine status based on gate
+            if gate_key == "nomade":
+                status = determine_nomade_status(result)
+            elif gate_key == "grownetics":
+                status = determine_grownetics_status(result)
+            else:
+                status = determine_nomade_status(result)
+            
             response = result.get("response", "UNKNOWN")
             message_text = result.get("message", "Unknown")
-            site = result.get("site", "nomade-studio.be")
+            site = result.get("site", gate_label)  # Use gate label, but won't be shown (anime character used)
             
             # Update statistics
             if status == "APPROVED":
@@ -385,12 +405,13 @@ async def handle_mau_command(client, message):
                     country = "N/A"
                 
                 message_display = message_text[:60] if message_text else "N/A"
-                site_display = site.replace("https://", "").replace("http://", "")[:25] if site else "nomade-studio.be"
+                # Use random anime character name instead of site name
+                anime_name = random.choice(ANIME_CHARACTERS)
                 
                 hit_message = f"""<b>[#StripeAuth] | {header}</b> ✦
 ━━━━━━━━━━━━━━━
 <b>[•] Card:</b> <code>{card_used}</code>
-<b>[•] Gateway:</b> <code>Stripe Auth [{site_display}]</code>
+<b>[•] Gateway:</b> <code>Stripe Auth [{anime_name}]</code>
 <b>[•] Status:</b> <code>{status_text}</code>
 <b>[•] Response:</b> <code>{message_display}</code>
 ━ ━ ━ ━ ━ ━ ━ ━ ━ ━ ━ ━ ━

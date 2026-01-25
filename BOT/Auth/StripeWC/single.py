@@ -95,7 +95,7 @@ async def handle_swc_command(client, message):
                 "<code>$swc cc|mes|ano|cvv site</code>\n\n"
                 "<b>Examples:</b>\n"
                 "<code>$swc 5312590016282230|12|2029|702</code>\n"
-                "<code>$swc 5312590016282230|12|2029|702 https://epicalarc.com</code>",
+                "<code>$swc 5312590016282230|12|2029|702 https://grownetics.com</code>",
                 reply_to_message_id=message.id,
                 parse_mode=ParseMode.HTML
             )
@@ -145,7 +145,7 @@ async def handle_swc_command(client, message):
             f"""<pre>━━━ Stripe WooCommerce Auth ━━━</pre>
 <b>Card:</b> <code>{fullcc}</code>
 <b>Status:</b> <code>Processing...</code>
-<b>Site:</b> <code>{site if site else 'epicalarc.com'}</code>
+<b>Site:</b> <code>{site if site else 'grownetics.com'}</code>
 <b>Checked By:</b> {checked_by} [<code>{plan} {badge}</code>]
 ━━━━━━━━━━━━━━━""",
             reply_to_message_id=message.id,

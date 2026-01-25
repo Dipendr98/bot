@@ -13,7 +13,7 @@ Replaced shavercity.com.au with shop.nomade-studio.be as the primary Stripe Auth
 - ✅ Removed `shavercity.com.au`
 - ✅ Added `shop.nomade-studio.be` as "nomade" gate
 - ✅ Set `nomade` as DEFAULT_GATE (primary)
-- ✅ Updated `toggle_au_gate()` to switch between nomade ↔ epicalarc
+- ✅ Updated `toggle_au_gate()` to switch between nomade ↔ grownetics
 - ✅ Updated `gate_display_name()` to show "nomade-studio.be"
 
 #### `BOT/db/store.py`:
@@ -54,13 +54,13 @@ Replaced shavercity.com.au with shop.nomade-studio.be as the primary Stripe Auth
 #### `BOT/Auth/Stripe/single.py`:
 - ✅ Added import for `check_nomade_stripe` and `determine_nomade_status`
 - ✅ Updated `/au` handler to use Nomade checker when gate is "nomade"
-- ✅ Falls back to WooCommerce checker for "epicalarc"
-- ✅ Updated gate toggle callback to show nomade/epicalarc
+- ✅ Falls back to Grownetics checker for "grownetics"
+- ✅ Updated gate toggle callback to show nomade/grownetics
 
 #### `BOT/Auth/Stripe/mass.py`:
 - ✅ Added import for Nomade checker
 - ✅ Updated `/mau` handler to use Nomade checker when gate is "nomade"
-- ✅ Falls back to WooCommerce checker for "epicalarc"
+- ✅ Falls back to Grownetics checker for "grownetics"
 
 ### 4. Removed Shavercity References
 
@@ -122,7 +122,7 @@ Replaced shavercity.com.au with shop.nomade-studio.be as the primary Stripe Auth
 ## Gate Configuration
 
 - **Primary**: `nomade-studio.be` (default)
-- **Secondary**: `epicalarc.com`
+- **Secondary**: `grownetics.com`
 - **Toggle**: Users can switch between gates using "Change gate" button
 
 ---

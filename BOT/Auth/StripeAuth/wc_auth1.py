@@ -16,10 +16,10 @@ from bs4 import BeautifulSoup
 import time
 
 
-# WooCommerce sites to try (booth-box alternative)
+# WooCommerce sites to try (legacy - not used in /au or /mau)
 WC_SITES = [
-    "https://epicalarc.com",
-    # Add more backup sites here if needed
+    "https://grownetics.com",
+    # Legacy checker - use nomade_checker or grownetics_checker instead
 ]
 
 # Request timeout

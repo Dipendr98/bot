@@ -70,7 +70,7 @@ async def handle_mswc_command(client, message):
                 "<code>$mswc cc|mes|ano|cvv site</code>\n\n"
                 "<b>Examples:</b>\n"
                 "<code>$mswc 5312590016282230|12|2029|702\n5312590016282231|11|2028|701</code>\n"
-                "<code>$mswc 5312590016282230|12|2029|702 https://epicalarc.com</code>",
+                "<code>$mswc 5312590016282230|12|2029|702 https://grownetics.com</code>",
                 reply_to_message_id=message.id
             )
 
@@ -133,7 +133,7 @@ async def handle_mswc_command(client, message):
             f"""<pre>━━━ Mass Stripe WooCommerce Auth ━━━</pre>
 <b>Total Cards:</b> <code>{card_count}</code>
 <b>Progress:</b> <code>0/{card_count}</code>
-<b>Site:</b> <code>{site if site else 'epicalarc.com'}</code>
+<b>Site:</b> <code>{site if site else 'grownetics.com'}</code>
 
 <b>Status:</b> <code>Starting...</code>
 ━━━━━━━━━━━━━━━
@@ -185,7 +185,7 @@ async def handle_mswc_command(client, message):
                 progress_msg = f"""<pre>━━━ Mass Stripe WooCommerce Auth ━━━</pre>
 <b>Total Cards:</b> <code>{card_count}</code>
 <b>Progress:</b> <code>{idx}/{card_count}</code>
-<b>Site:</b> <code>{site if site else 'epicalarc.com'}</code>
+<b>Site:</b> <code>{site if site else 'grownetics.com'}</code>
 
 <b>Recent Results:</b>
 {results_text}
@@ -221,7 +221,7 @@ async def handle_mswc_command(client, message):
         final_message = f"""<pre>━━━ Mass Stripe WooCommerce Auth ━━━</pre>
 <b>Total Cards:</b> <code>{card_count}</code>
 <b>Progress:</b> <code>{card_count}/{card_count}</code> ✓
-<b>Site:</b> <code>{site if site else 'epicalarc.com'}</code>
+<b>Site:</b> <code>{site if site else 'grownetics.com'}</code>
 
 <b>Results (Last 10):</b>
 {results_text}

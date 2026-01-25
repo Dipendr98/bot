@@ -1,6 +1,6 @@
 # MongoDB Setup for Christopher Bot
 
-This guide explains how to configure MongoDB so the bot persists **users**, **proxies**, **sites/URLs**, **subscriptions**, **plan requests**, **redeems**, **groups**, and **Stripe Auth gate** (nomade-studio.be/epicalarc).  
+This guide explains how to configure MongoDB so the bot persists **users**, **proxies**, **sites/URLs**, **subscriptions**, **plan requests**, **redeems**, **groups**, and **Stripe Auth gate** (nomade-studio.be/grownetics.com).  
 With MongoDB enabled, **no re-registration** is needed on redeploy—all data survives restarts.
 
 ---

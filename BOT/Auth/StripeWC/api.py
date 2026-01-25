@@ -6,7 +6,7 @@ executor = ThreadPoolExecutor(max_workers=10)
 
 # API Configuration
 API_BASE_URL = "https://newrp.vercel.app/check"
-DEFAULT_SITE = "https://epicalarc.com"
+DEFAULT_SITE = "https://grownetics.com"
 
 # Success response indicators
 SUCCESS_RESPONSES = [
@@ -36,7 +36,7 @@ def check_stripe_wc(card, mes, ano, cvv, site=None):
         mes: Expiry month
         ano: Expiry year
         cvv: CVV
-        site: WooCommerce site URL (default: epicalarc.com)
+        site: WooCommerce site URL (default: grownetics.com)
 
     Returns:
         dict with status (approved/declined/error) and response message
