@@ -88,9 +88,9 @@
 
 from pyrogram import Client, filters
 from pyrogram.types import Message
-import re, asyncio, httpx
+import re, asyncio, httpx, os, random
 
-from BOT.db.store import get_proxy as _get_proxy, set_proxy as _set_proxy, delete_proxy as _delete_proxy
+from BOT.db.store import get_proxy as _get_proxies, set_proxy as _set_proxy, delete_proxy as _delete_proxy, add_proxies as _add_proxies
 
 
 def normalize_proxy(proxy_raw: str) -> str:
@@ -129,7 +129,19 @@ async def get_ip(proxy_url: str):
 
 def get_proxy(user_id: int | str) -> str | None:
     """Return user's proxy from store (MongoDB or JSON). Used by checks, addurl, txturl."""
-    return _get_proxy(str(user_id))
+    # Legacy wrapper: only returns first proxy for backward compatibility if needed
+    # But usually checks should use get_rotating_proxy
+    p = _get_proxies(str(user_id))
+    if p and isinstance(p, list) and len(p) > 0:
+        return p[0]
+    return None
+
+def get_rotating_proxy(user_id: int | str) -> str | None:
+    """Get a random proxy from user's list."""
+    proxies = _get_proxies(str(user_id))  # Now returns list
+    if not proxies:
+        return None
+    return random.choice(proxies)
 
 @Client.on_message(filters.command("setpx") & ~filters.private)
 async def setpx_group_redirect(client, message: Message):
@@ -169,9 +181,35 @@ async def setpx_group_redirect(client, message: Message):
     )
 
 
+@Client.on_message(filters.command("import_proxies") & filters.private)
+async def import_proxies_handler(client, message: Message):
+    if not message.reply_to_message or not message.reply_to_message.document:
+        return await message.reply("❌ Reply to a .txt file containing proxies.", quote=True)
+        
+    doc = await message.reply_to_message.download()
+    try:
+        with open(doc, "r", encoding="utf-8") as f:
+            lines = f.readlines()
+            
+        valid_proxies = []
+        for line in lines:
+            p = normalize_proxy(line.strip())
+            if p: 
+                valid_proxies.append(p)
+            
+        if not valid_proxies:
+            return await message.reply("❌ No valid proxies found in file.", quote=True)
+            
+        count = _add_proxies(str(message.from_user.id), valid_proxies)
+        await message.reply(f"✅ Imported **{count}** proxies successfully!", quote=True)
+        
+    finally:
+        if os.path.exists(doc): 
+            os.remove(doc)
+
 @Client.on_message(filters.command("setpx") & filters.private)
 async def set_proxy(client, message: Message):
-    """Set proxy for mass checking. Private chat only for security."""
+    """Set proxy for mass checking. Private chat only for security. Adds to list if not exists."""
     if len(message.command) < 2:
         return await message.reply(
             """<pre>Proxy Setup 🔧</pre>
@@ -185,6 +223,8 @@ async def set_proxy(client, message: Message):
 
 <b>Example:</b>
 <code>/setpx 192.168.1.1:8080:user:pass</code>
+
+<b>Note:</b> This adds the proxy to your list. Use <code>/import_proxies</code> to bulk import from file.
 ━━━━━━━━━━━━━""",
             quote=True
         )
@@ -199,8 +239,8 @@ async def set_proxy(client, message: Message):
         )
 
     user_id = str(message.from_user.id)
-    existing = _get_proxy(user_id)
-    if existing == proxy_url:
+    existing_proxies = _get_proxies(user_id)
+    if existing_proxies and proxy_url in existing_proxies:
         return await message.reply("<b>This proxy is already added ⚠️</b>", quote=True)
 
     msg = await message.reply("<pre>Validating Proxy 🔘</pre>", quote=True)
@@ -220,7 +260,9 @@ async def set_proxy(client, message: Message):
 • Try a different proxy"""
         )
 
-    _set_proxy(user_id, proxy_url)
+    # Add to list instead of replacing
+    added = _add_proxies(user_id, [proxy_url])
+    total_count = len(_get_proxies(user_id))
 
     try:
         proxy_clean = proxy_url.replace("http://", "").replace("https://", "")
@@ -236,12 +278,13 @@ async def set_proxy(client, message: Message):
         port = "N/A"
 
     await msg.edit(
-        f"""<pre>Proxy Saved ✅</pre>
+        f"""<pre>Proxy Added ✅</pre>
 ━━━━━━━━━━━━━
 <b>[•] Host:</b> <code>{host}</code>
 <b>[•] Port:</b> <code>{port}</code>
 <b>[•] IP:</b> <code>{ip}</code>
 <b>[•] Status:</b> <code>Active ✓</code>
+<b>[•] Total Proxies:</b> <code>{total_count}</code>
 ━━━━━━━━━━━━━
 <b>Ready for mass checking!</b>"""
     )
@@ -249,32 +292,67 @@ async def set_proxy(client, message: Message):
 @Client.on_message(filters.command("delpx"))
 async def delete_proxy(client, message: Message):
     user_id = str(message.from_user.id)
-    if not _get_proxy(user_id):
+    if not _get_proxies(user_id):
         return await message.reply("<b>No proxy was found to delete !!!</b>", quote=True)
     _delete_proxy(user_id)
-    await message.reply("<b>Your proxy has been removed ✅</b>", quote=True)
+    await message.reply("<b>All your proxies have been removed ✅</b>", quote=True)
 
 @Client.on_message(filters.command("getpx"))
 async def getpx_handler(client, message):
     user_id = str(message.from_user.id)
-    proxy = _get_proxy(user_id)
+    proxies = _get_proxies(user_id)
 
-    if not proxy:
+    if not proxies:
         return await message.reply("<b>You haven't set any proxy yet ❌</b>")
 
     try:
-        # Normalize: strip protocol for display
-        proxy = (proxy or "").replace("http://", "").replace("https://", "")
-        if "@" not in proxy:
-            return await message.reply(f"<b>Proxy stored ✓</b>\n<code>{proxy[:60]}...</code>" if len(proxy) > 60 else f"<b>Proxy stored ✓</b>\n<code>{proxy}</code>")
-        creds, hostport = proxy.split("@", 1)
-        username = creds.split(":")[0]
-        host = hostport.split(":")[0]
+        from pyrogram.enums import ParseMode
+        proxy_count = len(proxies)
+        
+        if proxy_count == 1:
+            # Single proxy - show details
+            proxy = proxies[0]
+            proxy_clean = (proxy or "").replace("http://", "").replace("https://", "")
+            if "@" not in proxy_clean:
+                return await message.reply(
+                    f"<b>Proxy stored ✓</b>\n<code>{proxy_clean[:60]}...</code>" 
+                    if len(proxy_clean) > 60 else f"<b>Proxy stored ✓</b>\n<code>{proxy_clean}</code>"
+                )
+            creds, hostport = proxy_clean.split("@", 1)
+            username = creds.split(":")[0]
+            host = hostport.split(":")[0]
 
-        await message.reply(
-            f"<pre>Proxy | {user_id}\n"
-            f"✦ <b>Username:</b> <code>{username}</code>\n"
-            f"✦ <b>Host:</b> <code>{host}</code>"
-        )
+            await message.reply(
+                f"<pre>Proxy | {user_id}</pre>\n"
+                f"<b>✦ Username:</b> <code>{username}</code>\n"
+                f"<b>✦ Host:</b> <code>{host}</code>\n"
+                f"<b>✦ Total:</b> <code>1</code>\n"
+                f"<b>✦ Rotation:</b> <code>Enabled</code>",
+                parse_mode=ParseMode.HTML
+            )
+        else:
+            # Multiple proxies - show all with rotation info
+            preview_lines = []
+            for i, proxy in enumerate(proxies[:10], 1):
+                proxy_clean = (proxy or "").replace("http://", "").replace("https://", "")
+                if "@" in proxy_clean:
+                    creds, hostport = proxy_clean.split("@", 1)
+                    username = creds.split(":")[0]
+                    host = hostport.split(":")[0]
+                    preview_lines.append(f"<b>{i}.</b> <code>{host}</code> (<code>{username}</code>)")
+                else:
+                    host = proxy_clean.split(":")[0] if ":" in proxy_clean else proxy_clean[:30]
+                    preview_lines.append(f"<b>{i}.</b> <code>{host}</code>")
+            
+            more_text = f"\n<i>... and {proxy_count - 10} more proxy(ies)</i>" if proxy_count > 10 else ""
+            
+            await message.reply(
+                f"<pre>Proxies | {user_id}</pre>\n"
+                f"<b>Total:</b> <code>{proxy_count}</code>\n"
+                f"<b>Rotation:</b> <code>Enabled (Random Selection)</code>\n\n"
+                f"<b>Proxy List:</b>\n" + "\n".join(preview_lines) + more_text + "\n\n"
+                f"<i>Each request uses a random proxy from this list for better distribution.</i>",
+                parse_mode=ParseMode.HTML
+            )
     except Exception as e:
-        await message.reply(f"❌ Failed to parse proxy.\n<code>{e}</code>")
+        await message.reply(f"❌ Failed to parse proxies.\n<code>{e}</code>")

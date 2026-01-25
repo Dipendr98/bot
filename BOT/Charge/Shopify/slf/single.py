@@ -465,8 +465,8 @@ Use <code>/txturl site1.com site2.com</code> for multiple sites.""",
         
         # Get user's proxy - REQUIRED for Shopify checks
         try:
-            from BOT.tools.proxy import get_proxy
-            user_proxy = get_proxy(int(user_id))
+            from BOT.tools.proxy import get_rotating_proxy
+            user_proxy = get_rotating_proxy(int(user_id))
         except:
             user_proxy = None
         

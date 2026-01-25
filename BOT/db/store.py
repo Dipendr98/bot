@@ -292,15 +292,32 @@ def deduct_credit_bulk(user_id: str, amount: int) -> tuple[bool, str]:
 # ---------------------------------------------------------------------------
 
 def load_proxies() -> dict:
+    """Returns {uid: [proxy1, proxy2, ...]}."""
     if _use_mongo():
         coll = _proxies_coll()
-        return {str(d["_id"]): d["proxy"] for d in coll.find({})}
+        out = {}
+        for d in coll.find({}):
+            uid = str(d["_id"])
+            raw = d.get("proxies")
+            if raw is not None and isinstance(raw, list):
+                out[uid] = [str(p) for p in raw if p]
+            elif d.get("proxy") is not None:
+                out[uid] = [str(d["proxy"])]
+            else:
+                out[uid] = []
+        return out
     _ensure_data()
     if not os.path.exists(PROXY_FILE):
         return {}
     try:
         with open(PROXY_FILE, "r", encoding="utf-8") as f:
-            return json.load(f)
+            data = json.load(f)
+        for k, v in list(data.items()):
+            if isinstance(v, str):
+                data[k] = [v]
+            elif not isinstance(v, list):
+                data[k] = []
+        return data
     except Exception:
         return {}
 
@@ -308,23 +325,53 @@ def load_proxies() -> dict:
 def save_proxies(data: dict) -> None:
     if _use_mongo():
         coll = _proxies_coll()
-        for uid, proxy in data.items():
-            coll.replace_one({"_id": str(uid)}, {"_id": str(uid), "proxy": proxy}, upsert=True)
+        for uid, proxy_list in data.items():
+            if not isinstance(proxy_list, list):
+                proxy_list = [proxy_list] if proxy_list else []
+            coll.replace_one(
+                {"_id": str(uid)},
+                {"_id": str(uid), "proxies": proxy_list},
+                upsert=True,
+            )
         return
     _ensure_data()
     with open(PROXY_FILE, "w", encoding="utf-8") as f:
         json.dump(data, f, indent=2)
 
 
-def get_proxy(user_id: int | str) -> Optional[str]:
+def get_proxy(user_id: int | str) -> list:
+    """Return list of proxies for user. Empty list if none."""
     data = load_proxies()
-    return data.get(str(user_id))
+    proxies = data.get(str(user_id), [])
+    if isinstance(proxies, str):
+        return [proxies]
+    return list(proxies) if proxies else []
 
 
 def set_proxy(user_id: str, proxy: str) -> None:
+    """Overwrite user's proxy list with a single proxy."""
     data = load_proxies()
-    data[str(user_id)] = proxy
+    data[str(user_id)] = [proxy]
     save_proxies(data)
+
+
+def add_proxies(user_id: str, new_proxies: list) -> int:
+    """Add multiple proxies (unique only). Returns count added."""
+    data = load_proxies()
+    uid = str(user_id)
+    current = data.get(uid, [])
+    if isinstance(current, str):
+        current = [current]
+    existing = set(current)
+    added = 0
+    for p in new_proxies:
+        if p and p not in existing:
+            current.append(p)
+            existing.add(p)
+            added += 1
+    data[uid] = current
+    save_proxies(data)
+    return added
 
 
 def delete_proxy(user_id: str) -> None:

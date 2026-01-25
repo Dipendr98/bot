@@ -31,7 +31,7 @@ from pyrogram.enums import ParseMode, ChatType
 
 from BOT.Charge.Shopify.tls_session import TLSAsyncSession
 from BOT.Charge.Shopify.slf.api import autoshopify_with_captcha_retry
-from BOT.tools.proxy import get_proxy
+from BOT.tools.proxy import get_rotating_proxy
 from BOT.helper.start import load_users
 
 try:
@@ -389,10 +389,11 @@ def save_site_for_user_unified(user_id: str, site: str, gateway: str, price: str
     return add_site_for_user(user_id, site, gate_name, price or "N/A", set_primary=True)
 
 
-async def test_site_with_card(url: str, proxy: Optional[str] = None) -> tuple[bool, dict]:
+async def test_site_with_card(url: str, proxy: Optional[str] = None, max_retries: int = 3) -> tuple[bool, dict]:
     """
     Run a /sh-style test check on a single URL with TEST_CARD.
     Returns (has_receipt, result).
+    Fast testing with 3 retries - saves immediately when receipt found.
 
     Valid site = ReceiptId present → save. Invalid = ReceiptId absent → do not save.
     We do NOT filter by Response; CAPTCHA_* etc. with ReceiptId still count as valid.
@@ -401,15 +402,25 @@ async def test_site_with_card(url: str, proxy: Optional[str] = None) -> tuple[bo
     if proxy and str(proxy).strip():
         px = str(proxy).strip()
         proxy_url = px if px.startswith(("http://", "https://")) else f"http://{px}"
-    try:
-        async with TLSAsyncSession(timeout_seconds=75, proxy=proxy_url) as session:
-            res = await autoshopify_with_captcha_retry(
-                url, TEST_CARD, session, max_captcha_retries=2, proxy=proxy_url
-            )
-    except Exception as e:
-        return False, {"Response": f"ERROR: {str(e)[:50]}", "ReceiptId": None, "Price": "0.00"}
-    has = bool(res.get("ReceiptId"))
-    return has, res
+    
+    # Try up to max_retries times - return immediately on receipt
+    for attempt in range(max_retries):
+        try:
+            async with TLSAsyncSession(timeout_seconds=60, proxy=proxy_url) as session:
+                res = await autoshopify_with_captcha_retry(
+                    url, TEST_CARD, session, max_captcha_retries=1, proxy=proxy_url
+                )
+                # If receipt found, return immediately - no need to retry
+                if res.get("ReceiptId"):
+                    return True, res
+        except Exception as e:
+            if attempt == max_retries - 1:
+                return False, {"Response": f"ERROR: {str(e)[:50]}", "ReceiptId": None, "Price": "0.00"}
+            # Small delay between retries
+            await asyncio.sleep(0.1)
+    
+    # No receipt after all retries
+    return False, {"Response": "NO_RECEIPT", "ReceiptId": None, "Price": "0.00"}
 
 
 def get_user_current_site(user_id: str) -> Optional[Dict[str, str]]:
@@ -504,7 +515,7 @@ async def add_site_handler(client: Client, message: Message):
     
     try:
         # Get user's proxy if set
-        user_proxy = get_proxy(int(user_id))
+        user_proxy = get_rotating_proxy(int(user_id))
         
         # Validate all sites with lowest product parsing
         results = await validate_sites_batch(urls, user_proxy)
@@ -536,30 +547,40 @@ async def add_site_handler(client: Client, message: Message):
                 parse_mode=ParseMode.HTML
             )
 
-        await status_msg.edit_text(
-            f"""<pre>🔍 Validating Shopify Sites...</pre>
-━━━━━━━━━━━━━
-<b>Sites:</b> <code>{total_urls}</code>
-<b>Status:</b> <i>Testing with gate (test card)...</i>""",
-            parse_mode=ParseMode.HTML
-        )
+        # Test sites in parallel for speed - save immediately when receipt found
         proxy_url = user_proxy
         if user_proxy and str(user_proxy).strip():
             px = str(user_proxy).strip()
             proxy_url = px if px.startswith(("http://", "https://")) else f"http://{px}"
+        
         sites_with_receipt = []
-        for v in valid_sites:
-            has_rec, test_res = await test_site_with_card(v["url"], proxy_url)
+        saved_sites = []
+        
+        # Test all valid sites in parallel (fast)
+        async def test_and_save(site_info):
+            has_rec, test_res = await test_site_with_card(site_info["url"], proxy_url, max_retries=3)
             if has_rec:
-                pr = test_res.get("Price") or v.get("price") or "N/A"
+                pr = test_res.get("Price") or site_info.get("price") or "N/A"
                 try:
                     pv = float(pr)
                     pr = f"{pv:.2f}" if pv != int(pv) else str(int(pv))
                 except (TypeError, ValueError):
                     pr = str(pr) if pr else "N/A"
-                v["price"] = pr
-                v["formatted_price"] = f"${pr}"
-                sites_with_receipt.append(v)
+                site_info["price"] = pr
+                site_info["formatted_price"] = f"${pr}"
+                # Save immediately when receipt found
+                save_site_for_user_unified(user_id, site_info["url"], site_info.get("gateway", "Normal"), pr)
+                return site_info
+            return None
+        
+        # Run all tests in parallel
+        test_tasks = [test_and_save(v) for v in valid_sites]
+        test_results = await asyncio.gather(*test_tasks, return_exceptions=True)
+        
+        # Collect successful sites
+        for result in test_results:
+            if result and not isinstance(result, Exception):
+                sites_with_receipt.append(result)
         if not sites_with_receipt:
             time_taken = round(time.time() - start_time, 2)
             return await status_msg.edit_text(
@@ -576,13 +597,28 @@ async def add_site_handler(client: Client, message: Message):
                 parse_mode=ParseMode.HTML
             )
         time_taken = round(time.time() - start_time, 2)
-        primary_site = sites_with_receipt[0]
+        primary_site = sites_with_receipt[0] if sites_with_receipt else None
+        if not primary_site:
+            return await status_msg.edit_text(
+                f"""<pre>No Sites Verified ❌</pre>
+━━━━━━━━━━━━━
+<b>Gate test did not return receipt/bill.</b>
+(All sites tested; no receipts found.)
+
+<b>Tips:</b>
+• Set proxy: <code>/setpx</code>
+• Use a gate that completes checkout with receipt
+━━━━━━━━━━━━━
+⏱️ <b>Time:</b> <code>{time_taken}s</code>""",
+                parse_mode=ParseMode.HTML
+            )
+        
         site_url = primary_site["url"]
         gateway = primary_site.get("gateway", "Normal")
         price = primary_site["price"]
         product_title = primary_site.get("product_title", "N/A")
         formatted_price = primary_site.get("formatted_price", f"${price}")
-        saved = save_site_for_user_unified(user_id, site_url, gateway, price)
+        # Already saved in parallel test above
         response_lines = [
             f"<pre>Site Added Successfully ✅</pre>",
             "━━━━━━━━━━━━━",

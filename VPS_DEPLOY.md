@@ -189,37 +189,50 @@ Save and exit (`Ctrl+O`, `Enter`, `Ctrl+X`).
 
 ## 10. Set MongoDB URI (environment)
 
-**Option A – No MongoDB auth (local only):**
-
-```bash
-echo 'MONGODB_URI=mongodb://localhost:27017' > .env
-```
-
-**Option B – With MongoDB user (from step 5):**
-
-```bash
-echo 'MONGODB_URI=mongodb://botuser:YOUR_STRONG_PASSWORD@localhost:27017/christopher_bot' > .env
-```
-
-Or edit `.env`:
+Create `.env` file:
 
 ```bash
 nano .env
 ```
 
-Add **one** of:
+Add **ONE** of the following options:
+
+**Option A – Railway MongoDB (Recommended for production):**
+
+```env
+MONGODB_URI=mongodb://mongo:YOUR_PASSWORD@containers-us-west-XXX.railway.app:XXXXX
+```
+
+Replace with your actual Railway MongoDB connection string. You can find it in Railway dashboard → Your MongoDB service → Variables → `MONGO_URL` or `MONGODB_URI`.
+
+**Option B – Local MongoDB (No auth):**
 
 ```env
 MONGODB_URI=mongodb://localhost:27017
 ```
 
-or (with auth):
+**Option C – Local MongoDB (With auth, from step 5):**
 
 ```env
-MONGODB_URI=mongodb://botuser:YOUR_PASSWORD@localhost:27017/christopher_bot
+MONGODB_URI=mongodb://botuser:YOUR_STRONG_PASSWORD@localhost:27017/christopher_bot
 ```
 
-Save and exit.
+**Option D – Railway MongoDB (Alternative format):**
+
+If Railway provides `MONGO_URL` instead, you can use:
+
+```env
+MONGO_URL=mongodb://mongo:YOUR_PASSWORD@containers-us-west-XXX.railway.app:XXXXX
+```
+
+The bot supports both `MONGODB_URI` and `MONGO_URL` environment variables.
+
+**Example Railway MongoDB URI format:**
+```
+mongodb://mongo:password123@containers-us-west-123.railway.app:6543
+```
+
+Save and exit (`Ctrl+O`, `Enter`, `Ctrl+X`).
 
 ---
 
@@ -243,10 +256,13 @@ python main.py
 
 You should see:
 
-- `✅ MongoDB connected and ready.`
+- `✅ MongoDB connected and ready.` (if using MongoDB)
 - `✅ Bot is running...`
+- `✅ Bot commands registered for autocomplete`
 
 Stop with `Ctrl+C`.
+
+**Note:** If you see `⚠️ MongoDB init failed`, the bot will fall back to JSON storage in the `DATA/` directory. This is fine for testing, but for production use MongoDB (Railway or local).
 
 ---
 
@@ -384,26 +400,65 @@ sudo ufw status
 
 | Issue | Fix |
 |-------|-----|
-| **`MongoDB not configured`** | Set `MONGODB_URI` in `.env` or systemd `Environment`. |
-| **`MongoDB init failed`** | `sudo systemctl status mongod`; check URI (host, port, user, password). |
-| **`BOT_TOKEN` / config error** | Ensure `FILES/config.json` exists and has correct keys. |
+| **`MongoDB not configured`** | Set `MONGODB_URI` or `MONGO_URL` in `.env` or systemd `Environment`. |
+| **`MongoDB init failed`** | Check URI format (Railway or local). For Railway: ensure connection string includes password and port. For local: `sudo systemctl status mongod`; verify URI (host, port, user, password). |
+| **`BOT_TOKEN` / config error** | Ensure `FILES/config.json` exists and has correct keys (`BOT_TOKEN`, `API_ID`, `API_HASH`, `OWNER`). |
 | **Module not found** | `source venv/bin/activate` then `pip install -r requirements.txt`. |
-| **Permission denied** | Service runs as `botapp`; check ownership of `Christoperbot` and `FILES`. |
+| **Permission denied** | Service runs as `botapp`; check ownership: `sudo chown -R botapp:botapp /home/botapp/Christoperbot`. |
 | **Port in use** | Change `PORT` in `.env` or systemd and restart. |
+| **Railway connection timeout** | Check firewall rules, ensure Railway MongoDB is accessible from your VPS IP. Railway may require IP whitelisting. |
+| **Bot not responding** | Check logs: `sudo journalctl -u christopher-bot -f`. Verify bot token is correct in `FILES/config.json`. |
 
 ---
 
 ## 20. Summary
 
 1. **SSH** → VPS  
-2. **Install** Python 3.11, Git, MongoDB  
-3. **Start** MongoDB (`systemctl`)  
+2. **Install** Python 3.11, Git, MongoDB (optional if using Railway)  
+3. **Start** MongoDB (`systemctl`) - Skip if using Railway  
 4. **Clone** repo from GitHub  
 5. **venv** + `pip install -r requirements.txt`  
-6. **Create** `FILES/config.json` and `.env` (`MONGODB_URI`)  
-7. **Test** `python main.py`  
-8. **Enable** `christopher-bot` systemd service  
-9. **Update** later with `git pull` + `pip install -r requirements.txt` + `systemctl restart christopher-bot`
+6. **Create** `FILES/config.json` with bot credentials  
+7. **Create** `.env` with `MONGODB_URI` (Railway or local)  
+8. **Test** `python main.py`  
+9. **Enable** `christopher-bot` systemd service  
+10. **Update** later with `git pull` + `pip install -r requirements.txt` + `systemctl restart christopher-bot`
 
-**MongoDB on VPS:** `mongodb://localhost:27017` (or with user/pass if you enabled auth).  
-**Bot config:** `FILES/config.json`. **DB only:** `MONGODB_URI` in env.
+**MongoDB Options:**
+- **Railway (Recommended):** `MONGODB_URI=mongodb://mongo:PASSWORD@containers-us-west-XXX.railway.app:XXXXX` in `.env`
+- **Local VPS:** `MONGODB_URI=mongodb://localhost:27017` (or with user/pass if auth enabled)
+
+**Bot config:** `FILES/config.json` (BOT_TOKEN, API_ID, API_HASH, OWNER)  
+**Database:** `MONGODB_URI` or `MONGO_URL` in `.env`
+
+## 21. Quick Start Commands (After Initial Setup)
+
+**Start the bot:**
+```bash
+sudo systemctl start christopher-bot
+```
+
+**Stop the bot:**
+```bash
+sudo systemctl stop christopher-bot
+```
+
+**Restart the bot:**
+```bash
+sudo systemctl restart christopher-bot
+```
+
+**View live logs:**
+```bash
+sudo journalctl -u christopher-bot -f
+```
+
+**Update and restart:**
+```bash
+sudo systemctl stop christopher-bot && sudo -u botapp bash -c 'cd /home/botapp/Christoperbot && git pull origin main && source venv/bin/activate && pip install -r requirements.txt' && sudo systemctl start christopher-bot
+```
+
+**Check status:**
+```bash
+sudo systemctl status christopher-bot
+```

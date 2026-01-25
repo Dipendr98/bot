@@ -8,7 +8,7 @@ from typing import Optional, Dict, Any
 
 from BOT.Charge.Shopify.slf.api import autoshopify
 from BOT.Charge.Shopify.tls_session import TLSAsyncSession
-from BOT.tools.proxy import get_proxy
+from BOT.tools.proxy import get_rotating_proxy
 from BOT.Charge.Shopify.slf.site_manager import get_primary_site
 
 
@@ -59,7 +59,7 @@ async def check_card(user_id: str, cc: str, site: Optional[str] = None) -> str:
     
     # Get user's proxy
     try:
-        user_proxy = get_proxy(int(user_id))
+        user_proxy = get_rotating_proxy(int(user_id))
     except:
         user_proxy = None
     
@@ -126,7 +126,7 @@ async def check_card_full(user_id: str, cc: str, site: Optional[str] = None) -> 
     
     # Get user's proxy
     try:
-        user_proxy = get_proxy(int(user_id))
+        user_proxy = get_rotating_proxy(int(user_id))
     except:
         user_proxy = None
     

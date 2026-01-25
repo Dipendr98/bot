@@ -145,9 +145,13 @@ def migrate_json_to_mongo():
             with open(proxy_path, "r", encoding="utf-8") as f:
                 data = json.load(f)
             if isinstance(data, dict) and data:
-                for uid, proxy_url in data.items():
+                for uid, proxy_val in data.items():
                     try:
-                        db.proxies.insert_one({"user_id": str(uid), "proxy": proxy_url})
+                        if isinstance(proxy_val, list):
+                            proxies_list = [str(p) for p in proxy_val if p]
+                        else:
+                            proxies_list = [str(proxy_val)] if proxy_val else []
+                        db.proxies.insert_one({"_id": str(uid), "proxies": proxies_list})
                     except Exception:
                         pass
                 print("[MongoDB] Migrated proxies from proxy.json")

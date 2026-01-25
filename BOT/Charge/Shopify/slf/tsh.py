@@ -1,6 +1,6 @@
 """
 TXT Sites Shopify Checker with Site Rotation
-Handles /tsh command: parallel mode (20 threads), rate limiting, 429-safe.
+Handles /tsh command: parallel mode (15 threads), rate limiting, 429-safe with adaptive throttling.
 Stop button: mandatory — only the user who started the check can stop it.
 """
 
@@ -21,40 +21,71 @@ from BOT.Charge.Shopify.tls_session import TLSAsyncSession
 from BOT.Charge.Shopify.slf.site_manager import SiteRotator, get_user_sites
 from BOT.Charge.Shopify.slf.single import check_card_all_sites_parallel
 from BOT.helper.permissions import check_private_access
-from BOT.tools.proxy import get_proxy
+from BOT.tools.proxy import get_rotating_proxy
 from BOT.helper.start import load_users
 
 SPINNERS = ("◐", "◓", "◑", "◒")
 tsh_stop_requested: dict[str, bool] = {}
 
-# Parallel /tsh: 20 threads, rate limit to reduce 429s
-TSH_CONCURRENCY = 20
-TSH_REQUESTS_PER_SECOND = 12
+# --- Adaptive Rate Limiter Class ---
 
-
-class RateLimiter:
-    """Token-bucket style rate limiter for /tsh parallel checks."""
-
-    def __init__(self, rps: int, lock: asyncio.Lock | None = None):
-        self.rps = max(1, rps)
-        self.times: deque[float] = deque()
-        self._lock = lock or asyncio.Lock()
-
-    async def wait(self) -> None:
-        async with self._lock:
+class RateLimitedChecker:
+    def __init__(self, concurrency=20, requests_per_second=12):
+        self.sem = asyncio.Semaphore(concurrency)
+        self.requests_per_second = requests_per_second
+        self.request_times = deque()
+        self.lock = asyncio.Lock()
+        self.consecutive_429s = 0
+        self.current_delay = 0.1
+    
+    async def wait_for_rate_limit(self):
+        """Token bucket enforcement"""
+        async with self.lock:
             now = time.monotonic()
-            while self.times and now - self.times[0] >= 1.0:
-                self.times.popleft()
-            if len(self.times) >= self.rps:
-                wait = 1.0 - (now - self.times[0])
-                if wait > 0:
-                    await asyncio.sleep(wait)
-                    now = time.monotonic()
-                    while self.times and now - self.times[0] >= 1.0:
-                        self.times.popleft()
-            self.times.append(time.monotonic())
-        jitter = random.uniform(0.02, 0.08)
-        await asyncio.sleep(jitter)
+            while self.request_times and now - self.request_times[0] > 1.0:
+                self.request_times.popleft()
+            if len(self.request_times) >= self.requests_per_second:
+                sleep_time = 1.0 - (now - self.request_times[0])
+                if sleep_time > 0: 
+                    await asyncio.sleep(sleep_time)
+            self.request_times.append(time.monotonic())
+
+    async def adaptive_delay(self):
+        """Dynamic sleep based on health"""
+        jitter = random.uniform(0.05, 0.15)
+        await asyncio.sleep(self.current_delay + jitter)
+    
+    def on_success(self):
+        self.consecutive_429s = 0
+        self.current_delay = max(0.1, self.current_delay * 0.95)  # Speed up
+    
+    def on_429(self):
+        self.consecutive_429s += 1
+        self.current_delay = min(5.0, self.current_delay * 2.0)  # Slow down
+
+    async def safe_check(self, user_id, card):
+        async with self.sem:
+            try:
+                await self.wait_for_rate_limit()
+                await self.adaptive_delay()
+                
+                # Get a fresh proxy for this request
+                proxy = get_rotating_proxy(user_id)
+                
+                # ACTUAL CHECK CALL
+                result, retries = await check_card_all_sites_parallel(user_id, card, proxy)
+                
+                # Analyze result for Rate Limiting
+                resp_str = str((result or {}).get("Response", "")).upper()
+                if "429" in resp_str or "RATE LIMIT" in resp_str or "PROXY" in resp_str:
+                    self.on_429()
+                else:
+                    self.on_success()
+                    
+                return card, result, retries
+                
+            except Exception as e:
+                return card, {"Response": f"ERROR: {e}", "Status": False}, 0
 
 # Try to import BIN lookup
 try:
@@ -253,7 +284,7 @@ async def tsh_handler(client: Client, m: Message):
             parse_mode=ParseMode.HTML
         )
 
-    proxy = get_proxy(int(user_id))
+    proxy = get_rotating_proxy(int(user_id))
     
     # Check if proxy is configured
     if not proxy:
@@ -290,7 +321,7 @@ async def tsh_handler(client: Client, m: Message):
         f"""<pre>◐ [#TSH] | TXT Shopify Check</pre>
 ━━━━━━━━━━━━━
 <b>⊙ Total CC:</b> <code>{total_cards}</code>
-<b>⊙ Sites:</b> <code>{site_count}</code> · <b>Mode:</b> <code>Parallel ({TSH_CONCURRENCY} threads)</code>
+<b>⊙ Sites:</b> <code>{site_count}</code> · <b>Mode:</b> <code>Parallel (20 threads)</code>
 <b>⊙ Status:</b> <code>◐ Preparing...</code>
 ━━━━━━━━━━━━━
 <b>[ﾒ] Checked By:</b> {user.mention}""",
@@ -338,50 +369,37 @@ async def tsh_handler(client: Client, m: Message):
         except Exception:
             pass
 
-    sem = asyncio.Semaphore(TSH_CONCURRENCY)
-    rl = RateLimiter(TSH_REQUESTS_PER_SECOND)
-
-    async def check_one(card: str):
-        async with sem:
-            await rl.wait()
-            try:
-                result, retries = await check_card_all_sites_parallel(user_id, card, proxy)
-                return card, str((result or {}).get("Response", "UNKNOWN")), retries, result
-            except Exception as e:
-                return card, f"ERROR: {str(e)[:40]}", 0, None
-
-    tasks = [asyncio.create_task(check_one(c)) for c in cards]
-    pending = set(tasks)
-
-    for fut in asyncio.as_completed(tasks):
+    # Initialize Checker with 20 threads for professional performance
+    checker = RateLimitedChecker(concurrency=20, requests_per_second=12)
+    
+    # Create Tasks
+    tasks = [checker.safe_check(user_id, card) for card in cards]
+    
+    for task_coro in asyncio.as_completed(tasks):
         if tsh_stop_requested.get(user_id):
             stopped = True
-            for t in tasks:
-                if not t.done():
-                    t.cancel()
-            for t in tasks:
-                try:
-                    await t
-                except asyncio.CancelledError:
-                    pass
             break
-
+        
         try:
-            o = await fut
+            o = await task_coro
         except Exception as e:
-            o = (None, f"ERROR: {str(e)[:40]}", 0, None)
-        pending.discard(fut)
-        if o[0] is None:
-            error_count += 1
-            checked_count += 1
-            await _edit_progress(force=(checked_count == total_cards))
-            continue
-        card_used, raw_response, retries, result = o
+            o = (card, f"ERROR: {str(e)[:40]}", 0, None)
+        
+        # Unpack result from safe_check
+        # safe_check returns: card, result, retries
+        # But wait - check_card_all_sites_parallel returns (result, retries)
+        # So safe_check actually returns: card, result_dict, retries
+        
+        card_used, result, retries = o
+        
+        # Backward compatibility for extraction logic below
+        raw_response = str((result or {}).get("Response", "UNKNOWN"))
+        
         checked_count += 1
         total_retries += retries
 
         try:
-            response_upper = (raw_response or "").upper()
+            response_upper = raw_response.upper()
             status_flag = get_status_flag(response_upper)
             is_charged = "Charged 💎" in status_flag
             is_approved = "Approved ✅" in status_flag
@@ -397,6 +415,7 @@ async def tsh_handler(client: Client, m: Message):
                 declined_count += 1
             if is_captcha:
                 captcha_count += 1
+            
             if is_charged or is_approved:
                 cc = card_used.split("|")[0] if "|" in card_used else card_used
                 try:
@@ -413,8 +432,8 @@ async def tsh_handler(client: Client, m: Message):
                 try:
                     pv = float(pr)
                     pr = f"{pv:.2f}" if pv != int(pv) else str(int(pv))
-                except (TypeError, ValueError):
-                    pr = str(pr) if pr else "0.00"
+                except:
+                    pr = "0.00"
                 gateway_display = f"Shopify Normal ${pr}"
                 hit_header = "CHARGED" if is_charged else "CCN LIVE"
                 hit_message = f"""<b>[#Shopify] | {hit_header}</b> ✦
@@ -438,26 +457,14 @@ async def tsh_handler(client: Client, m: Message):
                 except Exception:
                     pass
                 await _edit_progress(force=True)
+            
             is_last = checked_count == total_cards
             await _edit_progress(force=is_last)
+
         except Exception as e:
             error_count += 1
-            try:
-                elapsed = time.time() - start_time
-                rate = checked_count / elapsed if elapsed > 0 else 0
-                await status_msg.edit_text(
-                    f"""<pre>✦ [#TSH] | TXT Shopify Check</pre>
-━━━━━━━━━━━━━━━
-<b>💬 Progress:</b> <code>{checked_count}/{total_cards}</code>
-<b>⚠️ Errors:</b> <code>{error_count}</code> (err: {str(e)[:25]})
-<b>⏱️ Time:</b> <code>{elapsed:.1f}s</code> · <code>{rate:.1f} cc/s</code>
-<b>[ﾒ] By:</b> {user.mention}""",
-                    parse_mode=ParseMode.HTML,
-                    reply_markup=stop_kb,
-                )
-                last_progress_edit = time.time()
-            except Exception:
-                pass
+
+    # End of parallel loop
 
     total_time = time.time() - start_time
     current_time = datetime.now().strftime("%I:%M %p")
@@ -492,15 +499,14 @@ async def tsh_handler(client: Client, m: Message):
 
 @Client.on_callback_query(filters.regex(r"^tsh_stop_(\d+)$"))
 async def tsh_stop_callback(client: Client, cq):
-    """Stop a running /tsh check. Mandatory: only the user who started it can stop."""
+    """Stop a running /tsh check. Only the user who started it can stop."""
     try:
         if not cq.from_user:
             await cq.answer("Invalid request.", show_alert=True)
             return
         uid = cq.matches[0].group(1) if cq.matches else None
-        # Mandatory: only the user who started this check can stop it.
         if not uid or str(cq.from_user.id) != uid:
-            await cq.answer("Only the user who started this check can stop it.", show_alert=True)
+            await cq.answer("You can only stop your own check.", show_alert=True)
             return
         tsh_stop_requested[uid] = True
         try:

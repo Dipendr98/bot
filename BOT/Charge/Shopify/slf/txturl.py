@@ -28,8 +28,9 @@ from pyrogram.enums import ParseMode
 
 from BOT.Charge.Shopify.tls_session import TLSAsyncSession
 from BOT.helper.start import load_users
-from BOT.tools.proxy import get_proxy
+from BOT.tools.proxy import get_rotating_proxy
 from BOT.Charge.Shopify.slf.addurl import test_site_with_card
+from BOT.Charge.Shopify.slf.site_manager import add_site_for_user
 
 try:
     import cloudscraper
@@ -517,7 +518,7 @@ Use <code>/txtls</code> to view your sites.""",
     try:
         user_proxy = None
         try:
-            user_proxy = get_proxy(int(user_id))
+            user_proxy = get_rotating_proxy(int(user_id))
         except Exception:
             pass
         results = await validate_sites_batch(
@@ -531,9 +532,8 @@ Use <code>/txtls</code> to view your sites.""",
         valid_sites = [r for r in results if r.get("valid")]
         invalid_sites = [r for r in results if not r.get("valid")]
         
-        time_taken = round(time.time() - start_time, 2)
-        
         if not valid_sites:
+            time_taken = round(time.time() - start_time, 2)
             error_lines = []
             for site in invalid_sites[:5]:
                 url = (site.get('url') or 'Unknown')[:40]
@@ -556,30 +556,46 @@ Use <code>/txtls</code> to view your sites.""",
                 parse_mode=ParseMode.HTML
             )
         
+        # Update status for parallel testing
         await wait_msg.edit_text(
-            f"""<pre>🔍 Validating Shopify Sites...</pre>
+            f"""<pre>🔍 Testing Sites (Parallel)...</pre>
 ━━━━━━━━━━━━━━━
 <b>Sites:</b> <code>{len(valid_sites)}</code>
-<b>Status:</b> <i>Testing with gate (test card)...</i>""",
+<b>Status:</b> <i>Testing with gate (3 retries each)...</i>""",
             parse_mode=ParseMode.HTML
         )
-        proxy_url = get_proxy(int(user_id))
+        
+        # Test sites in parallel for speed - save immediately when receipt found
+        proxy_url = get_rotating_proxy(int(user_id))
         if proxy_url and str(proxy_url).strip():
             px = str(proxy_url).strip()
             proxy_url = px if px.startswith(("http://", "https://")) else f"http://{px}"
+        
         sites_with_receipt = []
-        for v in valid_sites:
-            has_rec, test_res = await test_site_with_card(v["url"], proxy_url)
+        
+        # Test all valid sites in parallel (fast) with 3 retries
+        async def test_and_prepare(site_info):
+            has_rec, test_res = await test_site_with_card(site_info["url"], proxy_url, max_retries=3)
             if has_rec:
-                pr = test_res.get("Price") or v.get("price") or "N/A"
+                pr = test_res.get("Price") or site_info.get("price") or "N/A"
                 try:
                     pv = float(pr)
                     pr = f"{pv:.2f}" if pv != int(pv) else str(int(pv))
                 except (TypeError, ValueError):
                     pr = str(pr) if pr else "N/A"
-                v["price"] = pr
-                v["formatted_price"] = f"${pr}"
-                sites_with_receipt.append(v)
+                site_info["price"] = pr
+                site_info["formatted_price"] = f"${pr}"
+                return site_info
+            return None
+        
+        # Run all tests in parallel
+        test_tasks = [test_and_prepare(v) for v in valid_sites]
+        test_results = await asyncio.gather(*test_tasks, return_exceptions=True)
+        
+        # Collect successful sites
+        for result in test_results:
+            if result and not isinstance(result, Exception):
+                sites_with_receipt.append(result)
         if not sites_with_receipt:
             time_taken = round(time.time() - start_time, 2)
             return await wait_msg.edit_text(
@@ -595,18 +611,15 @@ Use <code>/txtls</code> to view your sites.""",
 ⏱️ <b>Time:</b> <code>{time_taken}s</code>""",
                 parse_mode=ParseMode.HTML
             )
-        valid_sites = sites_with_receipt
-        time_taken = round(time.time() - start_time, 2)
-
-        sites_to_add = []
-        for site in valid_sites:
+        # Save all sites with receipts immediately
+        saved_count = 0
+        for site in sites_with_receipt:
             price = site.get("price", "N/A")
-            sites_to_add.append({
-                "url": site["url"],
-                "gateway": f"Shopify Normal ${price}",
-                "price": price
-            })
-        added_count = add_sites_batch(user_id, sites_to_add)
+            if add_site_for_user(user_id, site["url"], f"Shopify Normal ${price}", price, set_primary=(saved_count == 0)):
+                saved_count += 1
+        
+        time_taken = round(time.time() - start_time, 2)
+        valid_sites = sites_with_receipt
 
         # Build response
         result_lines = [

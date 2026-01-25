@@ -20,7 +20,7 @@ from BOT.Charge.Shopify.slf.single import (
     MASS_DELAY_BETWEEN_CARDS,
 )
 from BOT.helper.start import load_users
-from BOT.tools.proxy import get_proxy
+from BOT.tools.proxy import get_rotating_proxy
 from BOT.helper.permissions import check_private_access
 from BOT.gc.credit import deduct_credit_bulk
 
@@ -223,7 +223,7 @@ async def mslf_handler(client, message):
         if not await check_private_access(message):
             return
 
-        proxy = get_proxy(str(user_id))
+        proxy = get_rotating_proxy(str(user_id))
         if not proxy:
             return await message.reply(
                 "<pre>Proxy Error ❗️</pre>\n"
