@@ -393,7 +393,11 @@ def save_site_for_user_unified(user_id: str, site: str, gateway: str, price: str
 async def test_site_with_card(url: str, proxy: Optional[str] = None) -> tuple[bool, dict]:
     """
     Run a /sh-style test check on a single URL with TEST_CARD.
-    Returns (has_receipt, result). Add site only when has_receipt.
+    Returns (has_receipt, result).
+
+    Valid = whenever bill/ReceiptId is present. We do NOT filter by Response.
+    So CAPTCHA_REQUIRED, CAPTCHA_MAX_RETRIES, etc. with ReceiptId still count
+    as valid — add the site with accurate checkout total (result["Price"]).
     """
     proxy_url = None
     if proxy and str(proxy).strip():
