@@ -226,40 +226,32 @@ async def fetch_products_json(
 
 
 def find_lowest_variant(products: List[Dict]) -> Optional[Dict]:
-    """Find lowest priced available product from products list."""
+    """Find lowest priced product. Prefer available; fallback to lowest price regardless."""
     lowest_price = float('inf')
     lowest_product = None
     lowest_variant = None
-    
+    fallback_price = float('inf')
+    fallback_product = None
+    fallback_variant = None
     for product in products:
-        variants = product.get('variants', [])
-        
+        variants = product.get('variants', []) or []
         for variant in variants:
             try:
-                # Check availability
                 available = variant.get('available', False)
-                price_str = variant.get('price', '0')
+                price_str = variant.get('price', '0') or '0'
                 price = float(price_str) if price_str else 0.0
-                
-                # Skip unavailable or free products
-                if not available or price < 0.10:
+                if price < 0.10:
                     continue
-                
-                if price < lowest_price:
-                    lowest_price = price
-                    lowest_product = product
-                    lowest_variant = variant
-                    
+                if available and price < lowest_price:
+                    lowest_price, lowest_product, lowest_variant = price, product, variant
+                if price < fallback_price:
+                    fallback_price, fallback_product, fallback_variant = price, product, variant
             except (ValueError, TypeError):
                 continue
-    
     if lowest_product and lowest_variant:
-        return {
-            'product': lowest_product,
-            'variant': lowest_variant,
-            'price': lowest_price
-        }
-    
+        return {'product': lowest_product, 'variant': lowest_variant, 'price': lowest_price}
+    if fallback_product and fallback_variant:
+        return {'product': fallback_product, 'variant': fallback_variant, 'price': fallback_price}
     return None
 
 
@@ -287,14 +279,11 @@ async def validate_site_robust(
         result["url"] = normalized
         products = await fetch_products_json(session, normalized, proxy)
         if not products:
-            result["error"] = "No products or not Shopify"
+            result["error"] = "No products from products.json (not Shopify or unreachable)"
             return result
-        
-        # Find lowest variant
         lowest = find_lowest_variant(products)
-        
         if not lowest:
-            result["error"] = "No available products"
+            result["error"] = "No parseable variants from products.json"
             return result
         
         # Success - populate result
@@ -355,7 +344,7 @@ async def validate_sites_batch(
                 await progress_callback(processed, total, valid_so_far)
             
             if i + batch_size < len(urls):
-                await asyncio.sleep(0.15)
+                await asyncio.sleep(0.08)
     
     return results
 
@@ -544,22 +533,21 @@ Use <code>/txtls</code> to view your sites.""",
         if not valid_sites:
             error_lines = []
             for site in invalid_sites[:5]:
-                url = site.get('url', 'Unknown')[:30]
-                err = site.get('error', 'Unknown')[:20]
-                error_lines.append(f"• <code>{url}</code> - {err}")
-            
+                url = (site.get('url') or 'Unknown')[:40]
+                err = (site.get('error') or 'Invalid')[:40]
+                error_lines.append(f"• <code>{url}</code> → {err}")
             return await wait_msg.edit_text(
-                f"""<pre>No Valid Sites Found ❌</pre>
+                f"""<pre>Invalid Site(s) ❌</pre>
 ━━━━━━━━━━━━━
 <b>Processed:</b> <code>{len(new_urls)}</code>
-<b>Valid:</b> <code>0</code>
+<b>Valid:</b> <code>0</code> (no products from products.json)
 
-<b>Failed Sites:</b>
+<b>Errors:</b>
 {chr(10).join(error_lines)}
 
 <b>Tips:</b>
-• Ensure sites are Shopify stores
-• Check if stores have available products
+• Use Shopify stores with <code>/products.json</code>
+• Full URL: <code>https://store.com</code>
 ━━━━━━━━━━━━━
 ⏱️ <b>Time:</b> <code>{time_taken}s</code>""",
                 parse_mode=ParseMode.HTML
@@ -589,17 +577,17 @@ Use <code>/txtls</code> to view your sites.""",
                 v["price"] = pr
                 v["formatted_price"] = f"${pr}"
                 sites_with_receipt.append(v)
-            await asyncio.sleep(0.2)
         if not sites_with_receipt:
             time_taken = round(time.time() - start_time, 2)
             return await wait_msg.edit_text(
                 f"""<pre>No Sites Verified ❌</pre>
 ━━━━━━━━━━━━━━━
-<b>Test check did not return receipt/bill.</b>
+<b>Gate test did not return receipt/bill.</b>
+(Sites have products; test checkout failed.)
 
 <b>Tips:</b>
-• Use working Shopify gates (checkout completes with receipt)
-• Ensure proxy is set: <code>/setpx</code>
+• Set proxy: <code>/setpx</code>
+• Use gates that complete checkout with receipt
 ━━━━━━━━━━━━━
 ⏱️ <b>Time:</b> <code>{time_taken}s</code>""",
                 parse_mode=ParseMode.HTML
