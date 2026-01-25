@@ -568,14 +568,15 @@ async def mslf_handler(client, message):
 
 @Client.on_callback_query(filters.regex(r"^msh_stop_(\d+)$"))
 async def msh_stop_callback(client, cq):
-    """Stop a running /msh check. Only the user who started it can stop."""
+    """Stop a running /msh check. Mandatory: only the user who started it can stop."""
     try:
         if not cq.from_user:
             await cq.answer("Invalid request.", show_alert=True)
             return
         uid = cq.matches[0].group(1) if cq.matches else None
+        # Mandatory: only the user who started this check can stop it.
         if not uid or str(cq.from_user.id) != uid:
-            await cq.answer("You can only stop your own check.", show_alert=True)
+            await cq.answer("Only the user who started this check can stop it.", show_alert=True)
             return
         msh_stop_requested[uid] = True
         try:

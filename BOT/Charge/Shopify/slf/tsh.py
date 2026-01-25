@@ -1,7 +1,7 @@
 """
 TXT Sites Shopify Checker with Site Rotation
-Handles /tsh command with intelligent site rotation on captcha/errors.
-429-proof: sequential checks, robust retries, proxy usage.
+Handles /tsh command: parallel mode (20 threads), rate limiting, 429-safe.
+Stop button: mandatory — only the user who started the check can stop it.
 """
 
 import os
@@ -9,6 +9,8 @@ import re
 import json
 import asyncio
 import time
+import random
+from collections import deque
 from datetime import datetime
 
 from pyrogram import Client, filters
@@ -17,16 +19,42 @@ from pyrogram.enums import ParseMode
 from BOT.Charge.Shopify.slf.api import autoshopify, autoshopify_with_captcha_retry
 from BOT.Charge.Shopify.tls_session import TLSAsyncSession
 from BOT.Charge.Shopify.slf.site_manager import SiteRotator, get_user_sites
-from BOT.Charge.Shopify.slf.single import (
-    check_card_all_sites_parallel,
-    MASS_DELAY_BETWEEN_CARDS,
-)
+from BOT.Charge.Shopify.slf.single import check_card_all_sites_parallel
 from BOT.helper.permissions import check_private_access
 from BOT.tools.proxy import get_proxy
 from BOT.helper.start import load_users
 
 SPINNERS = ("◐", "◓", "◑", "◒")
 tsh_stop_requested: dict[str, bool] = {}
+
+# Parallel /tsh: 20 threads, rate limit to reduce 429s
+TSH_CONCURRENCY = 20
+TSH_REQUESTS_PER_SECOND = 12
+
+
+class RateLimiter:
+    """Token-bucket style rate limiter for /tsh parallel checks."""
+
+    def __init__(self, rps: int, lock: asyncio.Lock | None = None):
+        self.rps = max(1, rps)
+        self.times: deque[float] = deque()
+        self._lock = lock or asyncio.Lock()
+
+    async def wait(self) -> None:
+        async with self._lock:
+            now = time.monotonic()
+            while self.times and now - self.times[0] >= 1.0:
+                self.times.popleft()
+            if len(self.times) >= self.rps:
+                wait = 1.0 - (now - self.times[0])
+                if wait > 0:
+                    await asyncio.sleep(wait)
+                    now = time.monotonic()
+                    while self.times and now - self.times[0] >= 1.0:
+                        self.times.popleft()
+            self.times.append(time.monotonic())
+        jitter = random.uniform(0.02, 0.08)
+        await asyncio.sleep(jitter)
 
 # Try to import BIN lookup
 try:
@@ -262,7 +290,7 @@ async def tsh_handler(client: Client, m: Message):
         f"""<pre>◐ [#TSH] | TXT Shopify Check</pre>
 ━━━━━━━━━━━━━
 <b>⊙ Total CC:</b> <code>{total_cards}</code>
-<b>⊙ Sites:</b> <code>{site_count}</code> · <b>Mode:</b> <code>Sequential</code>
+<b>⊙ Sites:</b> <code>{site_count}</code> · <b>Mode:</b> <code>Parallel ({TSH_CONCURRENCY} threads)</code>
 <b>⊙ Status:</b> <code>◐ Preparing...</code>
 ━━━━━━━━━━━━━
 <b>[ﾒ] Checked By:</b> {user.mention}""",
@@ -310,63 +338,86 @@ async def tsh_handler(client: Client, m: Message):
         except Exception:
             pass
 
-    async def check_one(card):
-        try:
-            result, retries = await check_card_all_sites_parallel(user_id, card, proxy)
-            return card, str((result or {}).get("Response", "UNKNOWN")), retries, result
-        except Exception as e:
-            return card, f"ERROR: {str(e)[:40]}", 0, None
+    sem = asyncio.Semaphore(TSH_CONCURRENCY)
+    rl = RateLimiter(TSH_REQUESTS_PER_SECOND)
 
-    for idx, card in enumerate(cards):
+    async def check_one(card: str):
+        async with sem:
+            await rl.wait()
+            try:
+                result, retries = await check_card_all_sites_parallel(user_id, card, proxy)
+                return card, str((result or {}).get("Response", "UNKNOWN")), retries, result
+            except Exception as e:
+                return card, f"ERROR: {str(e)[:40]}", 0, None
+
+    tasks = [asyncio.create_task(check_one(c)) for c in cards]
+    pending = set(tasks)
+
+    for fut in asyncio.as_completed(tasks):
         if tsh_stop_requested.get(user_id):
             stopped = True
+            for t in tasks:
+                if not t.done():
+                    t.cancel()
+            for t in tasks:
+                try:
+                    await t
+                except asyncio.CancelledError:
+                    pass
             break
+
         try:
-            o = await check_one(card)
+            o = await fut
         except Exception as e:
-            o = (card, f"ERROR: {str(e)[:40]}", 0, None)
+            o = (None, f"ERROR: {str(e)[:40]}", 0, None)
+        pending.discard(fut)
+        if o[0] is None:
+            error_count += 1
+            checked_count += 1
+            await _edit_progress(force=(checked_count == total_cards))
+            continue
         card_used, raw_response, retries, result = o
-        checked_count = idx + 1
+        checked_count += 1
         total_retries += retries
 
         try:
-                response_upper = (raw_response or "").upper()
-                status_flag = get_status_flag(response_upper)
-                is_charged = "Charged 💎" in status_flag
-                is_approved = "Approved ✅" in status_flag
-                is_error = "Error ⚠️" in status_flag
-                is_captcha = any(x in response_upper for x in ["CAPTCHA", "HCAPTCHA", "RECAPTCHA"])
-                if is_charged:
-                    charged_count += 1
-                elif is_approved:
-                    approved_count += 1
-                elif is_error:
-                    error_count += 1
-                else:
-                    declined_count += 1
-                if is_captcha:
-                    captcha_count += 1
-                if is_charged or is_approved:
-                    cc = card_used.split("|")[0] if "|" in card_used else card_used
-                    try:
-                        bin_data = get_bin_details(cc[:6])
-                        if bin_data:
-                            bin_info = f"{bin_data.get('vendor', 'N/A')} - {bin_data.get('type', 'N/A')} - {bin_data.get('level', 'N/A')}"
-                            bank = bin_data.get('bank', 'N/A')
-                            country = f"{bin_data.get('country', 'N/A')} {bin_data.get('flag', '')}"
-                        else:
-                            bin_info = bank = country = "N/A"
-                    except Exception:
+            response_upper = (raw_response or "").upper()
+            status_flag = get_status_flag(response_upper)
+            is_charged = "Charged 💎" in status_flag
+            is_approved = "Approved ✅" in status_flag
+            is_error = "Error ⚠️" in status_flag
+            is_captcha = any(x in response_upper for x in ["CAPTCHA", "HCAPTCHA", "RECAPTCHA"])
+            if is_charged:
+                charged_count += 1
+            elif is_approved:
+                approved_count += 1
+            elif is_error:
+                error_count += 1
+            else:
+                declined_count += 1
+            if is_captcha:
+                captcha_count += 1
+            if is_charged or is_approved:
+                cc = card_used.split("|")[0] if "|" in card_used else card_used
+                try:
+                    bin_data = get_bin_details(cc[:6])
+                    if bin_data:
+                        bin_info = f"{bin_data.get('vendor', 'N/A')} - {bin_data.get('type', 'N/A')} - {bin_data.get('level', 'N/A')}"
+                        bank = bin_data.get('bank', 'N/A')
+                        country = f"{bin_data.get('country', 'N/A')} {bin_data.get('flag', '')}"
+                    else:
                         bin_info = bank = country = "N/A"
-                    pr = (result or {}).get("Price", "0.00")
-                    try:
-                        pv = float(pr)
-                        pr = f"{pv:.2f}" if pv != int(pv) else str(int(pv))
-                    except (TypeError, ValueError):
-                        pr = str(pr) if pr else "0.00"
-                    gateway_display = f"Shopify Normal ${pr}"
-                    hit_header = "CHARGED" if is_charged else "CCN LIVE"
-                    hit_message = f"""<b>[#Shopify] | {hit_header}</b> ✦
+                except Exception:
+                    bin_info = bank = country = "N/A"
+                pr = (result or {}).get("Price", "0.00")
+                try:
+                    pv = float(pr)
+                    pr = f"{pv:.2f}" if pv != int(pv) else str(int(pv))
+                except (TypeError, ValueError):
+                    pr = str(pr) if pr else "0.00"
+                gateway_display = f"Shopify Normal ${pr}"
+                hit_header = "CHARGED" if is_charged else "CCN LIVE"
+                hit_message = f"""<b>[#Shopify] | {hit_header}</b> ✦
 ━━━━━━━━━━━━━━━
 <b>[•] Card:</b> <code>{card_used}</code>
 <b>[•] Gateway:</b> <code>{gateway_display}</code>
@@ -382,13 +433,13 @@ async def tsh_handler(client: Client, m: Message):
 <b>[ﾒ] Checked By:</b> {user.mention}
 <b>[ϟ] Dev:</b> <a href="https://t.me/Chr1shtopher">Chr1shtopher</a>
 ━━━━━━━━━━━━━━━"""
-                    try:
-                        await m.reply(hit_message, parse_mode=ParseMode.HTML, disable_web_page_preview=True)
-                    except Exception:
-                        pass
-                    await _edit_progress(force=True)
-                is_last = checked_count == total_cards
-                await _edit_progress(force=is_last)
+                try:
+                    await m.reply(hit_message, parse_mode=ParseMode.HTML, disable_web_page_preview=True)
+                except Exception:
+                    pass
+                await _edit_progress(force=True)
+            is_last = checked_count == total_cards
+            await _edit_progress(force=is_last)
         except Exception as e:
             error_count += 1
             try:
@@ -398,7 +449,7 @@ async def tsh_handler(client: Client, m: Message):
                     f"""<pre>✦ [#TSH] | TXT Shopify Check</pre>
 ━━━━━━━━━━━━━━━
 <b>💬 Progress:</b> <code>{checked_count}/{total_cards}</code>
-<b>⚠️ Errors:</b> <code>{error_count}</code> (card err: {str(e)[:25]})
+<b>⚠️ Errors:</b> <code>{error_count}</code> (err: {str(e)[:25]})
 <b>⏱️ Time:</b> <code>{elapsed:.1f}s</code> · <code>{rate:.1f} cc/s</code>
 <b>[ﾒ] By:</b> {user.mention}""",
                     parse_mode=ParseMode.HTML,
@@ -407,9 +458,6 @@ async def tsh_handler(client: Client, m: Message):
                 last_progress_edit = time.time()
             except Exception:
                 pass
-
-        if not stopped and idx + 1 < total_cards:
-            await asyncio.sleep(MASS_DELAY_BETWEEN_CARDS)
 
     total_time = time.time() - start_time
     current_time = datetime.now().strftime("%I:%M %p")
@@ -444,14 +492,15 @@ async def tsh_handler(client: Client, m: Message):
 
 @Client.on_callback_query(filters.regex(r"^tsh_stop_(\d+)$"))
 async def tsh_stop_callback(client: Client, cq):
-    """Stop a running /tsh check. Only the user who started it can stop."""
+    """Stop a running /tsh check. Mandatory: only the user who started it can stop."""
     try:
         if not cq.from_user:
             await cq.answer("Invalid request.", show_alert=True)
             return
         uid = cq.matches[0].group(1) if cq.matches else None
+        # Mandatory: only the user who started this check can stop it.
         if not uid or str(cq.from_user.id) != uid:
-            await cq.answer("You can only stop your own check.", show_alert=True)
+            await cq.answer("Only the user who started this check can stop it.", show_alert=True)
             return
         tsh_stop_requested[uid] = True
         try:
