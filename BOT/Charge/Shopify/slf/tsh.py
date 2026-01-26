@@ -362,15 +362,6 @@ async def tsh_handler(client: Client, m: Message):
         )
 
     total_cards = len(cards)
-    # Limit to 50 cards for parallel processing
-    if total_cards > 50:
-        cards = cards[:50]
-        total_cards = len(cards)
-        await m.reply(
-            f"<pre>⚠️ Card Limit Applied</pre>\n<b>Limited to 50 cards for parallel processing.</b>\n<b>Processing:</b> <code>{total_cards} cards</code>",
-            parse_mode=ParseMode.HTML
-        )
-
     user = m.from_user
     user_sites = get_user_sites(user_id)
 
