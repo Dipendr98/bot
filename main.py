@@ -15,6 +15,7 @@ from BOT.plans.plan3 import check_and_expire_plans as plan3_expiry
 from BOT.plans.plan4 import check_and_expire_plans as plan4_expiry
 from BOT.plans.redeem import check_and_expire_redeem_plans as redeem_expiry
 from BOT.db.mongo import use_mongo, init_db, close_db, migrate_json_to_mongo
+from BOT.queue.manager import init_queue
 
 # Load bot credentials from FILES/config.json (existing implementation)
 from BOT.config_loader import get_config
@@ -56,6 +57,14 @@ async def run_bot():
             print("✅ MongoDB connected and ready.")
         except Exception as e:
             print(f"⚠️ MongoDB init failed: {e}. Using JSON storage.")
+
+    # Initialize Global Priority Queue (500 workers)
+    try:
+        await init_queue()
+        print("✅ Global Priority Queue initialized (500 workers)")
+    except Exception as e:
+        print(f"⚠️ Queue init failed: {e}")
+
     await bot.start()
     print("✅ Bot is running...")
 
@@ -107,6 +116,9 @@ async def run_bot():
         BotCommand("txtls", "List your sites (up to 20)"),
         BotCommand("showsitetxt", "Get full site list as TXT file"),
         BotCommand("rurl", "Remove TXT sites"),
+        BotCommand("mst", "Mass Stripe $20 charge"),
+        BotCommand("qstatus", "View global queue status"),
+        BotCommand("qpos", "View your queue position"),
     ]
 
     await bot.set_bot_commands(commands)
