@@ -179,7 +179,7 @@ async def check_card_with_rotation(user_id: str, card: str, proxy: str = None) -
                 next_site = rotator.get_next_site()
                 if not next_site:
                     break
-                await asyncio.sleep(0.2)
+                await asyncio.sleep(0.15)  # Railway-safe delay
                 continue
             else:
                 return response, site_url, retry_count
@@ -273,6 +273,15 @@ async def mslf_handler(client, message):
         if not all_cards:
             return await message.reply("❌ No valid cards found!", reply_to_message_id=message.id)
 
+        # Limit to 50 cards for parallel processing
+        if len(all_cards) > 50:
+            all_cards = all_cards[:50]
+            await message.reply(
+                f"<pre>⚠️ Card Limit Applied</pre>\n<b>Limited to 50 cards for parallel processing.</b>\n<b>Processing:</b> <code>{len(all_cards)} cards</code>",
+                parse_mode=ParseMode.HTML,
+                reply_to_message_id=message.id
+            )
+
         if len(all_cards) > mlimit:
             return await message.reply(
                 f"❌ You can check max {mlimit} cards as per your plan!",
@@ -313,7 +322,7 @@ async def mslf_handler(client, message):
 <b>[⚬] Gateway:</b> <code>{gateway}</code>
 <b>[⚬] Cards:</b> <code>{card_count}</code>
 <b>[⚬] Sites:</b> <code>{site_count}</code>
-<b>[⚬] Mode:</b> <code>Parallel (50 threads) ⚡</code>
+<b>[⚬] Mode:</b> <code>Parallel (100 threads) ⚡</code>
 <b>[⚬] Status:</b> <code>◐ Processing...</code>
 ━━━━━━━━━━━━━
 <b>[⚬] Checked By:</b> {checked_by} [<code>{plan} {badge}</code>]""",
@@ -396,7 +405,7 @@ async def mslf_handler(client, message):
         start_time = time.time()
         total_cc = len(all_cards)
         last_progress_edit = 0.0
-        PROGRESS_THROTTLE = 0.3  # Faster updates for 50 threads
+        PROGRESS_THROTTLE = 0.25  # Faster updates for responsive UI (100 threads)
         approved_count = 0
         declined_count = 0
         charged_count = 0
@@ -406,8 +415,8 @@ async def mslf_handler(client, message):
         total_retries = 0
         stopped = False
         
-        # Professional multi-threading: 50 threads with semaphore
-        MSH_CONCURRENCY = 50
+        # Professional multi-threading: 100 threads with semaphore (Railway-optimized)
+        MSH_CONCURRENCY = 100
         msh_semaphore = asyncio.Semaphore(MSH_CONCURRENCY)
         progress_lock = asyncio.Lock()
 
@@ -432,7 +441,7 @@ async def mslf_handler(client, message):
 <b>⚠️ Errors:</b> <code>{error_count}</code>
 <b>🔄 Rotations:</b> <code>{total_retries}</code>
 <b>⏱️ Time:</b> <code>{elapsed:.1f}s</code> · <code>{rate:.1f} cc/s</code>
-<b>⚡ Threads:</b> <code>{MSH_CONCURRENCY}</code>
+<b>⚡ Threads:</b> <code>100</code>
 <b>👤 Checked By:</b> {checked_by} [<code>{plan} {badge}</code>]""",
                         parse_mode=ParseMode.HTML,
                         disable_web_page_preview=True,
@@ -443,8 +452,8 @@ async def mslf_handler(client, message):
                     pass
 
         async def check_one(card):
-            """Professional check with 50-thread parallel processing - silver bullet speed."""
-            async with msh_semaphore:  # Limit to 50 concurrent checks
+            """Professional check with 100-thread parallel processing - Railway-optimized."""
+            async with msh_semaphore:  # Limit to 100 concurrent checks
                 try:
                     # Get fresh proxy for each card (rotation)
                     current_proxy = get_rotating_proxy(str(user_id))
@@ -457,12 +466,12 @@ async def mslf_handler(client, message):
                         return card, "NO_ACTIVE_SITES", 0, None
                     
                     # Smart site selection: try primary first, then random if needed
-                    rotator = SiteRotator(user_id, max_retries=2)  # Minimal retries for speed
+                    rotator = SiteRotator(user_id, max_retries=2)  # Minimal retries for Railway-optimized speed
                     retry_count = 0
                     last_response = "UNKNOWN"
                     last_result = None
                     
-                    while retry_count < 2:  # Max 2 site attempts for speed
+                    while retry_count < 2:  # Max 2 site attempts (Railway-safe)
                         current_site = rotator.get_current_site()
                         if not current_site:
                             break
@@ -500,7 +509,7 @@ async def mslf_handler(client, message):
                                 next_site = rotator.get_next_site()
                                 if not next_site:
                                     break
-                                await asyncio.sleep(0.05)  # Ultra-minimal delay
+                                await asyncio.sleep(0.1)  # Railway-safe delay
                                 continue
                             else:
                                 return card, response, retry_count, result
@@ -521,10 +530,10 @@ async def mslf_handler(client, message):
                 except Exception as e:
                     return card, f"ERROR: {str(e)[:40]}", 0, None
 
-        # Create all tasks for parallel processing (50 threads)
+        # Create all tasks for parallel processing (100 threads, Railway-optimized)
         tasks = [check_one(card) for card in all_cards]
         
-        # Process results as they complete (silver bullet speed)
+        # Process results as they complete (professional parallel processing)
         for task_coro in asyncio.as_completed(tasks):
             if msh_stop_requested.get(user_id):
                 stopped = True

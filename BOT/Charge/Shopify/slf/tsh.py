@@ -1,7 +1,7 @@
 """
 TXT Sites Shopify Checker with Site Rotation
-Handles /tsh command: parallel mode (300+ threads), rate limiting, 429-safe with adaptive throttling.
-Ultra Silver Bullet Performance - 300+ concurrent threads for maximum speed.
+Handles /tsh command: parallel mode (100 threads), rate limiting, 429-safe with adaptive throttling.
+Professional Parallel Processing - 100 concurrent threads, Railway-optimized, 50 card limit.
 Stop button: mandatory — only the user who started the check can stop it.
 """
 
@@ -31,14 +31,14 @@ tsh_stop_requested: dict[str, bool] = {}
 # --- Adaptive Rate Limiter Class ---
 
 class RateLimitedChecker:
-    def __init__(self, concurrency=300, requests_per_second=250):
-        """Silver bullet performance - 300+ threads, ultra-optimized rate limiting."""
+    def __init__(self, concurrency=100, requests_per_second=80):
+        """Professional parallel processing - 100 threads, Railway-optimized rate limiting."""
         self.sem = asyncio.Semaphore(concurrency)
-        self.requests_per_second = requests_per_second  # Ultra-high for maximum speed
+        self.requests_per_second = requests_per_second  # Railway-safe rate limit
         self.request_times = deque()
         self.lock = asyncio.Lock()
         self.consecutive_429s = 0
-        self.current_delay = 0.01  # Ultra-fast initial delay for 300+ threads
+        self.current_delay = 0.05  # Railway-safe initial delay for 100 threads
     
     async def wait_for_rate_limit(self):
         """Token bucket enforcement - optimized for speed"""
@@ -55,17 +55,17 @@ class RateLimitedChecker:
             self.request_times.append(time.monotonic())
 
     async def adaptive_delay(self):
-        """Dynamic sleep - silver bullet speed"""
-        jitter = random.uniform(0.01, 0.05)  # Minimal jitter for maximum speed
+        """Dynamic sleep - Railway-safe with professional delays"""
+        jitter = random.uniform(0.02, 0.08)  # Railway-safe jitter to avoid detection
         await asyncio.sleep(self.current_delay + jitter)
     
     def on_success(self):
         self.consecutive_429s = 0
-        self.current_delay = max(0.01, self.current_delay * 0.90)  # Aggressive speed up
+        self.current_delay = max(0.05, self.current_delay * 0.95)  # Gradual speed up (Railway-safe)
     
     def on_429(self):
         self.consecutive_429s += 1
-        self.current_delay = min(3.0, self.current_delay * 1.8)  # Moderate slowdown
+        self.current_delay = min(2.5, self.current_delay * 1.5)  # Moderate slowdown (Railway-safe)
 
     async def safe_check(self, user_id, card):
         """
@@ -144,8 +144,8 @@ class RateLimitedChecker:
                             next_site = rotator.get_next_site()
                             if not next_site:
                                 break
-                            # Minimal delay between site rotations
-                            await asyncio.sleep(0.1)
+                            # Railway-safe delay between site rotations
+                            await asyncio.sleep(0.15)
                             continue
                         else:
                             # Real response but not a hit - return it
@@ -162,7 +162,7 @@ class RateLimitedChecker:
                         next_site = rotator.get_next_site()
                         if not next_site:
                             break
-                        await asyncio.sleep(0.1)
+                        await asyncio.sleep(0.15)
                 
                 # All retries exhausted
                 if last_result:
@@ -362,9 +362,14 @@ async def tsh_handler(client: Client, m: Message):
         )
 
     total_cards = len(cards)
-    if total_cards > 500:
-        cards = cards[:500]
+    # Limit to 50 cards for parallel processing
+    if total_cards > 50:
+        cards = cards[:50]
         total_cards = len(cards)
+        await m.reply(
+            f"<pre>⚠️ Card Limit Applied</pre>\n<b>Limited to 50 cards for parallel processing.</b>\n<b>Processing:</b> <code>{total_cards} cards</code>",
+            parse_mode=ParseMode.HTML
+        )
 
     user = m.from_user
     user_sites = get_user_sites(user_id)
@@ -412,7 +417,7 @@ async def tsh_handler(client: Client, m: Message):
         f"""<pre>◐ [#TSH] | TXT Shopify Check</pre>
 ━━━━━━━━━━━━━
 <b>⊙ Total CC:</b> <code>{total_cards}</code>
-<b>⊙ Sites:</b> <code>{site_count}</code> · <b>Mode:</b> <code>Parallel (300+ threads) ⚡</code>
+<b>⊙ Sites:</b> <code>{site_count}</code> · <b>Mode:</b> <code>Parallel (100 threads) ⚡</code>
 <b>⊙ Status:</b> <code>◐ Preparing...</code>
 ━━━━━━━━━━━━━
 <b>[ﾒ] Checked By:</b> {user.mention}""",
@@ -422,7 +427,7 @@ async def tsh_handler(client: Client, m: Message):
 
     start_time = time.time()
     last_progress_edit = 0.0
-    PROGRESS_THROTTLE = 0.45
+    PROGRESS_THROTTLE = 0.25  # Faster updates for responsive UI
     checked_count = 0
     charged_count = 0
     approved_count = 0
@@ -452,7 +457,7 @@ async def tsh_handler(client: Client, m: Message):
 <b>⚠️ Errors:</b> <code>{error_count}</code>
 <b>🔄 Rotations:</b> <code>{total_retries}</code>
 <b>⏱️ Time:</b> <code>{elapsed:.1f}s</code> · <code>{rate:.1f} cc/s</code>
-<b>⚡ Threads:</b> <code>300+</code>
+<b>⚡ Threads:</b> <code>100</code>
 <b>[ﾒ] By:</b> {user.mention}""",
                 parse_mode=ParseMode.HTML,
                 reply_markup=stop_kb
@@ -461,8 +466,8 @@ async def tsh_handler(client: Client, m: Message):
         except Exception:
             pass
 
-    # Initialize Checker with 300+ threads - Ultra Silver Bullet Performance
-    checker = RateLimitedChecker(concurrency=300, requests_per_second=250)
+    # Initialize Checker with 100 threads - Professional Parallel Processing (Railway-optimized)
+    checker = RateLimitedChecker(concurrency=100, requests_per_second=80)
 
     # Create Tasks
     tasks = [checker.safe_check(user_id, card) for card in cards]
