@@ -84,8 +84,7 @@ REQUEST GET "https://<site>/products.json"
   HEADER "Accept-Language: en-US,en;q=0.9" 
   HEADER "Pragma: no-cache" 
 
-# Parse variant ID and price from products.json
-variantid PARSE "<SOURCE>" LR "\"id\":" "," CreateEmpty=FALSE -> VAR "variantid" 
+variantid PARSE "<SOURCE>" LR "\"variants\":[{\"id\":" "," CreateEmpty=FALSE -> VAR "variantid" 
 
 price PARSE "<SOURCE>" LR "\"price\":\"" "\"," CreateEmpty=FALSE -> VAR "price" 
 
