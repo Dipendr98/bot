@@ -78,6 +78,8 @@ async def run_bot():
         BotCommand("br", "Braintree checker"),
         BotCommand("st", "Stripe $20 charge"),
         BotCommand("register", "Register with the bot"),
+        BotCommand("changegate", "Change Stripe Auth gate"),
+        BotCommand("dork", "Find low checkout Shopify stores"),
         BotCommand("au", "Stripe Auth $0 check"),
         BotCommand("mau", "Stripe Auth mass check"),
         BotCommand("vbv", "VBV verification check"),

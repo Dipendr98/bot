@@ -349,3 +349,36 @@ async def au_change_gate_callback(client: Client, cq: CallbackQuery):
         )
     except Exception:
         pass
+
+
+@Client.on_message(filters.command("changegate") & filters.private)
+async def change_gate_command(client: Client, message: Message):
+    """Direct command to change Stripe Auth gate."""
+    if not message.from_user:
+        return
+    
+    user_id = str(message.from_user.id)
+    current_gate = get_au_gate(user_id)
+    current_label = gate_display_name(current_gate)
+    
+    # Toggle to the other gate
+    new_gate = toggle_au_gate(user_id)
+    new_label = gate_display_name(new_gate)
+    
+    await message.reply(
+        f"""<pre>Stripe Auth Gate Changed</pre>
+━ ━ ━ ━ ━ ━ ━ ━ ━ ━ ━ ━
+<b>• Previous gate:</b> <code>{current_label}</code>
+<b>• Current gate:</b> <code>{new_label}</code>
+<b>• Primary:</b> <code>Gate-1</code> (Fast ⚡)
+<b>• Secondary:</b> <code>Gate-2</code>
+<b>• Use</b> <code>/au</code> <b>or</b> <code>/mau</code> <b>to check.</b>
+━ ━ ━ ━ ━ ━ ━ ━ ━ ━ ━ ━""",
+        parse_mode=ParseMode.HTML,
+        reply_markup=InlineKeyboardMarkup([
+            [
+                InlineKeyboardButton("Change gate", callback_data="au_change_gate"),
+                InlineKeyboardButton("Support", url="https://t.me/Chr1shtopher")
+            ]
+        ])
+    )
