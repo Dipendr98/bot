@@ -276,7 +276,6 @@ async def help_callback(client: Client, callback_query: CallbackQuery):
 • Pro - Professional tier
 • Elite - Advanced capabilities
 • VIP - Premium access
-• Ultimate - Highest tier
 """
         plans_buttons = InlineKeyboardMarkup([
             [

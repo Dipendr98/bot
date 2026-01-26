@@ -1,6 +1,7 @@
 """
 TXT Sites Shopify Checker with Site Rotation
-Handles /tsh command: parallel mode (15 threads), rate limiting, 429-safe with adaptive throttling.
+Handles /tsh command: parallel mode (300+ threads), rate limiting, 429-safe with adaptive throttling.
+Ultra Silver Bullet Performance - 300+ concurrent threads for maximum speed.
 Stop button: mandatory — only the user who started the check can stop it.
 """
 
@@ -30,14 +31,14 @@ tsh_stop_requested: dict[str, bool] = {}
 # --- Adaptive Rate Limiter Class ---
 
 class RateLimitedChecker:
-    def __init__(self, concurrency=20, requests_per_second=18):
-        """Silver bullet performance - 20 threads, optimized rate limiting."""
+    def __init__(self, concurrency=300, requests_per_second=250):
+        """Silver bullet performance - 300+ threads, ultra-optimized rate limiting."""
         self.sem = asyncio.Semaphore(concurrency)
-        self.requests_per_second = requests_per_second  # Increased for maximum speed
+        self.requests_per_second = requests_per_second  # Ultra-high for maximum speed
         self.request_times = deque()
         self.lock = asyncio.Lock()
         self.consecutive_429s = 0
-        self.current_delay = 0.02  # Ultra-fast initial delay
+        self.current_delay = 0.01  # Ultra-fast initial delay for 300+ threads
     
     async def wait_for_rate_limit(self):
         """Token bucket enforcement - optimized for speed"""
@@ -411,7 +412,7 @@ async def tsh_handler(client: Client, m: Message):
         f"""<pre>◐ [#TSH] | TXT Shopify Check</pre>
 ━━━━━━━━━━━━━
 <b>⊙ Total CC:</b> <code>{total_cards}</code>
-<b>⊙ Sites:</b> <code>{site_count}</code> · <b>Mode:</b> <code>Parallel (20 threads)</code>
+<b>⊙ Sites:</b> <code>{site_count}</code> · <b>Mode:</b> <code>Parallel (300+ threads) ⚡</code>
 <b>⊙ Status:</b> <code>◐ Preparing...</code>
 ━━━━━━━━━━━━━
 <b>[ﾒ] Checked By:</b> {user.mention}""",
@@ -440,8 +441,8 @@ async def tsh_handler(client: Client, m: Message):
         rate = (checked_count / elapsed) if elapsed > 0 else 0
         sp = SPINNERS[checked_count % 4]
         try:
-            await status_msg.edit_text(
-                f"""<pre>{sp} [#TSH] | TXT Shopify Check</pre>
+                await status_msg.edit_text(
+                    f"""<pre>{sp} [#TSH] | TXT Shopify Check</pre>
 ━━━━━━━━━━━━━━━
 <b>🟢 Total CC:</b> <code>{total_cards}</code>
 <b>💬 Progress:</b> <code>{checked_count}/{total_cards}</code>
@@ -451,6 +452,7 @@ async def tsh_handler(client: Client, m: Message):
 <b>⚠️ Errors:</b> <code>{error_count}</code>
 <b>🔄 Rotations:</b> <code>{total_retries}</code>
 <b>⏱️ Time:</b> <code>{elapsed:.1f}s</code> · <code>{rate:.1f} cc/s</code>
+<b>⚡ Threads:</b> <code>300+</code>
 <b>[ﾒ] By:</b> {user.mention}""",
                 parse_mode=ParseMode.HTML,
                 reply_markup=stop_kb,
@@ -459,8 +461,8 @@ async def tsh_handler(client: Client, m: Message):
         except Exception:
             pass
 
-    # Initialize Checker with 20 threads - Silver Bullet Performance
-    checker = RateLimitedChecker(concurrency=20, requests_per_second=18)
+        # Initialize Checker with 300+ threads - Ultra Silver Bullet Performance
+        checker = RateLimitedChecker(concurrency=300, requests_per_second=250)
     
     # Create Tasks
     tasks = [checker.safe_check(user_id, card) for card in cards]

@@ -113,14 +113,21 @@ def save_plan_requests(requests):
 
 @Client.on_message(filters.command("plans") & (filters.private | filters.group))
 async def show_plans(client: Client, message: Message):
-    """Display all available subscription plans"""
+    """Display all available subscription plans (Ultimate hidden from users, visible to admins)"""
+    from BOT.helper.start import load_owner_id
+    
+    OWNER_ID = load_owner_id()
+    is_owner = str(message.from_user.id) == str(OWNER_ID) if OWNER_ID else False
 
     plans_text = """<b>📊 Available Subscription Plans</b>
 ━━━━━━━━━━━━━━━━━━━━
 
 """
 
-    for plan_name, details in PLAN_DETAILS.items():
+    # Filter plans: hide Ultimate from regular users, show to owner
+    plans_to_show = PLAN_DETAILS.items() if is_owner else {k: v for k, v in PLAN_DETAILS.items() if k != "Ultimate"}
+    
+    for plan_name, details in plans_to_show:
         features_list = "\n".join([f"  • {feature}" for feature in details["features"]])
 
         plans_text += f"""<b>{details['badge']} {plan_name} Plan</b>
@@ -140,7 +147,8 @@ Use <code>/requestplan [plan_name]</code> to request a plan.
 
 <b>Contact:</b> @Chr1shtopher for payment details."""
 
-    keyboard = InlineKeyboardMarkup([
+    # Build keyboard: hide Ultimate button from regular users
+    keyboard_buttons = [
         [
             InlineKeyboardButton("Request Plus", callback_data="request_Plus"),
             InlineKeyboardButton("Request Pro", callback_data="request_Pro")
@@ -149,14 +157,20 @@ Use <code>/requestplan [plan_name]</code> to request a plan.
             InlineKeyboardButton("Request Elite", callback_data="request_Elite"),
             InlineKeyboardButton("Request VIP", callback_data="request_VIP")
         ],
-        [
+    ]
+    
+    # Only show Ultimate button to owner
+    if is_owner:
+        keyboard_buttons.append([
             InlineKeyboardButton("Request Ultimate", callback_data="request_Ultimate")
-        ],
-        [
-            InlineKeyboardButton("My Requests", callback_data="my_requests"),
-            InlineKeyboardButton("Close", callback_data="close_plans")
-        ]
+        ])
+    
+    keyboard_buttons.append([
+        InlineKeyboardButton("My Requests", callback_data="my_requests"),
+        InlineKeyboardButton("Close", callback_data="close_plans")
     ])
+    
+    keyboard = InlineKeyboardMarkup(keyboard_buttons)
 
     await message.reply(plans_text, reply_markup=keyboard)
 
@@ -165,20 +179,38 @@ async def request_plan_command(client: Client, message: Message):
     """Handle plan request via command"""
     args = message.text.split(maxsplit=1)
 
+    from BOT.helper.start import load_owner_id
+    
+    OWNER_ID = load_owner_id()
+    is_owner = str(message.from_user.id) == str(OWNER_ID) if OWNER_ID else False
+    
+    # Available plans for display (hide Ultimate from users)
+    available_plans = "Plus, Pro, Elite, VIP" + (", Ultimate" if is_owner else "")
+    
     if len(args) < 2:
         await message.reply(
             "❗ <b>Usage:</b> <code>/requestplan [plan_name]</code>\n\n"
-            "<b>Available plans:</b> Plus, Pro, Elite, VIP, Ultimate\n"
+            f"<b>Available plans:</b> {available_plans}\n"
             "<b>Example:</b> <code>/requestplan Pro</code>"
         )
         return
 
     plan_name = args[1].capitalize()
 
+    # Check if plan exists and if user can request it (Ultimate only for owner)
     if plan_name not in PLAN_DETAILS:
         await message.reply(
             f"❌ Invalid plan name: <code>{plan_name}</code>\n\n"
-            "<b>Available plans:</b> Plus, Pro, Elite, VIP, Ultimate"
+            f"<b>Available plans:</b> {available_plans}"
+        )
+        return
+    
+    # Block Ultimate requests from non-owners
+    if plan_name == "Ultimate" and not is_owner:
+        await message.reply(
+            "❌ <b>Access Denied</b>\n\n"
+            "The Ultimate plan is not available for public requests.\n"
+            "Please contact @Chr1shtopher for more information."
         )
         return
 
