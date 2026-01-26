@@ -87,14 +87,8 @@ async def handle_mass_autosh(client, message):
                 reply_to_message_id=message.id
             )
 
-        # Limit cards (max 50 for mass check)
-        max_cards = 50
-        if len(cards) > max_cards:
-            cards = cards[:max_cards]
-            await message.reply(
-                f"<pre>⚠️ Card Limit</pre>\n"
-                f"<b>Only checking first {max_cards} cards</b>"
-            )
+        # Limit removed - processing all cards
+        # max_cards = 50 ...
 
         # Calculate credits needed
         credits_needed = len(cards)
