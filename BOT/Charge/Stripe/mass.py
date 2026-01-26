@@ -80,15 +80,9 @@ async def handle_mass_stripe(client, message):
         
         user_data = users[user_id]
         plan_info = user_data.get("plan", {})
-        mlimit = plan_info.get("mlimit")
+        # mlimit = plan_info.get("mlimit") # Limit removed
         plan = plan_info.get("plan", "Free")
         badge = plan_info.get("badge", "🎟️")
-        
-        # Default limit if None
-        if mlimit is None or str(mlimit).lower() in ["null", "none"]:
-            mlimit = 10_000
-        else:
-            mlimit = int(mlimit)
         
         # Extract cards
         target_text = None
@@ -112,12 +106,8 @@ async def handle_mass_stripe(client, message):
                 parse_mode=ParseMode.HTML
             )
         
-        if len(all_cards) > mlimit:
-            return await message.reply(
-                f"❌ You can check max {mlimit} cards as per your plan!",
-                reply_to_message_id=message.id,
-                parse_mode=ParseMode.HTML
-            )
+        # Limit check removed
+        # if len(all_cards) > mlimit: ...
         
         # Check credits
         available_credits = user_data["plan"].get("credits", 0)
@@ -147,13 +137,12 @@ async def handle_mass_stripe(client, message):
 <b>[⚬] Gateway:</b> <code>{gateway}</code>
 <b>[⚬] CC Amount:</b> <code>{card_count}</code>
 <b>[⚬] Checked By:</b> {checked_by} [<code>{plan} {badge}</code>]
-<b>[⚬] Status:</b> <code>Processing...</code>""",
+<b>[⚬] Status:</b> <code>Processing Parallel (100 threads)...</code>""",
             reply_to_message_id=message.id,
             parse_mode=ParseMode.HTML
         )
         
         start_time = time.time()
-        final_results = []
         
         # Statistics
         total_cc = len(all_cards)
@@ -163,63 +152,89 @@ async def handle_mass_stripe(client, message):
         error_count = 0
         processed_count = 0
         
-        for fullcc in all_cards:
-            card, mes, ano, cvv = fullcc.split("|")
-            
-            # Check card
-            result = await async_stripe_charge(card, mes, ano, cvv)
+        # Parallel Processing
+        STRIPE_CONCURRENCY = 100
+        sem = asyncio.Semaphore(STRIPE_CONCURRENCY)
+        progress_lock = asyncio.Lock()
+        last_edit_time = 0
+        
+        async def check_one(fullcc):
+            async with sem:
+                try:
+                    card, mes, ano, cvv = fullcc.split("|")
+                    result = await async_stripe_charge(card, mes, ano, cvv)
+                    return fullcc, result
+                except Exception as e:
+                    return fullcc, {"status": "error", "response": str(e)}
+
+        tasks = [check_one(cc) for cc in all_cards]
+        
+        for task in asyncio.as_completed(tasks):
+            fullcc, result = await task
             
             status = result.get("status", "error")
             response = result.get("response", "Unknown error")
-            
             status_flag = get_status_flag(status, response)
             
-            # Count statistics
-            if status == "charged":
-                charged_count += 1
-            elif status == "approved":
-                approved_count += 1
-            elif status == "declined":
-                declined_count += 1
-            else:
-                error_count += 1
-            
-            processed_count += 1
-            
-            # Get BIN info
-            try:
-                bin_data = get_bin_details(card[:6])
-                if bin_data:
-                    bin_info = f"{bin_data.get('vendor', 'N/A')} - {bin_data.get('type', 'N/A')}"
-                    country_info = f"{bin_data.get('country', 'N/A')} {bin_data.get('flag', '')}"
+            async with progress_lock:
+                # Count statistics
+                if status == "charged":
+                    charged_count += 1
+                elif status == "approved":
+                    approved_count += 1
+                elif status == "declined":
+                    declined_count += 1
                 else:
+                    error_count += 1
+                
+                processed_count += 1
+                
+                # Update UI periodically
+                now = time.time()
+                if now - last_edit_time > 1.5 or processed_count == total_cc:
+                    try:
+                        await loader_msg.edit(
+                            f"""<pre>✦ Mass Stripe $20 Check</pre>
+<b>[⚬] Progress:</b> <code>{processed_count}/{total_cc}</code>
+<b>[⚬] Charged:</b> <code>{charged_count}</code>
+<b>[⚬] Approved:</b> <code>{approved_count}</code>
+<b>[⚬] Declined:</b> <code>{declined_count}</code>
+<b>[⚬] Checked By:</b> {checked_by}""",
+                            parse_mode=ParseMode.HTML
+                        )
+                        last_edit_time = now
+                    except:
+                        pass
+
+            # Send hit notification
+            if status in ["charged", "approved"]:
+                try:
+                    card_num = fullcc.split("|")[0]
                     bin_info = "N/A"
                     country_info = "N/A"
-            except:
-                bin_info = "N/A"
-                country_info = "N/A"
-            
-            final_results.append(
-                f"<b>[•] Card:</b> <code>{fullcc}</code>\n"
-                f"<b>[•] Status:</b> <code>{status_flag}</code>\n"
-                f"<b>[•] Response:</b> <code>{response[:50]}</code>\n"
-                f"<b>[+] BIN:</b> <code>{card[:6]}</code> | <code>{bin_info}</code> | <code>{country_info}</code>\n"
-                "━ ━ ━ ━ ━ ━━━ ━ ━ ━ ━ ━"
-            )
-            
-            # Update progress (show last 5 cards)
-            ongoing_result = "\n".join(final_results[-5:])
-            try:
-                await loader_msg.edit(
-                    f"<pre>✦ Mass Stripe $20 Check</pre>\n"
-                    f"{ongoing_result}\n"
-                    f"<b>💬 Progress:</b> <code>{processed_count}/{total_cc}</code>\n"
-                    f"<b>[⚬] Checked By:</b> {checked_by} [<code>{plan} {badge}</code>]",
-                    disable_web_page_preview=True,
-                    parse_mode=ParseMode.HTML
-                )
-            except:
-                pass
+                    try:
+                        bin_data = get_bin_details(card_num[:6])
+                        if bin_data:
+                            bin_info = f"{bin_data.get('vendor', 'N/A')} - {bin_data.get('type', 'N/A')}"
+                            country_info = f"{bin_data.get('country', 'N/A')} {bin_data.get('flag', '')}"
+                    except:
+                        pass
+
+                    hit_msg = (
+                        f"<b>[#Stripe] | {status_flag}</b> ✦\n"
+                        f"━━━━━━━━━━━━━━━\n"
+                        f"<b>[•] Card:</b> <code>{fullcc}</code>\n"
+                        f"<b>[•] Status:</b> <code>{status_flag}</code>\n"
+                        f"<b>[•] Response:</b> <code>{response}</code>\n"
+                        f"━ ━ ━ ━ ━ ━ ━ ━ ━ ━ ━ ━ ━\n"
+                        f"<b>[+] BIN:</b> <code>{card_num[:6]}</code> | <code>{bin_info}</code>\n"
+                        f"<b>[+] Country:</b> <code>{country_info}</code>\n"
+                        f"━━━━━━━━━━━━━━━\n"
+                        f"<b>[ﾒ] Checked By:</b> {checked_by}"
+                    )
+                    await message.reply(hit_msg, parse_mode=ParseMode.HTML)
+                except:
+                    pass
         
         end_time = time.time()
         timetaken = round(end_time - start_time, 2)
