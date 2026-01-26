@@ -125,7 +125,10 @@ async def show_plans(client: Client, message: Message):
 """
 
     # Filter plans: hide Ultimate from regular users, show to owner
-    plans_to_show = PLAN_DETAILS.items() if is_owner else {k: v for k, v in PLAN_DETAILS.items() if k != "Ultimate"}
+    if is_owner:
+        plans_to_show = PLAN_DETAILS.items()
+    else:
+        plans_to_show = [(k, v) for k, v in PLAN_DETAILS.items() if k != "Ultimate"]
     
     for plan_name, details in plans_to_show:
         features_list = "\n".join([f"  • {feature}" for feature in details["features"]])
