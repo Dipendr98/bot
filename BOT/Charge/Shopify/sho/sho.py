@@ -383,7 +383,6 @@ async def create_shopify_charge(card, mes, ano, cvv, session):
     'operationName': 'Proposal',
 }
 
-              request = await session.post(
               request = await request_with_retry(
                   session, 'POST',
                   'https://shedknives.com/checkouts/unstable/graphql',
@@ -659,7 +658,6 @@ async def create_shopify_charge(card, mes, ano, cvv, session):
     'operationName': 'SubmitForCompletion',
 }
 
-              request = await session.post(
               request = await request_with_retry(
                   session, 'POST',
                   'https://shedknives.com/checkouts/unstable/graphql',
@@ -716,7 +714,6 @@ async def create_shopify_charge(card, mes, ano, cvv, session):
                   'operationName': 'PollForReceipt',
               }
 
-              request = await session.post(
               request = await request_with_retry(
                   session, 'POST',
                   'https://shedknives.com/checkouts/unstable/graphql',
@@ -762,7 +759,6 @@ async def create_shopify_charge(card, mes, ano, cvv, session):
                   'operationName': 'PollForReceipt',
               }
 
-              request = await session.post(
               request = await request_with_retry(
                   session, 'POST',
                   'https://shedknives.com/checkouts/unstable/graphql',
