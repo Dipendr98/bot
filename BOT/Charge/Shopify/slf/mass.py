@@ -273,20 +273,11 @@ async def mslf_handler(client, message):
         if not all_cards:
             return await message.reply("❌ No valid cards found!", reply_to_message_id=message.id)
 
-        # Limit to 50 cards for parallel processing
-        if len(all_cards) > 50:
-            all_cards = all_cards[:50]
-            await message.reply(
-                f"<pre>⚠️ Card Limit Applied</pre>\n<b>Limited to 50 cards for parallel processing.</b>\n<b>Processing:</b> <code>{len(all_cards)} cards</code>",
-                parse_mode=ParseMode.HTML,
-                reply_to_message_id=message.id
-            )
+        # Limit removed - processing all cards
+        # if len(all_cards) > 50: ...
 
-        if len(all_cards) > mlimit:
-            return await message.reply(
-                f"❌ You can check max {mlimit} cards as per your plan!",
-                reply_to_message_id=message.id
-            )
+        # Limit check removed
+        # if len(all_cards) > mlimit: ...
 
         available_credits = user_data.get("plan", {}).get("credits", 0)
         card_count = len(all_cards)
