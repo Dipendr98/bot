@@ -1,7 +1,7 @@
 {
-  "BOT_TOKEN": "YOUR_BOT_TOKEN_FROM_BOTFATHER",
-  "API_ID": "YOUR_TELEGRAM_API_ID",
-  "API_HASH": "YOUR_TELEGRAM_API_HASH",
-  "OWNER": "YOUR_TELEGRAM_USER_ID",
-  "FEEDBACK": "@YourFeedbackHandle"
+  "BOT_TOKEN": "7849194624:AAGmM1poFqNYcHftvFXMXJe9azmdNqhvLw0",
+  "API_ID": "36525802",
+  "API_HASH": "c247cfe0b0268dc6bf7cf013e17a54b7",
+  "OWNER": "Chr1shtopher",
+  "FEEDBACK": "@Chr1shtophere"
 }
