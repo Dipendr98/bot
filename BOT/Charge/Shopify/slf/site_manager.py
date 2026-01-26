@@ -1,6 +1,10 @@
 """
 Unified Site Manager for Shopify Checkers.
 Storage delegated to BOT.db.store (MongoDB or JSON).
+
+IMPORTANT: No default sites for admin/owner.
+All users (including admin/owner) must add sites manually using /addurl or /txturl.
+No special handling or default sites are provided for any user.
 """
 
 import random

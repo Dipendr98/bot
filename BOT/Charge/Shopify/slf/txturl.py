@@ -359,6 +359,9 @@ async def txturl_handler(client: Client, message: Message):
     Add multiple sites for checking.
     Works exactly like /addurl but for bulk sites.
     
+    IMPORTANT: No special handling for admin/owner - everyone is treated the same.
+    All users (including admin/owner) must add sites manually. No default sites.
+    
     Usage:
         /txturl site1.com site2.com site3.com
         /txturl (reply to message with URLs)

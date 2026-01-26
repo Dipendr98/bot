@@ -391,6 +391,9 @@ def delete_proxy(user_id: str) -> None:
 # ---------------------------------------------------------------------------
 # User sites (unified)
 # ---------------------------------------------------------------------------
+# IMPORTANT: No default sites for admin/owner.
+# All users (including admin/owner) must add sites manually.
+# No automatic initialization of default sites for any user.
 
 def load_unified_sites() -> dict:
     if _use_mongo():
@@ -418,6 +421,10 @@ def save_unified_sites(data: dict) -> None:
 
 
 def get_user_sites(user_id: str) -> list:
+    """
+    Get sites for any user (regular user or admin/owner).
+    No default sites are returned - only sites manually added by the user.
+    """
     data = load_unified_sites()
     return data.get(str(user_id), [])
 
@@ -438,6 +445,15 @@ def get_primary_site(user_id: str) -> Optional[dict]:
 
 
 def add_site_for_user(user_id: str, url: str, gateway: str, price: str = "N/A", set_primary: bool = False) -> bool:
+    """
+    Add a site for any user (regular user or admin/owner).
+    No special handling for admin/owner - everyone is treated the same.
+    All users must add sites manually using /addurl or /txturl commands.
+    No default sites are automatically added for any user.
+    
+    This function works identically for all users, including owners.
+    Owners must add sites manually just like regular users.
+    """
     try:
         data = load_unified_sites()
         uid = str(user_id)
@@ -466,6 +482,11 @@ def add_site_for_user(user_id: str, url: str, gateway: str, price: str = "N/A", 
 
 
 def add_sites_batch(user_id: str, sites: list) -> int:
+    """
+    Add multiple sites for a user (regular user or admin/owner).
+    Works identically for all users - no special handling.
+    No default sites are automatically added for any user.
+    """
     try:
         data = load_unified_sites()
         uid = str(user_id)
@@ -490,6 +511,11 @@ def add_sites_batch(user_id: str, sites: list) -> int:
 
 
 def remove_site_for_user(user_id: str, url: str) -> bool:
+    """
+    Remove a specific site for a user (regular user or admin/owner).
+    Works identically for all users - no special handling.
+    Owners use the same function as regular users.
+    """
     try:
         data = load_unified_sites()
         uid = str(user_id)
@@ -509,6 +535,12 @@ def remove_site_for_user(user_id: str, url: str) -> bool:
 
 
 def clear_user_sites(user_id: str) -> int:
+    """
+    Clear all sites for a user (regular user or admin/owner).
+    Works identically for all users - no special handling.
+    Owners use the same function as regular users.
+    Returns the number of sites cleared.
+    """
     try:
         data = load_unified_sites()
         uid = str(user_id)

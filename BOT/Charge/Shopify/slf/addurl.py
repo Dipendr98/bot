@@ -444,6 +444,9 @@ async def add_site_handler(client: Client, message: Message):
     Works in both private chats and groups.
     Parses lowest product and validates before saving.
     
+    IMPORTANT: No special handling for admin/owner - everyone is treated the same.
+    All users (including admin/owner) must add sites manually. No default sites.
+    
     Usage:
         /addurl https://example.myshopify.com
         /addurl example.com
