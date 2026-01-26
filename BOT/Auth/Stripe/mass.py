@@ -3,8 +3,9 @@ Stripe Auth Mass Card Checker
 =============================
 Handles /mau command for mass Stripe authentication checks.
 
-Uses shop.nomade-studio.be (default) with 33-thread parallel processing.
+Uses Gate-1 (default) or Gate-2 with 33-thread parallel processing.
 Each thread creates a new account for maximum speed and reliability.
+NO URLs are displayed to users - only gate numbers.
 """
 
 import re
@@ -35,10 +36,10 @@ from BOT.helper.start import load_users
 from BOT.helper.permissions import check_private_access, is_premium_user
 from BOT.gc.credit import deduct_credit_bulk
 
-# Import the Nomade and Grownetics checkers
+# Import the Nomade and Starr checkers
 from BOT.Auth.StripeAuth.nomade_checker import check_nomade_stripe, determine_nomade_status
-from BOT.Auth.StripeAuth.grownetics_checker import check_grownetics_stripe, determine_grownetics_status
-from BOT.Auth.StripeAuth.au_gate import get_au_gate, get_au_gate_url, gate_display_name
+from BOT.Auth.StripeAuth.starr_checker import check_starr_stripe, determine_starr_status
+from BOT.Auth.StripeAuth.au_gate import get_au_gate, gate_display_name
 
 # Try to import BIN lookup
 try:
@@ -219,13 +220,12 @@ async def handle_mau_command(client, message):
         
         checked_by = f"<a href='tg://user?id={message.from_user.id}'>{message.from_user.first_name}</a>"
         gate_key = get_au_gate(user_id)
-        site_url = get_au_gate_url(user_id)
-        gate_label = gate_display_name(gate_key)
+        gate_label = gate_display_name(gate_key)  # Gate-1 or Gate-2 (NO URLs)
         
-        # Ensure gate is valid (nomade or grownetics)
-        if gate_key not in ["nomade", "grownetics"]:
+        # Ensure gate is valid (nomade or starr)
+        if gate_key not in ["nomade", "starr"]:
             gate_key = "nomade"
-            gate_label = "nomade-studio.be"
+            gate_label = "Gate-1"
         
         change_gate_btn = InlineKeyboardMarkup([
             [InlineKeyboardButton("Change gate", callback_data="au_change_gate")],
@@ -238,11 +238,11 @@ async def handle_mau_command(client, message):
         # Get final card count after limit
         final_card_count = len(all_cards)
         
-        # Send initial message
+        # Send initial message (NO URLs shown)
         loader_msg = await message.reply(
             f"""<pre>◐ [#MAU] | Mass Stripe Auth</pre>
 ━━━━━━━━━━━━━━━
-<b>[⚬] Gate:</b> <code>{gate_label}</code> (Default: nomade-studio.be)
+<b>[⚬] Gate:</b> <code>{gate_label}</code>
 <b>[⚬] Cards:</b> <code>{final_card_count}</code> <i>(Max: 50)</i>
 <b>[⚬] Mode:</b> <code>Parallel (33 threads)</code>
 <b>[⚬] Status:</b> <code>◐ Processing...</code>
@@ -314,8 +314,13 @@ async def handle_mau_command(client, message):
                     await limiter.wait_for_rate_limit()
                     await limiter.adaptive_delay()
                     
-                    # Use Nomade checker (creates new account for each check)
-                    result = await check_nomade_stripe(card)
+                    # Use appropriate checker based on gate
+                    if gate_key == "nomade":
+                        result = await check_nomade_stripe(card)
+                    elif gate_key == "starr":
+                        result = await check_starr_stripe(card)
+                    else:
+                        result = await check_nomade_stripe(card)
                     
                     # Convert to standard format
                     if result.get("response") == "APPROVED":
@@ -355,14 +360,14 @@ async def handle_mau_command(client, message):
             # Determine status based on gate
             if gate_key == "nomade":
                 status = determine_nomade_status(result)
-            elif gate_key == "grownetics":
-                status = determine_grownetics_status(result)
+            elif gate_key == "starr":
+                status = determine_starr_status(result)
             else:
                 status = determine_nomade_status(result)
             
             response = result.get("response", "UNKNOWN")
             message_text = result.get("message", "Unknown")
-            site = result.get("site", gate_label)  # Use gate label, but won't be shown (anime character used)
+            # site variable not used - URLs never shown (anime character used)
             
             # Update statistics
             if status == "APPROVED":

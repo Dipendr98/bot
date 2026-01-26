@@ -1,6 +1,7 @@
 """
 Stripe Auth (/au, /mau) gate selector.
-Stores current gate per user: nomade-studio.be (primary) | grownetics.com (secondary)
+Stores current gate per user: Gate-1 (primary) | Gate-2 (secondary)
+No URLs are displayed to users - only gate numbers.
 """
 
 import json
@@ -9,13 +10,13 @@ import os
 DATA_DIR = "DATA"
 AU_GATE_PATH = os.path.join(DATA_DIR, "au_gate.json")
 
-# Gate key -> base URL
+# Gate key -> base URL (internal only, never shown to users)
 AU_GATES = {
     "nomade": "https://shop.nomade-studio.be",
-    "grownetics": "https://grownetics.com",
+    "starr": "https://starr-shop.eu",
 }
 
-DEFAULT_GATE = "nomade"  # Nomade is now primary
+DEFAULT_GATE = "nomade"  # Gate-1 (primary)
 
 
 def _ensure_data_dir():
@@ -64,17 +65,17 @@ def get_au_gate_url(user_id: str) -> str:
 
 
 def toggle_au_gate(user_id: str) -> str:
-    """Switch nomade <-> grownetics. Returns new gate key."""
+    """Switch Gate-1 <-> Gate-2. Returns new gate key."""
     current = get_au_gate(user_id)
-    new = "grownetics" if current == "nomade" else "nomade"
+    new = "starr" if current == "nomade" else "nomade"
     set_au_gate(user_id, new)
     return new
 
 
 def gate_display_name(gate_key: str) -> str:
-    """Short label for UI."""
+    """Display name for UI - NO URLs shown, only gate numbers."""
     if gate_key == "nomade":
-        return "nomade-studio.be"
-    if gate_key == "grownetics":
-        return "grownetics.com"
-    return gate_key
+        return "Gate-1"
+    if gate_key == "starr":
+        return "Gate-2"
+    return "Gate-1"  # Default

@@ -35,9 +35,9 @@ from BOT.helper.permissions import check_private_access, is_premium_user
 from BOT.helper.antispam import can_run_command
 from BOT.gc.credit import deduct_credit, has_credits
 
-# Import the Nomade and Grownetics checkers
+# Import the Nomade and Starr checkers
 from BOT.Auth.StripeAuth.nomade_checker import check_nomade_stripe, determine_nomade_status
-from BOT.Auth.StripeAuth.grownetics_checker import check_grownetics_stripe, determine_grownetics_status
+from BOT.Auth.StripeAuth.starr_checker import check_starr_stripe, determine_starr_status
 from BOT.Auth.StripeAuth.au_gate import (
     get_au_gate,
     get_au_gate_url,
@@ -70,16 +70,14 @@ def format_response(fullcc: str, result: dict, user_info: dict, time_taken: floa
     
     response = result.get("response", "UNKNOWN")
     message = result.get("message", "Unknown")
-    site = result.get("site", "Unknown")
+    # site variable not used - URLs never shown
     
     # Determine status and header (support all checkers)
-    site = result.get("site", "")
-    if "nomade" in site.lower():
-        status = determine_nomade_status(result)
-    elif "grownetics" in site.lower():
-        status = determine_grownetics_status(result)
+    gate_key = get_au_gate(str(result.get("user_id", ""))) if "user_id" in result else get_au_gate("")
+    if gate_key == "starr":
+        status = determine_starr_status(result)
     else:
-        status = determine_nomade_status(result)  # Default to nomade status
+        status = determine_nomade_status(result)  # Default to nomade (Gate-1)
     
     if status == "APPROVED":
         header = "APPROVED"
@@ -242,15 +240,14 @@ async def handle_au_command(client: Client, message: Message):
         
         start_time = time()
         gate_key = get_au_gate(user_id)
-        site_url = get_au_gate_url(user_id)
-        gate_label = gate_display_name(gate_key)
+        gate_label = gate_display_name(gate_key)  # Gate-1 or Gate-2 (NO URLs)
 
-        # Show processing message
+        # Show processing message (NO URLs shown)
         loading_msg = await message.reply(
             f"""<pre>Processing Request...</pre>
 ━ ━ ━ ━ ━ ━ ━ ━ ━ ━ ━ ━
 <b>• Card:</b> <code>{fullcc}</code>
-<b>• Gate:</b> <code>Stripe Auth [{gate_label}]</code>
+<b>• Gate:</b> <code>{gate_label}</code>
 <b>• Status:</b> <i>Registering and checking... ◐</i>""",
             reply_to_message_id=message.id,
             parse_mode=ParseMode.HTML
@@ -267,10 +264,10 @@ async def handle_au_command(client: Client, message: Message):
                 result["response"] = "CCN LIVE"
             else:
                 result["response"] = result.get("response", "DECLINED")
-        elif gate_key == "grownetics":
-            # Use fast Grownetics checker
-            result = await check_grownetics_stripe(fullcc)
-            # Convert grownetics result format to match expected format
+        elif gate_key == "starr":
+            # Use fast Starr checker
+            result = await check_starr_stripe(fullcc)
+            # Convert starr result format to match expected format
             if result.get("response") == "APPROVED":
                 result["response"] = "APPROVED"
             elif result.get("response") == "CCN LIVE" or result.get("response") == "CCN_LIVE":
@@ -325,20 +322,20 @@ async def handle_au_command(client: Client, message: Message):
 
 @Client.on_callback_query(filters.regex("^au_change_gate$"))
 async def au_change_gate_callback(client: Client, cq: CallbackQuery):
-    """Toggle Stripe Auth gate (nomade <-> grownetics) for /au and /mau."""
+    """Toggle Stripe Auth gate (Gate-1 <-> Gate-2) for /au and /mau. NO URLs shown."""
     if not cq.from_user:
         return
     user_id = str(cq.from_user.id)
     new_gate = toggle_au_gate(user_id)
-    label = gate_display_name(new_gate)
+    label = gate_display_name(new_gate)  # Gate-1 or Gate-2
     try:
         await cq.answer(f"Gate switched to {label}", show_alert=False)
         await cq.edit_message_text(
             f"""<pre>Stripe Auth Gate Changed</pre>
 ━ ━ ━ ━ ━ ━ ━ ━ ━ ━ ━ ━
 <b>• Current gate:</b> <code>{label}</code>
-<b>• Primary:</b> <code>nomade-studio.be</code> (Fast ⚡)
-<b>• Secondary:</b> <code>grownetics.com</code>
+<b>• Primary:</b> <code>Gate-1</code> (Fast ⚡)
+<b>• Secondary:</b> <code>Gate-2</code>
 <b>• Use</b> <code>/au</code> <b>or</b> <code>/mau</code> <b>to check.</b>
 ━ ━ ━ ━ ━ ━ ━ ━ ━ ━ ━ ━""",
             reply_markup=InlineKeyboardMarkup([

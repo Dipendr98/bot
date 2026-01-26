@@ -565,8 +565,8 @@ def reset_site_fail_count(user_id: str, url: str) -> None:
 # AU gate (Stripe Auth)
 # ---------------------------------------------------------------------------
 
-AU_GATES = {"nomade": "https://shop.nomade-studio.be", "grownetics": "https://grownetics.com"}
-DEFAULT_AU_GATE = "nomade"  # Nomade is now primary
+AU_GATES = {"nomade": "https://shop.nomade-studio.be", "starr": "https://starr-shop.eu"}
+DEFAULT_AU_GATE = "nomade"  # Gate-1 (primary)
 
 
 def get_au_gate(user_id: str) -> str:
@@ -614,17 +614,18 @@ def get_au_gate_url(user_id: str) -> str:
 
 def toggle_au_gate(user_id: str) -> str:
     cur = get_au_gate(user_id)
-    new = "grownetics" if cur == "nomade" else "nomade"
+    new = "starr" if cur == "nomade" else "nomade"
     set_au_gate(user_id, new)
     return new
 
 
 def gate_display_name(gate_key: str) -> str:
+    """Display name for UI - NO URLs shown, only gate numbers."""
     if gate_key == "nomade":
-        return "nomade-studio.be"
-    if gate_key == "grownetics":
-        return "grownetics.com"
-    return gate_key
+        return "Gate-1"
+    if gate_key == "starr":
+        return "Gate-2"
+    return "Gate-1"  # Default
 
 
 # ---------------------------------------------------------------------------
