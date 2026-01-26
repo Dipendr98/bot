@@ -8,6 +8,10 @@ import json
 # import html
 import time
 from urllib.parse import urlparse
+from BOT.Charge.http_utils import ResponseCache, request_with_retry, safe_json_parse
+
+# Initialize response cache
+_response_cache = ResponseCache()
 import random, html
 from datetime import datetime, timezone, timedelta
 import uuid
@@ -196,7 +200,10 @@ async def autoshopify(url, card, session):
         headers = {
             "User-Agent": f'{getua}',
         }
-        request = await session.get(f"{url}/products.json", headers=headers, follow_redirects=True)
+        request = await request_with_retry(
+            session, 'GET', f"{url}/products.json",
+            headers=headers, follow_redirects=True, cache=_response_cache
+        )
 
         product_id,price = get_product_id(request)
         if not product_id:
@@ -208,7 +215,10 @@ async def autoshopify(url, card, session):
             return output
 
         try:
-            request = await session.get(url, follow_redirects=True)
+            request = await request_with_retry(
+                session, 'GET', url,
+                follow_redirects=True, cache=_response_cache
+            )
         except:
             output.update({
                 "Response": "SITE DEAD",
@@ -261,7 +271,11 @@ async def autoshopify(url, card, session):
             },
         }
 
-        response = await session.post(f'{url}/api/unstable/graphql.json', params=params, headers=headers, json=json_data, timeout=20, follow_redirects=True)
+        response = await request_with_retry(
+            session, 'POST', f'{url}/api/unstable/graphql.json',
+            params=params, headers=headers, json=json_data, timeout=20,
+            follow_redirects=True, cache=_response_cache
+        )
         # print(response)
         response_data = response.json()
         checkout_url = response_data["data"]["result"]["cart"]["checkoutUrl"]
@@ -289,7 +303,11 @@ async def autoshopify(url, card, session):
             'auto_redirect': 'false',
         }
 
-        request = await session.get(checkout_url, headers=headers, params=params, follow_redirects=True, timeout=20)
+        request = await request_with_retry(
+            session, 'GET', checkout_url,
+            headers=headers, params=params, follow_redirects=True,
+            timeout=20, cache=_response_cache
+        )
         
 
         paymentMethodIdentifier = capture(request.text,"paymentMethodIdentifier&quot;:&quot;","&quot")
@@ -380,10 +398,19 @@ async def autoshopify(url, card, session):
             'payment_session_scope': domain,
         }
 
-        request = await session.post('https://checkout.pci.shopifyinc.com/sessions', headers=headers, json=json_data, timeout=20)
+        request = await request_with_retry(
+            session, 'POST', 'https://checkout.pci.shopifyinc.com/sessions',
+            headers=headers, json=json_data, timeout=20, cache=_response_cache
+        )
         # print(request.text)
 
-        sessionid = request.json()["id"]
+        session_data = safe_json_parse(request, {})
+        sessionid = session_data.get("id")
+        if not sessionid:
+            return {
+                "Response": "ERROR: Failed to create payment session",
+                "Status": False
+            }
         # print(f"PAY ID{paymentMethodIdentifier}\nSTABLE ID{stable_id}\nQUTTA TOKEN{queue_token}\nXcheckout :{x_checkout_one_session_token}\ntoken {token}\nmc build{web_build}\nsusion id{sessionid}\nCurrency Code: {currencyCode}\nCountry Code:{countryCode}\nRaw Tax: {tax1}\nGate: {gateway}")
 
         headers = {
@@ -575,7 +602,11 @@ async def autoshopify(url, card, session):
             'operationName': 'Proposal',
         }
 
-        request = await session.post(f'{url}/checkouts/unstable/graphql', params=params, headers=headers, json=json_data, timeout=20)
+        request = await request_with_retry(
+            session, 'POST', f'{url}/checkouts/unstable/graphql',
+            params=params, headers=headers, json=json_data,
+            timeout=20, cache=_response_cache
+        )
 
         match = re.search(r'"totalTaxAndDutyAmount"\s*:\s*{[^}]*"value"\s*:\s*{[^}]*"amount"\s*:\s*"([\d.]+)"', request.text)
 
@@ -786,7 +817,11 @@ async def autoshopify(url, card, session):
         }
         
         for _ in range(3):
-            request = await session.post(f'{url}/checkouts/unstable/graphql', params=params, headers=headers, json=json_data, timeout=20)
+            request = await request_with_retry(
+            session, 'POST', f'{url}/checkouts/unstable/graphql',
+            params=params, headers=headers, json=json_data,
+            timeout=20, cache=_response_cache
+        )
             # print(request)
             if "signedHandle" in request.text:
                 break
@@ -795,18 +830,28 @@ async def autoshopify(url, card, session):
 
         # open("test.json","w").write(request.text)
 
-        seller = request.json()["data"]["session"]["negotiate"]["result"]["sellerProposal"]["delivery"]["deliveryLines"][0]["availableDeliveryStrategies"][0]
-        amount = seller["deliveryStrategyBreakdown"][0]["amount"]["value"]["amount"]
+        response_data = safe_json_parse(request, {})
+        seller_proposal = response_data.get("data", {}).get("session", {}).get("negotiate", {}).get("result", {}).get("sellerProposal", {})
+
+        delivery_lines = seller_proposal.get("delivery", {}).get("deliveryLines", [])
+        if not delivery_lines:
+            return {
+                "Response": "ERROR: No delivery lines available",
+                "Status": False
+            }
+
+        seller = delivery_lines[0].get("availableDeliveryStrategies", [{}])[0]
+        amount = seller.get("deliveryStrategyBreakdown", [{}])[0].get("amount", {}).get("value", {}).get("amount", "0")
         # total = price+float(amount)+float(ttax)
 
-        tax3 = request.json()["data"]["session"]["negotiate"]["result"]["sellerProposal"]["tax"]['totalTaxAmount']["value"]["amount"]
+        tax3 = seller_proposal.get("tax", {}).get('totalTaxAmount', {}).get("value", {}).get("amount", "0")
 
-        # tomtal = request.json()["data"]["session"]["negotiate"]["result"]["sellerProposal"]["checkoutTotal"]["value"]["amount"]
+        # tomtal = seller_proposal.get("checkoutTotal", {}).get("value", {}).get("amount", "0")
 
         # print(tomtal)
 
         try:
-            total = request.json()["data"]["session"]["negotiate"]["result"]["sellerProposal"]["checkoutTotal"]["value"]["amount"]
+            total = seller_proposal.get("checkoutTotal", {}).get("value", {}).get("amount", "0")
         except:
             total = price
         
@@ -1309,7 +1354,11 @@ async def autoshopify(url, card, session):
             selected_json_data = sjson_data
 
         for _ in range(3):
-            request = await session.post(f'{url}/checkouts/unstable/graphql',params=params,headers=headers,json=selected_json_data, timeout=20)
+            request = await request_with_retry(
+                session, 'POST', f'{url}/checkouts/unstable/graphql',
+                params=params, headers=headers, json=selected_json_data,
+                timeout=20, cache=_response_cache
+            )
             # print(request)
             if "success" in request.text:
                 break
@@ -1368,7 +1417,7 @@ async def autoshopify(url, card, session):
             return output  
 
         # receipt_id = request.json()["data"]["submitForCompletion"]["receipt"]["id"]
-        jsun = request.json()
+        jsun = safe_json_parse(request, {})
         receipt = jsun.get("data", {}).get("submitForCompletion", {}).get("receipt", {})
         receipt_id = receipt.get("id")
         if not receipt_id:
@@ -1424,7 +1473,11 @@ async def autoshopify(url, card, session):
         }
 
         for i in range(2):
-            request = await session.post(f'{url}/checkouts/unstable/graphql', params=params, headers=headers, json=json_data, timeout=20)
+            request = await request_with_retry(
+            session, 'POST', f'{url}/checkouts/unstable/graphql',
+            params=params, headers=headers, json=json_data,
+            timeout=20, cache=_response_cache
+        )
             # print(request)
             if i == 1:
                 pass  

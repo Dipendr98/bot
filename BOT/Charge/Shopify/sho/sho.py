@@ -5,6 +5,10 @@ import re
 import json
 import csv
 import random
+from BOT.Charge.http_utils import ResponseCache, request_with_retry, safe_json_parse
+
+# Initialize response cache
+_response_cache = ResponseCache()
 
 def find_between(s, first, last):
     try:
@@ -46,8 +50,11 @@ async def create_shopify_charge(card, mes, ano, cvv, session):
             }
 
               response = requests.post('https://shedknives.com/cart/add.js', headers=headers, data=data)
-              
-              request = await session.post('https://shedknives.com/cart/add.js', headers=headers, data=data)
+
+              request = await request_with_retry(
+                  session, 'POST', 'https://shedknives.com/cart/add.js',
+                  headers=headers, data=data, cache=_response_cache
+              )
 
               headers = {
                   'accept': 'application/json, text/javascript, */*; q=0.01',
@@ -64,8 +71,14 @@ async def create_shopify_charge(card, mes, ano, cvv, session):
                   'x-requested-with': 'XMLHttpRequest',
               }
 
-              request = await session.get('https://shedknives.com/cart.js', headers=headers)
-              token = request.json()["token"]
+              request = await request_with_retry(
+                  session, 'GET', 'https://shedknives.com/cart.js',
+                  headers=headers, cache=_response_cache
+              )
+              cart_data = safe_json_parse(request, {})
+              token = cart_data.get("token")
+              if not token:
+                  return "ERROR: Failed to retrieve cart token"
               print(token)
 
               headers = {
@@ -96,7 +109,10 @@ async def create_shopify_charge(card, mes, ano, cvv, session):
                   'address[zip]': '',
               }
 
-              request = await session.post('https://shedknives.com/cart', follow_redirects=True, headers=headers, data=data)
+              request = await request_with_retry(
+                  session, 'POST', 'https://shedknives.com/cart',
+                  follow_redirects=True, headers=headers, data=data, cache=_response_cache
+              )
               print(request)
               x_checkout_one_session_token = find_between(request.text, 'serialized-session-token" content="&quot;', '&quot;"')
               queue_token                  = find_between(request.text, 'queueToken&quot;:&quot;', '&quot;')
@@ -139,8 +155,14 @@ async def create_shopify_charge(card, mes, ano, cvv, session):
                   'payment_session_scope': 'shedknives.com',
               }
 
-              request = await session.post('https://checkout.pci.shopifyinc.com/sessions', headers=headers, json=json_data)
-              sessionid = request.json()["id"]
+              request = await request_with_retry(
+                  session, 'POST', 'https://checkout.pci.shopifyinc.com/sessions',
+                  headers=headers, json=json_data, cache=_response_cache
+              )
+              session_data = safe_json_parse(request, {})
+              sessionid = session_data.get("id")
+              if not sessionid:
+                  return "ERROR: Failed to create payment session"
               # print(sessionid)
 
               headers = {
@@ -362,11 +384,13 @@ async def create_shopify_charge(card, mes, ano, cvv, session):
     'operationName': 'Proposal',
 }
 
-              request = await session.post(
+              request = await request_with_retry(
+                  session, 'POST',
                   'https://shedknives.com/checkouts/unstable/graphql',
                   params=params,
                   headers=headers,
                   json=json_data,
+                  cache=_response_cache
               )
 
               headers = {
@@ -637,18 +661,23 @@ async def create_shopify_charge(card, mes, ano, cvv, session):
     'operationName': 'SubmitForCompletion',
 }
 
-              request = await session.post(
+              request = await request_with_retry(
+                  session, 'POST',
                   'https://shedknives.com/checkouts/unstable/graphql',
                   params=params,
                   headers=headers,
                   json=json_data,
+                  cache=_response_cache
               )
               
               # print(request.text)
     
               if "CAPTCHA_METADATA_MISSING" in request.text:
                   return "Captcha Detected ! ⚠️"
-              bill=request.json()['data']['submitForCompletion']['receipt']['id']
+              response_data = safe_json_parse(request, {})
+              bill = response_data.get('data', {}).get('submitForCompletion', {}).get('receipt', {}).get('id')
+              if not bill:
+                  return "ERROR: Failed to retrieve receipt ID"
               # print(bill)
 
 
@@ -689,11 +718,13 @@ async def create_shopify_charge(card, mes, ano, cvv, session):
                   'operationName': 'PollForReceipt',
               }
 
-              request = await session.post(
+              request = await request_with_retry(
+                  session, 'POST',
                   'https://shedknives.com/checkouts/unstable/graphql',
                   params=params,
                   headers=headers,
                   json=json_data,
+                  cache=_response_cache
               )
 
               await asyncio.sleep(5)
@@ -735,11 +766,13 @@ async def create_shopify_charge(card, mes, ano, cvv, session):
                   'operationName': 'PollForReceipt',
               }
 
-              request = await session.post(
+              request = await request_with_retry(
+                  session, 'POST',
                   'https://shedknives.com/checkouts/unstable/graphql',
                   params=params,
                   headers=headers,
                   json=json_data,
+                  cache=_response_cache
               )
 
 

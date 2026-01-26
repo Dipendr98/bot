@@ -6,6 +6,10 @@ import httpx
 import uuid
 from typing import Optional
 from urllib.parse import urlparse, parse_qs
+from BOT.Charge.http_utils import ResponseCache, request_with_retry, safe_json_parse
+
+# Initialize response cache
+_response_cache = ResponseCache()
 
 
 def recaptcha_bypass():
@@ -115,7 +119,10 @@ async def check_braintree(card: str, exp: str, exy: str, cvc: str, proxy: Option
             'Accept-Language': "en-US,en;q=0.9,ar;q=0.8",
         }
 
-        response = await session.post(url, json=payload, headers=headers)
+        response = await request_with_retry(
+            session, 'POST', url,
+            json=payload, headers=headers, cache=_response_cache
+        )
         if response.status_code != 200 and response.status_code != 201:
             await session.aclose()
             return {
@@ -139,7 +146,10 @@ async def check_braintree(card: str, exp: str, exy: str, cvc: str, proxy: Option
             'Accept-Language': "en-US,en;q=0.9,ar;q=0.8",
         }
 
-        response = await session.get(url, headers=headers)
+        response = await request_with_retry(
+            session, 'GET', url,
+            headers=headers, cache=_response_cache
+        )
         if response.status_code != 200:
             await session.aclose()
             return {
@@ -251,7 +261,10 @@ async def check_braintree(card: str, exp: str, exy: str, cvc: str, proxy: Option
             'Accept-Language': "en-US,en;q=0.9,ar;q=0.8",
         }
 
-        response = await session.post(url, json=payload, headers=headers)
+        response = await request_with_retry(
+            session, 'POST', url,
+            json=payload, headers=headers, cache=_response_cache
+        )
         await session.aclose()
 
         # Parse response
