@@ -326,8 +326,9 @@ async def autoshopify(url, card, session, proxy=None):
                 break
             if sc == 429 or (500 <= sc <= 599):
                 if attempt < products_fetch_retries - 1:
-                    backoff = 2.0 + attempt * 1.0 if sc == 429 else 0.8 + attempt * 0.6
-                    await asyncio.sleep(backoff)
+                     # Exponential backoff for 429
+                    wait_time = 2 ** attempt if sc == 429 else 1.0 + attempt * 1.0
+                    await asyncio.sleep(wait_time)
                     continue
             output.update({
                 "Response": f"SITE_HTTP_{sc}",
