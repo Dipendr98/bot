@@ -84,15 +84,12 @@ REQUEST GET "https://<site>/products.json"
   HEADER "Accept-Language: en-US,en;q=0.9" 
   HEADER "Pragma: no-cache" 
 
-# Parse product_id and price from products.json
-# Extract first variant object for more reliable parsing
-first_variant PARSE "<SOURCE>" LR "\"variants\":[{" "}" CreateEmpty=FALSE -> VAR "first_variant" 
+# Parse product_id and price from products.json  
+# Parse variant ID (numeric, no quotes) - from first variant in products
+variantid PARSE "<SOURCE>" LR "\"variants\":[{\"id\":" ",\"available\"" CreateEmpty=FALSE -> VAR "variantid" 
 
-# Parse variant ID from first variant (numeric, no quotes)
-variantid PARSE "<first_variant>" LR "\"id\":" "," CreateEmpty=FALSE -> VAR "variantid" 
-
-# Parse price from first variant
-price PARSE "<first_variant>" LR "\"price\":\"" "\"," CreateEmpty=FALSE -> VAR "price" 
+# Parse price - find price in the first variant (search from variants array start)
+price PARSE "<SOURCE>" LR "\"variants\":[{\"id\":" "\"price\":\"" "\"," CreateEmpty=FALSE -> VAR "price" 
 
 # Step 2: Get site homepage to extract accessToken
 REQUEST GET "https://<site>" 
