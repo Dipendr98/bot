@@ -441,8 +441,8 @@ async def tsh_handler(client: Client, m: Message):
         rate = (checked_count / elapsed) if elapsed > 0 else 0
         sp = SPINNERS[checked_count % 4]
         try:
-                await status_msg.edit_text(
-                    f"""<pre>{sp} [#TSH] | TXT Shopify Check</pre>
+            await status_msg.edit_text(
+                f"""<pre>{sp} [#TSH] | TXT Shopify Check</pre>
 ━━━━━━━━━━━━━━━
 <b>🟢 Total CC:</b> <code>{total_cards}</code>
 <b>💬 Progress:</b> <code>{checked_count}/{total_cards}</code>
@@ -455,15 +455,15 @@ async def tsh_handler(client: Client, m: Message):
 <b>⚡ Threads:</b> <code>300+</code>
 <b>[ﾒ] By:</b> {user.mention}""",
                 parse_mode=ParseMode.HTML,
-                reply_markup=stop_kb,
+                reply_markup=stop_kb
             )
             last_progress_edit = now
         except Exception:
             pass
 
-        # Initialize Checker with 300+ threads - Ultra Silver Bullet Performance
-        checker = RateLimitedChecker(concurrency=300, requests_per_second=250)
-    
+    # Initialize Checker with 300+ threads - Ultra Silver Bullet Performance
+    checker = RateLimitedChecker(concurrency=300, requests_per_second=250)
+
     # Create Tasks
     tasks = [checker.safe_check(user_id, card) for card in cards]
     
