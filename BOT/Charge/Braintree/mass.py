@@ -71,8 +71,8 @@ async def handle_mass_braintree(client, message):
         
         if user_id not in users:
             return await message.reply(
-                \"\"\"<pre>Access Denied 🚫</pre>
-<b>You have to register first using</b> <code>/register</code> <b>command.</b>\"\"\",
+                """<pre>Access Denied 🚫</pre>
+<b>You have to register first using</b> <code>/register</code> <b>command.</b>""",
                 reply_to_message_id=message.id,
                 parse_mode=ParseMode.HTML
             )
@@ -117,10 +117,10 @@ async def handle_mass_braintree(client, message):
                 available_credits = int(available_credits)
                 if card_count > available_credits:
                     return await message.reply(
-                        \"\"\"<pre>Notification ❗️</pre>
+                        """<pre>Notification ❗️</pre>
 <b>Message :</b> <code>You Have Insufficient Credits</code>
 ━━━━━━━━━━━━━
-<b>Type <code>/buy</code> to get Credits.</b>\"\"\",
+<b>Type <code>/buy</code> to get Credits.</b>""",
                         reply_to_message_id=message.id,
                         parse_mode=ParseMode.HTML
                     )
@@ -132,11 +132,11 @@ async def handle_mass_braintree(client, message):
         
         # Send loading message
         loader_msg = await message.reply(
-            f\"\"\"<pre>✦ Mass Braintree Check</pre>
+            f"""<pre>✦ Mass Braintree Check</pre>
 <b>[⚬] Gateway:</b> <code>{gateway}</code>
 <b>[⚬] CC Amount:</b> <code>{card_count}</code>
 <b>[⚬] Checked By:</b> {checked_by} [<code>{plan} {badge}</code>]
-<b>[⚬] Status:</b> <code>Processing Parallel (100 threads)...</code>\"\"\",
+<b>[⚬] Status:</b> <code>Processing Parallel (100 threads)...</code>""",
             reply_to_message_id=message.id,
             parse_mode=ParseMode.HTML
         )
@@ -210,12 +210,12 @@ async def handle_mass_braintree(client, message):
                 if now - last_edit_time > 1.5 or processed_count == total_cc:
                     try:
                         await loader_msg.edit(
-                            f\"\"\"<pre>✦ Mass Braintree Check</pre>
+                            f"""<pre>✦ Mass Braintree Check</pre>
 <b>[⚬] Progress:</b> <code>{processed_count}/{total_cc}</code>
 <b>[⚬] Charged:</b> <code>{charged_count}</code>
 <b>[⚬] Approved:</b> <code>{approved_count}</code>
 <b>[⚬] Declined:</b> <code>{declined_count}</code>
-<b>[⚬] Checked By:</b> {checked_by}\"\"\",
+<b>[⚬] Checked By:</b> {checked_by}""",
                             parse_mode=ParseMode.HTML
                         )
                         last_edit_time = now
@@ -264,7 +264,7 @@ async def handle_mass_braintree(client, message):
         from datetime import datetime
         current_time = datetime.now().strftime("%I:%M %p")
         
-        completion_message = f\"\"\"<b>[#Braintree] | MASS CHECK ✦</b>
+        completion_message = f"""<b>[#Braintree] | MASS CHECK ✦</b>
 ━━━━━━━━━━━━━━━
 🟢 <b>Total CC</b>     : <code>{total_cc}</code>
 💬 <b>Progress</b>    : <code>{processed_count}/{total_cc}</code>
@@ -276,7 +276,7 @@ async def handle_mass_braintree(client, message):
 <b>[ﾒ] Checked By:</b> {checked_by} [<code>{plan} {badge}</code>]
 <b>[ϟ] Dev:</b> <a href="https://t.me/Chr1shtopher">Chr1shtopher</a>
 ━━━━━━━━━━━━━━━
-<b>[ﾒ] Time:</b> <code>{timetaken}s</code> | <code>{current_time}</code>\"\"\"
+<b>[ﾒ] Time:</b> <code>{timetaken}s</code> | <code>{current_time}</code>"""
         
         await loader_msg.edit(
             completion_message,
