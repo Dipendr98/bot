@@ -2,6 +2,7 @@ import asyncio
 import hashlib
 import json
 from dataclasses import dataclass
+import random
 from typing import Any, Dict, Optional
 import httpx
 
@@ -344,9 +345,12 @@ async def request_with_retry(
                     else:
                         wait_time = delay
 
+                    jitter = random.uniform(0.2, 0.6)
+                    wait_time = min(10.0, wait_time + jitter)
+
                     print(f"Rate limited (429). Retrying in {wait_time}s... (attempt {attempt + 1}/{max_retries})")
                     await asyncio.sleep(wait_time)
-                    delay *= 2  # Exponential backoff
+                    delay = min(10.0, delay * 2)  # Exponential backoff with cap
                     continue
                 else:
                     # Max retries reached, return the error response
