@@ -47,10 +47,6 @@ async def create_shopify_charge(card, mes, ano, cvv, session):
                 'section-id': 'template--16314355777706__main',
             }
 
-              response = requests.post('https://shedknives.com/cart/add.js', headers=headers, data=data)
-
-              request = await session.post('https://shedknives.com/cart/add.js', headers=headers, data=data)
-
               request = await request_with_retry(
                   session, 'POST', 'https://shedknives.com/cart/add.js',
                   headers=headers, data=data, cache=_response_cache
@@ -71,8 +67,6 @@ async def create_shopify_charge(card, mes, ano, cvv, session):
                   'x-requested-with': 'XMLHttpRequest',
               }
 
-              request = await session.get('https://shedknives.com/cart.js', headers=headers)
-              token = request.json()["token"]
               request = await request_with_retry(
                   session, 'GET', 'https://shedknives.com/cart.js',
                   headers=headers, cache=_response_cache
@@ -110,7 +104,6 @@ async def create_shopify_charge(card, mes, ano, cvv, session):
                   'address[zip]': '',
               }
 
-              request = await session.post('https://shedknives.com/cart', follow_redirects=True, headers=headers, data=data)
               request = await request_with_retry(
                   session, 'POST', 'https://shedknives.com/cart',
                   follow_redirects=True, headers=headers, data=data, cache=_response_cache
@@ -154,8 +147,6 @@ async def create_shopify_charge(card, mes, ano, cvv, session):
                   'payment_session_scope': 'shedknives.com',
               }
 
-              request = await session.post('https://checkout.pci.shopifyinc.com/sessions', headers=headers, json=json_data)
-              sessionid = request.json()["id"]
               request = await request_with_retry(
                   session, 'POST', 'https://checkout.pci.shopifyinc.com/sessions',
                   headers=headers, json=json_data, cache=_response_cache
@@ -671,7 +662,6 @@ async def create_shopify_charge(card, mes, ano, cvv, session):
 
               if "CAPTCHA_METADATA_MISSING" in request.text:
                   return "Captcha Detected ! ⚠️"
-              bill=request.json()['data']['submitForCompletion']['receipt']['id']
               response_data = safe_json_parse(request, {})
               bill = response_data.get('data', {}).get('submitForCompletion', {}).get('receipt', {}).get('id')
               if not bill:
@@ -770,7 +760,9 @@ async def create_shopify_charge(card, mes, ano, cvv, session):
 
 
               # print(request.text)
-              res_json = json.loads(request.text)
+              res_json = safe_json_parse(request, {})
+              if not res_json:
+                  return "ERROR: Empty response from server"
               result = res_json.get('data', {}).get('receipt', {}).get('processingError', {}).get('code')
               if "shopify_payments" in str(res_json):
                   return "ORDER_CONFIRMED"
