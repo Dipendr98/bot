@@ -32,6 +32,18 @@ class TLSAsyncSession:
         normalized.setdefault("timeout_seconds", self._timeout_seconds)
         return normalized
 
+    async def request(self, method: str, url: str, **kwargs: Any) -> Any:
+        """Generic request method that supports any HTTP method."""
+        normalized = self._normalize_kwargs(kwargs)
+        method_lower = method.lower()
+
+        # Get the appropriate method from the underlying session
+        session_method = getattr(self._session, method_lower, None)
+        if session_method is None:
+            raise ValueError(f"Unsupported HTTP method: {method}")
+
+        return await asyncio.to_thread(session_method, url, **normalized)
+
     async def get(self, url: str, **kwargs: Any) -> Any:
         normalized = self._normalize_kwargs(kwargs)
         return await asyncio.to_thread(self._session.get, url, **normalized)
@@ -39,6 +51,26 @@ class TLSAsyncSession:
     async def post(self, url: str, **kwargs: Any) -> Any:
         normalized = self._normalize_kwargs(kwargs)
         return await asyncio.to_thread(self._session.post, url, **normalized)
+
+    async def put(self, url: str, **kwargs: Any) -> Any:
+        normalized = self._normalize_kwargs(kwargs)
+        return await asyncio.to_thread(self._session.put, url, **normalized)
+
+    async def patch(self, url: str, **kwargs: Any) -> Any:
+        normalized = self._normalize_kwargs(kwargs)
+        return await asyncio.to_thread(self._session.patch, url, **normalized)
+
+    async def delete(self, url: str, **kwargs: Any) -> Any:
+        normalized = self._normalize_kwargs(kwargs)
+        return await asyncio.to_thread(self._session.delete, url, **normalized)
+
+    async def head(self, url: str, **kwargs: Any) -> Any:
+        normalized = self._normalize_kwargs(kwargs)
+        return await asyncio.to_thread(self._session.head, url, **normalized)
+
+    async def options(self, url: str, **kwargs: Any) -> Any:
+        normalized = self._normalize_kwargs(kwargs)
+        return await asyncio.to_thread(self._session.options, url, **normalized)
 
     async def close(self) -> None:
         close = getattr(self._session, "close", None)
