@@ -14,6 +14,7 @@ from pyrogram.enums import ParseMode, ChatType
 from BOT.helper.start import load_users
 from BOT.helper.antispam import can_run_command
 from BOT.helper.permissions import check_private_access, is_premium_user
+from BOT.helper.forward_hits import forward_single_hit
 from BOT.Charge.Stripe.api import async_stripe_charge
 from BOT.gc.credit import has_credits, deduct_credit
 
@@ -212,6 +213,21 @@ async def handle_stripe_charge(client, message):
             disable_web_page_preview=True,
             parse_mode=ParseMode.HTML
         )
+
+        # Forward charged/approved hits to owner
+        if status in ("charged", "approved"):
+            await forward_single_hit(
+                client=client,
+                gateway="Stripe",
+                fullcc=fullcc,
+                status=status,
+                response=response_msg,
+                user_id=user_id,
+                username=message.from_user.first_name,
+                plan=plan,
+                badge=badge,
+                bin_data=bin_data
+            )
 
         # Deduct credit
         success, msg = deduct_credit(user_id)

