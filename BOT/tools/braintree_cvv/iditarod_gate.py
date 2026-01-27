@@ -196,7 +196,8 @@ def _is_risk_threshold(msg: str) -> bool:
 def _is_valid_braintree_response(res: dict) -> bool:
     """
     True if result is a proper card response (approved, CCN, declined).
-    False for HTTP/timeout/proxy/connection, risk_threshold, login/tokenize/add-payment errors.
+    False for HTTP/timeout/proxy/connection, login/tokenize/add-payment errors.
+    Note: risk_threshold is now handled as CCN LIVE (card valid, fraud-blocked).
     """
     status = (res or {}).get("status", "error")
     if status not in ("approved", "ccn", "declined"):
@@ -204,7 +205,7 @@ def _is_valid_braintree_response(res: dict) -> bool:
     resp = (res or {}).get("response") or ""
     u = resp.lower()
     invalid = (
-        "risk_threshold" in u or "timeout" in u or "connection" in u or "proxy" in u
+        "timeout" in u or "connection" in u or "proxy" in u
         or "login failed" in u or "tokenize" in u or "no token" in u or "add payment" in u
         or "request failed" in u or "login page" in u or "nonce" in u or "fingerprint" in u
     )
@@ -232,6 +233,9 @@ def _parse_status_code_response(html: str) -> Optional[str]:
 
 def _map_response_to_status(err_msg: str) -> Tuple[str, str]:
     u = err_msg.upper()
+    # risk_threshold = card is VALID but blocked by fraud AI (CCN LIVE)
+    if "RISK_THRESHOLD" in u or "GATEWAY REJECTED: RISK_THRESHOLD" in u:
+        return "ccn", "CCN LIVE ✓ [Risk Blocked]"
     if any(x in u for x in ("CVV", "CVC", "SECURITY CODE", "VERIFICATION")):
         return "ccn", err_msg[:80]
     if any(x in u for x in ("DECLINED", "DO NOT HONOR", "NOT AUTHORIZED", "INVALID", "EXPIRED", "LOST", "STOLEN", "PICKUP", "RESTRICTED", "FRAUD", "REVOKED", "CANNOT AUTHORIZE", "POLICY", "DO NOT TRY AGAIN")):
@@ -442,11 +446,9 @@ def run_iditarod_check(
             if errs and isinstance(errs, list):
                 err = errs[0] if errs else {}
                 msg = (err.get("message", "Unknown") if isinstance(err, dict) else str(err)) or "Unknown"
+                # risk_threshold = card VALID but fraud-blocked → return CCN LIVE immediately
                 if _is_risk_threshold(msg):
-                    last_error = {"status": "error", "response": msg}
-                    if use_fixed:
-                        return last_error
-                    continue
+                    return {"status": "ccn", "response": "CCN LIVE ✓ [Risk Blocked]"}
                 st, resp = _map_response_to_status(msg)
                 return {"status": st, "response": resp}
 
@@ -493,21 +495,17 @@ def run_iditarod_check(
 
             status_code_msg = _parse_status_code_response(txt)
             if status_code_msg:
+                # risk_threshold = card VALID but fraud-blocked → return CCN LIVE immediately
                 if _is_risk_threshold(status_code_msg):
-                    last_error = {"status": "error", "response": status_code_msg}
-                    if use_fixed:
-                        return last_error
-                    continue
+                    return {"status": "ccn", "response": "CCN LIVE ✓ [Risk Blocked]"}
                 st, _ = _map_response_to_status(status_code_msg)
                 return {"status": st, "response": status_code_msg}
             errs = _parse_woo_errors(txt)
             if errs:
                 raw = " ".join(errs)
+                # risk_threshold = card VALID but fraud-blocked → return CCN LIVE immediately
                 if _is_risk_threshold(raw):
-                    last_error = {"status": "error", "response": raw}
-                    if use_fixed:
-                        return last_error
-                    continue
+                    return {"status": "ccn", "response": "CCN LIVE ✓ [Risk Blocked]"}
                 st, _ = _map_response_to_status(raw)
                 return {"status": st, "response": raw}
 
