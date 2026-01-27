@@ -464,7 +464,19 @@ async def make_request(
     async def _do_request():
         try:
             async with session.post(url, json=data) as response:
-                return await response.json()
+                response_text = await response.text()
+                if response.status != 200:
+                    print(f"Error: {response.status}")
+                    print(response_text)
+                    return None
+                if not response_text:
+                    print("Empty response - likely blocked")
+                    return None
+                try:
+                    return json.loads(response_text)
+                except json.JSONDecodeError:
+                    print(f"Invalid JSON: {response_text[:200]}")
+                    return None
         except Exception as e:
             print(f"Error: {e}")
             return None
