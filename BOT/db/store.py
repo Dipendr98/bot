@@ -748,3 +748,131 @@ def save_allowed_groups(groups: list) -> None:
     _ensure_data()
     with open(GROUPS_FILE, "w", encoding="utf-8") as f:
         json.dump(groups, f)
+
+
+# ---------------------------------------------------------------------------
+# Proxy Health & Settings Storage
+# ---------------------------------------------------------------------------
+
+PROXY_HEALTH_FILE = os.path.join(DATA_DIR, "proxy_health.json")
+PROXY_SETTINGS_FILE = os.path.join(DATA_DIR, "proxy_settings.json")
+
+
+def _proxy_health_coll():
+    m = _mongo()
+    return m.proxy_health if m is not None else None
+
+
+def _proxy_settings_coll():
+    m = _mongo()
+    return m.proxy_settings if m is not None else None
+
+
+def load_proxy_health(user_id: str) -> Dict[str, dict]:
+    """Load proxy health data for a user. Returns {proxy_url: health_dict}."""
+    uid = str(user_id)
+    if _use_mongo():
+        coll = _proxy_health_coll()
+        doc = coll.find_one({"_id": uid})
+        if doc:
+            return doc.get("health", {})
+        return {}
+    _ensure_data()
+    if not os.path.exists(PROXY_HEALTH_FILE):
+        return {}
+    try:
+        with open(PROXY_HEALTH_FILE, "r", encoding="utf-8") as f:
+            data = json.load(f)
+        return data.get(uid, {})
+    except Exception:
+        return {}
+
+
+def save_proxy_health(user_id: str, health_data: Dict[str, dict]) -> None:
+    """Save proxy health data for a user."""
+    uid = str(user_id)
+    if _use_mongo():
+        coll = _proxy_health_coll()
+        coll.replace_one(
+            {"_id": uid},
+            {"_id": uid, "health": health_data},
+            upsert=True
+        )
+        return
+    _ensure_data()
+    data = {}
+    if os.path.exists(PROXY_HEALTH_FILE):
+        try:
+            with open(PROXY_HEALTH_FILE, "r", encoding="utf-8") as f:
+                data = json.load(f)
+        except Exception:
+            pass
+    data[uid] = health_data
+    with open(PROXY_HEALTH_FILE, "w", encoding="utf-8") as f:
+        json.dump(data, f, indent=2)
+
+
+def delete_proxy_health(user_id: str) -> None:
+    """Delete all proxy health data for a user."""
+    uid = str(user_id)
+    if _use_mongo():
+        coll = _proxy_health_coll()
+        coll.delete_one({"_id": uid})
+        return
+    _ensure_data()
+    if not os.path.exists(PROXY_HEALTH_FILE):
+        return
+    try:
+        with open(PROXY_HEALTH_FILE, "r", encoding="utf-8") as f:
+            data = json.load(f)
+        if uid in data:
+            del data[uid]
+            with open(PROXY_HEALTH_FILE, "w", encoding="utf-8") as f:
+                json.dump(data, f, indent=2)
+    except Exception:
+        pass
+
+
+def get_proxy_settings(user_id: str) -> dict:
+    """Get proxy settings for a user (rotation strategy, etc.)."""
+    uid = str(user_id)
+    default = {"rotation_strategy": "random"}
+    if _use_mongo():
+        coll = _proxy_settings_coll()
+        doc = coll.find_one({"_id": uid})
+        if doc:
+            return {k: v for k, v in doc.items() if k != "_id"}
+        return default
+    _ensure_data()
+    if not os.path.exists(PROXY_SETTINGS_FILE):
+        return default
+    try:
+        with open(PROXY_SETTINGS_FILE, "r", encoding="utf-8") as f:
+            data = json.load(f)
+        return data.get(uid, default)
+    except Exception:
+        return default
+
+
+def save_proxy_settings(user_id: str, settings: dict) -> None:
+    """Save proxy settings for a user."""
+    uid = str(user_id)
+    if _use_mongo():
+        coll = _proxy_settings_coll()
+        coll.replace_one(
+            {"_id": uid},
+            {"_id": uid, **settings},
+            upsert=True
+        )
+        return
+    _ensure_data()
+    data = {}
+    if os.path.exists(PROXY_SETTINGS_FILE):
+        try:
+            with open(PROXY_SETTINGS_FILE, "r", encoding="utf-8") as f:
+                data = json.load(f)
+        except Exception:
+            pass
+    data[uid] = settings
+    with open(PROXY_SETTINGS_FILE, "w", encoding="utf-8") as f:
+        json.dump(data, f, indent=2)
