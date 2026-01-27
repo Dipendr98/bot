@@ -245,6 +245,7 @@ def determine_status(response: str) -> tuple:
         "LOST", "STOLEN", "PICKUP", "RESTRICTED", "SECURITY_VIOLATION",
         "FRAUD", "FRAUDULENT", "INVALID_ACCOUNT", "CARD_NOT_SUPPORTED",
         "TRY_AGAIN", "PROCESSING_ERROR", "NO_SUCH_CARD", "LIMIT_EXCEEDED",
+        "AMOUNT_TOO_SMALL",
         "REVOKED", "SERVICE_NOT_ALLOWED", "RISKY"
     ]):
         return "Declined ❌", "DECLINED", False

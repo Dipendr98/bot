@@ -1463,7 +1463,15 @@ async def autoshopify(url, card, session):
         #     "Price": total,
         #     "cc": card
         # })
-        if "shopify_payments" in str(res_json):
+        if "AMOUNT_TOO_SMALL" in str(res_json) or result == "AMOUNT_TOO_SMALL":
+            output.update({
+                "Response": "AMOUNT_TOO_SMALL",
+                "Status": False,
+                "Gateway": gateway,
+                "Price": total,
+                "cc": card
+            })
+        elif "shopify_payments" in str(res_json):
             output.update({
                 "Response": "ORDER_PLACED",
                 "Status": True,
