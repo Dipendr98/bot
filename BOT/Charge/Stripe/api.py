@@ -8,12 +8,36 @@ from urllib.parse import quote_plus
 from fake_useragent import UserAgent
 from datetime import datetime
 from faker import Faker
+from bs4 import BeautifulSoup
 from concurrent.futures import ThreadPoolExecutor
 
 executor = ThreadPoolExecutor(max_workers=10)
 
 DELAY_BETWEEN_REQUESTS = 2
 DELAY_RANDOM_RANGE = 1
+
+
+def _extract_nonce(html: str, nonce_name: str) -> str:
+    """Extract WooCommerce nonces from HTML using multiple strategies."""
+    soup = BeautifulSoup(html, "html.parser")
+    input_tag = soup.find("input", {"name": nonce_name}) or soup.find("input", {"id": nonce_name})
+    if input_tag and input_tag.get("value"):
+        return input_tag["value"].strip()
+
+    name_pattern = re.escape(nonce_name)
+    regex_patterns = [
+        rf'name=["\']{name_pattern}["\'][\s\S]*?value=["\']([^"\']+)["\']',
+        rf'value=["\']([^"\']+)["\'][\s\S]*?name=["\']{name_pattern}["\']',
+        rf'id=["\']{name_pattern}["\'][\s\S]*?value=["\']([^"\']+)["\']',
+        rf'"{name_pattern}"\s*:\s*"([^"]+)"',
+        rf"'{name_pattern}'\s*:\s*'([^']+)'",
+    ]
+    for pattern in regex_patterns:
+        match = re.search(pattern, html, re.I)
+        if match:
+            return match.group(1).strip()
+
+    return ""
 
 
 def random_delay():
@@ -136,55 +160,36 @@ def check_stripe_charge(card, mes, ano, cvv, proxy=None):
         response = scraper.get('https://www.balliante.com/store/checkout/', headers=headers)
         random_delay()
 
-        # Extract nonces with improved regex patterns
+        # Extract nonces with improved parsing and fallback patterns
         html = response.text
-        
+
         try:
-            # Try multiple patterns to find the nonces
-            # Pattern 1: Standard input format
-            noncewo_match = re.search(r'name=["\']woocommerce-process-checkout-nonce["\'][\s\S]*?value=["\']([^"\']+)["\']', html)
-            noncelogin_match = re.search(r'name=["\']woocommerce-login-nonce["\'][\s\S]*?value=["\']([^"\']+)["\']', html)
-            
-            # Pattern 2: Reversed order (value before name)
-            if not noncewo_match:
-                noncewo_match = re.search(r'value=["\']([^"\']+)["\'][\s\S]*?name=["\']woocommerce-process-checkout-nonce["\']', html)
-            if not noncelogin_match:
-                noncelogin_match = re.search(r'value=["\']([^"\']+)["\'][\s\S]*?name=["\']woocommerce-login-nonce["\']', html)
-            
-            # Pattern 3: ID-based search as fallback
-            if not noncewo_match:
-                noncewo_match = re.search(r'id=["\']woocommerce-process-checkout-nonce["\'][\s\S]*?value=["\']([^"\']+)["\']', html)
-            if not noncelogin_match:
-                noncelogin_match = re.search(r'id=["\']woocommerce-login-nonce["\'][\s\S]*?value=["\']([^"\']+)["\']', html)
-            
-            if not noncewo_match or not noncelogin_match:
-                # Save HTML for debugging
+            noncewo = _extract_nonce(html, "woocommerce-process-checkout-nonce")
+            noncelogin = _extract_nonce(html, "woocommerce-login-nonce")
+
+            if not noncewo or not noncelogin:
                 debug_file = f'checkout_debug_{int(time.time())}.html'
                 with open(debug_file, 'w', encoding='utf-8') as f:
                     f.write(html)
-                
+
                 missing = []
-                if not noncewo_match:
+                if not noncewo:
                     missing.append('checkout-nonce')
-                if not noncelogin_match:
+                if not noncelogin:
                     missing.append('login-nonce')
-                
+
                 return {
-                    "status": "error", 
+                    "status": "error",
                     "response": f"Failed to extract {', '.join(missing)} (saved to {debug_file})"
                 }
-            
-            noncewo = noncewo_match.group(1)
-            noncelogin = noncelogin_match.group(1)
-            
+
         except Exception as e:
-            # Save HTML for debugging
             debug_file = f'checkout_debug_{int(time.time())}.html'
             try:
                 with open(debug_file, 'w', encoding='utf-8') as f:
                     f.write(html)
                 return {"status": "error", "response": f"Nonce extraction error: {str(e)[:50]} (saved to {debug_file})"}
-            except:
+            except Exception:
                 return {"status": "error", "response": f"Nonce extraction error: {str(e)[:50]}"}
 
         # Step 4: Create Stripe payment method
