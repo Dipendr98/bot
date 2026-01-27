@@ -1,7 +1,7 @@
 """
 TXT Sites Shopify Checker with Site Rotation
-Handles /tsh command: parallel mode (100 threads), rate limiting, 429-safe with adaptive throttling.
-Professional Parallel Processing - 100 concurrent threads, Railway-optimized, 50 card limit.
+Handles /tsh command: parallel mode (3 threads), rate limiting, 429-safe with adaptive throttling.
+Professional Parallel Processing - 3 concurrent threads, delay-based throttling, 50 card limit.
 Stop button: mandatory — only the user who started the check can stop it.
 """
 
@@ -31,14 +31,16 @@ tsh_stop_requested: dict[str, bool] = {}
 # --- Adaptive Rate Limiter Class ---
 
 class RateLimitedChecker:
-    def __init__(self, concurrency=100, requests_per_second=80):
-        """Professional parallel processing - 100 threads, Railway-optimized rate limiting."""
+    def __init__(self, concurrency=3, requests_per_second=6, base_delay=0.4):
+        """Professional parallel processing - 2-3 threads, delay-based rate limiting."""
+        self.concurrency = concurrency
         self.sem = asyncio.Semaphore(concurrency)
-        self.requests_per_second = requests_per_second  # Railway-safe rate limit
+        self.requests_per_second = requests_per_second  # Conservative rate limit
         self.request_times = deque()
         self.lock = asyncio.Lock()
         self.consecutive_429s = 0
-        self.current_delay = 0.05  # Railway-safe initial delay for 100 threads
+        self.current_delay = base_delay  # Initial delay for low-thread mode
+        self.base_delay = base_delay
     
     async def wait_for_rate_limit(self):
         """Token bucket enforcement - optimized for speed"""
@@ -55,17 +57,17 @@ class RateLimitedChecker:
             self.request_times.append(time.monotonic())
 
     async def adaptive_delay(self):
-        """Dynamic sleep - Railway-safe with professional delays"""
-        jitter = random.uniform(0.02, 0.08)  # Railway-safe jitter to avoid detection
+        """Dynamic sleep - low-thread throttling with jitter"""
+        jitter = random.uniform(0.1, 0.35)
         await asyncio.sleep(self.current_delay + jitter)
     
     def on_success(self):
         self.consecutive_429s = 0
-        self.current_delay = max(0.05, self.current_delay * 0.95)  # Gradual speed up (Railway-safe)
+        self.current_delay = max(self.base_delay, self.current_delay * 0.9)
     
     def on_429(self):
         self.consecutive_429s += 1
-        self.current_delay = min(2.5, self.current_delay * 1.5)  # Moderate slowdown (Railway-safe)
+        self.current_delay = min(5.0, self.current_delay * 1.6)
 
     async def safe_check(self, user_id, card):
         """
@@ -448,7 +450,7 @@ async def tsh_handler(client: Client, m: Message):
 <b>⚠️ Errors:</b> <code>{error_count}</code>
 <b>🔄 Rotations:</b> <code>{total_retries}</code>
 <b>⏱️ Time:</b> <code>{elapsed:.1f}s</code> · <code>{rate:.1f} cc/s</code>
-<b>⚡ Threads:</b> <code>100</code>
+<b>⚡ Threads:</b> <code>{checker.concurrency}</code>
 <b>[ﾒ] By:</b> {user.mention}""",
                 parse_mode=ParseMode.HTML,
                 reply_markup=stop_kb
@@ -457,8 +459,8 @@ async def tsh_handler(client: Client, m: Message):
         except Exception:
             pass
 
-    # Initialize Checker with 100 threads - Professional Parallel Processing (Railway-optimized)
-    checker = RateLimitedChecker(concurrency=100, requests_per_second=80)
+    # Initialize Checker with 2-3 threads + delays to avoid 429s
+    checker = RateLimitedChecker(concurrency=3, requests_per_second=6, base_delay=0.4)
 
     # Create Tasks
     tasks = [checker.safe_check(user_id, card) for card in cards]
